@@ -63,24 +63,33 @@ if __name__ == "__main__":
 
     config = yaml.load( open(args.config, "r"), Loader=yaml.FullLoader)
 
-    if args.checkpoint:
-        assert False # FIXME: implement
-    else:
-        shutil.rmtree(args.out_dir, ignore_errors=True)
-
-    os.makedirs(args.out_dir, exist_ok=True)
-
     datamodule = G2PDataModule (config, args.lex, num_workers=args.num_workers, batch_size=args.batch_size)
 
     model_type = ModelType(config['model']['type'])
-    model = LightningTransformer(model_type,
-                                 config=config,
-                                 tokenizer=datamodule.tokenizer,
-                                 val_dir=Path(args.out_dir) / 'validation',
-                                 lr=args.lr,
-                                 weight_decay=args.weight_decay,
-                                 max_epochs=args.max_epochs,
-                                 warmup_epochs=args.warmup_epochs)
+
+    if args.checkpoint:
+        model = LightningTransformer.load_from_checkpoint(args.checkpoint,
+                                                          model_type=model_type,
+                                                          config=config,
+                                                          tokenizer=datamodule.tokenizer,
+                                                          val_dir=Path(args.out_dir) / 'validation',
+                                                          lr=args.lr,
+                                                          weight_decay=args.weight_decay,
+                                                          max_epochs=args.max_epochs,
+                                                          warmup_epochs=args.warmup_epochs)
+
+    else:
+        shutil.rmtree(args.out_dir, ignore_errors=True)
+        model = LightningTransformer(model_type=model_type,
+                                     config=config,
+                                     tokenizer=datamodule.tokenizer,
+                                     val_dir=Path(args.out_dir) / 'validation',
+                                     lr=args.lr,
+                                     weight_decay=args.weight_decay,
+                                     max_epochs=args.max_epochs,
+                                     warmup_epochs=args.warmup_epochs)
+
+    os.makedirs(args.out_dir, exist_ok=True)
 
     checkpoint_callback = ForgivingModelCheckpoint(
         monitor='val',
