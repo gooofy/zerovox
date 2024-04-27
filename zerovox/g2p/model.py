@@ -384,6 +384,8 @@ class LightningTransformer(LightningModule):
                  weight_decay:float, max_epochs:int, warmup_epochs:int):
         super().__init__()
 
+        self.save_hyperparameters()
+
         self._config        = config
         self._lr            = lr
         self._val_dir       = val_dir
@@ -438,7 +440,7 @@ class LightningTransformer(LightningModule):
 
                     word = self._tokenizer.convert_ids_to_graphemes(inp.tolist())
                     phone_target = self._tokenizer.convert_ids_to_phonemes(tar.tolist())
-                    phone_pred = self._tokenizer.convert_ids_to_phonemes(pred.argmax(0).tolist())
+                    phone_pred = self._tokenizer.convert_ids_to_phonemes(pred.argmax(1).tolist())
 
                     f.write(f'{"".join(word[1:])}: {"".join(phone_pred)} vs {"".join(phone_target)}\n')
 
