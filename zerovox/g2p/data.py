@@ -8,8 +8,8 @@ from torch.utils import data
 from lightning import LightningDataModule
 
 #DEBUG_LIMIT = 8192
-DEBUG_LIMIT =128
-#DEBUG_LIMIT = 0
+#DEBUG_LIMIT =128
+DEBUG_LIMIT = 0
 
 def load_lex(lexicon_path:os.PathLike, graphemes: set[str], phoneset: set[str]) -> dict [str, str]:
 
@@ -283,7 +283,7 @@ class G2PDataModule(LightningDataModule):
         return data.DataLoader(self._train_dataset, batch_size=self._batch_size, shuffle=True, num_workers=self._num_workers, collate_fn=self._pad)
 
     def val_dataloader(self):
-        return data.DataLoader(self._val_dataset, batch_size=self._batch_size, shuffle=True, num_workers=self._num_workers, collate_fn=self._pad)
+        return data.DataLoader(self._val_dataset, batch_size=self._batch_size, shuffle=False, num_workers=self._num_workers, collate_fn=self._pad)
 
     def test_dataloader(self):
         assert False # FIXME
