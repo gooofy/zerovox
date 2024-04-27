@@ -1,0 +1,24 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "train",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "train_g2p.py",
+            "console": "integratedTerminal",
+            "args": ["--accelerator=cpu",
+                     "--max_epochs=100",
+                     "--val_epochs=1",
+                     "--lr=0.0001",
+                     "--batch-size=32",
+                     "--out-dir=models/de_tiny1",
+                     "configs/g2p_de_autoreg.yaml", "lexicon/german_mfa.dict"],
+            "cwd": "${workspaceFolder}",
+            "justMyCode": false
+        }
+    ]
+}
