@@ -1,13 +1,14 @@
-preprocessing:
+
+# german MFA based lexicon
+
+symbols:
+
   graphemes: 'abcdefghijklmnopqrstuvwxyzäöüß0123456789-''áãåçèéêëíñóôøúûāćđğıőśşżžșțọứàʿ'
   phonemes: ['ts', 'ə', 'iː', 'oː', 'pf', 'aj', 'd', 'tʃ', 'm', 'œ', 'z', 'ɛ', 'ɲ', 't', 'ɟ', 'n̩', 'b', 'ɪ', 'kʰ', 'h', 'eː', 'ɔ', 'f', 'v', 'l̩', 'n', 'x', 'yː', 'p', 'c', 'aː', 'ç', 'uː', 'ʃ', 'øː', 'a', 'l', 'j', 'ɔʏ', 'cʰ', 'aw', 'ŋ', 'ɐ', 'ʊ', 'pʰ', 'ʁ', 's', 'ʏ', 'ɡ', 'tʰ', 'k', 'm̩']
 
-model:
-  type: 'autoreg_transformer'        # Whether to use a forward transformer or autoregressive transformer model.
-                                     # Choices: ['transformer', 'autoreg_transformer']
-  d_model: 512
-  d_fft: 1024
-  layers: 4
-  dropout: 0.1
-  heads: 4
-  
+paths:
+
+  base: 'german_mfa.dict'
+  user: 'german_mfa_add.dict'
+
+

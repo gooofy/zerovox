@@ -4,134 +4,81 @@
 By kyubyong park(kbpark.linguist@gmail.com) and Jongseok Kim(https://github.com/ozmig77)
 https://www.github.com/kyubyong/g2p
 
-adaptation to german 2024 by G. Bartsch
+adaptation to german / dp models 2024 by G. Bartsch
 '''
-import nltk
-from nltk.tokenize import TweetTokenizer
-word_tokenize = TweetTokenizer().tokenize
 
-import numpy as np
 import re
-import os
+import yaml
+from pathlib import Path
+
+import torch
+from nltk.tokenize import TweetTokenizer
 
 from num2words import num2words
 
-dirname = os.path.dirname(__file__)
+from zerovox import download_model_file
+from zerovox.lexicon import Lexicon
+from zerovox.g2p.data import G2PSymbols
+from zerovox.g2p.model import ModelType, LightningTransformer
 
-class G2p(object):
-    def __init__(self):
+
+MODEL_NAME    = "zerovox-g2p-autoreg"
+MODEL_VERSION = "1"
+
+class G2P(object):
+
+    def __init__(self, lang: str, infer_device: str='cpu'):
+
         super().__init__()
-        self.graphemes = ["<pad>", "<unk>", "</s>"] + list("abcdefghijklmnopqrstuvwxyzüöäß")
-        self.phonemes = ["<pad>", "<unk>", "<s>", "</s>"] + ['ts', 'ə', 'iː', 'oː', 'pf', 'aj', 'd', 'tʃ', 'm', 'œ', 'z', 'ɛ', 'ɲ', 't', 'ɟ', 'n̩', 'b', 'ɪ', 'kʰ', 'h', 'eː', 'ɔ', 'f', 'v', 'l̩', 'n', 'x', 'yː', 'p', 'c', 'aː', 'ç', 'uː', 'ʃ', 'øː', 'a', 'l', 'j', 'ɔʏ', 'cʰ', 'aw', 'ŋ', 'ɐ', 'ʊ', 'pʰ', 'ʁ', 's', 'ʏ', 'ɡ', 'tʰ', 'k', 'm̩']
 
-        self.g2idx = {g: idx for idx, g in enumerate(self.graphemes)}
-        self.idx2g = {idx: g for idx, g in enumerate(self.graphemes)}
+        self._cfg_path  = download_model_file(lang=lang, model=MODEL_NAME, version=MODEL_VERSION, relpath='config.yaml')
+        self._ckpt_path = download_model_file(lang=lang, model=MODEL_NAME, version=MODEL_VERSION, relpath='best.ckpt')
 
-        self.p2idx = {p: idx for idx, p in enumerate(self.phonemes)}
-        self.idx2p = {idx: p for idx, p in enumerate(self.phonemes)}
+        config = yaml.load( open(self._cfg_path, "r"), Loader=yaml.FullLoader)
+        self._graphemes = list(config['preprocessing']['graphemes'])
+        self._phonemes = config['preprocessing']['phonemes']
 
-        self.load_lexicon()
-        self.load_variables()
+        model_type = ModelType(config['model']['type'])
 
-    def load_lexicon(self):
+        self._symbols = G2PSymbols (self._graphemes, self._phonemes)
 
-        self.lexicon = {} # word -> [ phonemes ]
+        self._infer_device = infer_device
+        self._model = LightningTransformer.load_from_checkpoint(self._ckpt_path,
+                                                                model_type=model_type,
+                                                                config=config,
+                                                                symbols=self._symbols,
+                                                                map_location=infer_device)
+        self._model.eval()
 
-        with open (os.path.join(dirname, 'german_mfa.dict'), 'r') as lexf:
-            for line in lexf:
-                parts = line.strip().split('\t')
-                if len(parts) != 2:
-                    continue
+        self._lang = lang
 
-                graph = parts[0]
-                phonemes = parts[1].split(' ')
-                valid = True
-                for c in graph:
-                    if not c in self.graphemes:
-                        valid = False
-                        break
+        self._lex = Lexicon.load(lang)
 
-                if not valid:
-                    continue
-
-                self.lexicon[graph] = phonemes
+        self._word_tokenize = TweetTokenizer().tokenize
 
 
-    def load_variables(self):
-        self.variables = np.load(os.path.join(dirname,'checkpoint_de.npz'))
-        self.enc_emb = self.variables["enc_emb"]  # (33, 64). (len(graphemes), emb)
-        self.enc_w_ih = self.variables["enc_w_ih"]  # (3*128, 64)
-        self.enc_w_hh = self.variables["enc_w_hh"]  # (3*128, 128)
-        self.enc_b_ih = self.variables["enc_b_ih"]  # (3*128,)
-        self.enc_b_hh = self.variables["enc_b_hh"]  # (3*128,)
+    def predict(self, word:str) -> tuple [list[str], float]:
 
-        self.dec_emb = self.variables["dec_emb"]  # (56, 64). (len(phonemes), emb)
-        self.dec_w_ih = self.variables["dec_w_ih"]  # (3*128, 64)
-        self.dec_w_hh = self.variables["dec_w_hh"]  # (3*128, 128)
-        self.dec_b_ih = self.variables["dec_b_ih"]  # (3*128,)
-        self.dec_b_hh = self.variables["dec_b_hh"]  # (3*128,)
-        self.fc_w = self.variables["fc_w"]  # (56, 128)
-        self.fc_b = self.variables["fc_b"]  # (56,)
+        tokens = [self._symbols.start_token] + list(word.lower()) + [self._symbols.end_token]
 
-    def sigmoid(self, x):
-        return 1 / (1 + np.exp(-x))
+        d = self._symbols.g2idx
 
-    def grucell(self, x, h, w_ih, w_hh, b_ih, b_hh):
-        rzn_ih = np.matmul(x, w_ih.T) + b_ih
-        rzn_hh = np.matmul(h, w_hh.T) + b_hh
+        x = [d[t] for t in tokens]
 
-        rz_ih, n_ih = rzn_ih[:, :rzn_ih.shape[-1] * 2 // 3], rzn_ih[:, rzn_ih.shape[-1] * 2 // 3:]
-        rz_hh, n_hh = rzn_hh[:, :rzn_hh.shape[-1] * 2 // 3], rzn_hh[:, rzn_hh.shape[-1] * 2 // 3:]
+        with torch.no_grad():
+            inputs = torch.tensor([x], dtype=torch.long).to(device=self._infer_device)
+            out_indices, out_probs = self._model.generate(inputs, self._symbols.start_token_pidx)
 
-        rz = self.sigmoid(rz_ih + rz_hh)
-        r, z = np.split(rz, 2, -1)
+        phonemes = self._symbols.convert_ids_to_phonemes(out_indices[0].cpu().tolist()[1:])
 
-        n = np.tanh(n_ih + r * n_hh)
-        h = (1 - z) * n + z * h
+        probs = out_probs[0].cpu().tolist()[1:]
 
-        return h
+        prob = sum(probs) / float (len(probs)) if len(probs)>0 else 0.0
 
-    def gru(self, x, steps, w_ih, w_hh, b_ih, b_hh, h0=None):
-        if h0 is None:
-            h0 = np.zeros((x.shape[0], w_hh.shape[1]), np.float32)
-        h = h0  # initial hidden state
-        outputs = np.zeros((x.shape[0], steps, w_hh.shape[1]), np.float32)
-        for t in range(steps):
-            h = self.grucell(x[:, t, :], h, w_ih, w_hh, b_ih, b_hh)  # (b, h)
-            outputs[:, t, ::] = h
-        return outputs
+        return phonemes, prob
 
-    def encode(self, word):
-        chars = list(word) + ["</s>"]
-        x = [self.g2idx.get(char, self.g2idx["<unk>"]) for char in chars]
-        x = np.take(self.enc_emb, np.expand_dims(x, 0), axis=0)
 
-        return x
-
-    def predict(self, word):
-        # encoder
-        enc = self.encode(word)
-        enc = self.gru(enc, len(word) + 1, self.enc_w_ih, self.enc_w_hh,
-                       self.enc_b_ih, self.enc_b_hh, h0=np.zeros((1, self.enc_w_hh.shape[-1]), np.float32))
-        last_hidden = enc[:, -1, :]
-
-        # decoder
-        dec = np.take(self.dec_emb, [2], axis=0)  # 2: <s>
-        h = last_hidden
-
-        preds = []
-        for i in range(20):
-            h = self.grucell(dec, h, self.dec_w_ih, self.dec_w_hh, self.dec_b_ih, self.dec_b_hh)  # (b, h)
-            logits = np.matmul(h, self.fc_w.T) + self.fc_b
-            pred = logits.argmax()
-            if pred == 3: break  # 3: </s>
-            preds.append(pred)
-            dec = np.take(self.dec_emb, [pred], axis=0)
-
-        preds = [self.idx2p.get(idx, "<unk>") for idx in preds]
-        return preds
-
-    def tokenize (self, text):
+    def tokenize (self, text:str) -> list[str]:
 
         # preprocessing
 
@@ -140,7 +87,7 @@ class G2p(object):
         text = text.replace("d.h.", "das heißt")
 
         # tokenization
-        tokens = word_tokenize(text)
+        tokens = self._word_tokenize(text)
 
         res = []
         for token in tokens:
@@ -160,43 +107,35 @@ class G2p(object):
             return self.lexicon[token]
         return None
 
-    def __call__(self, text):
-        # preprocessing
+    def __call__(self, text:str) -> list[str]:
 
-        text = text.lower().encode('latin1', errors='ignore').decode('latin1')
-        text = text.replace("z.b.", "zum beispiel")
-        text = text.replace("d.h.", "das heißt")
-
-        # tokenization
-        words = word_tokenize(text)
-        #breakpoint()
-        # tokens = pos_tag(words)  # tuples of (word, tag)
+        tokens = self.tokenize(text)
 
         prons = []
-        for token in words:
-
-            if re.search("[0-9]", token):
-                token = num2words(token, lang='de')
+        for token in tokens:
 
             if re.search("[a-züöäß]", token) is None:
                 pron = [token]
-            elif token in self.lexicon:
-                pron = self.lexicon[token]
+            elif token in self._lex:
+                pron = self._lex[token]
             else: # predict for oov
-                pron = self.predict(token)
+                pron, _ = self.predict(token)
                 # print (f"predicted: {token} [{pron}]")
 
             prons.extend(pron)
-            prons.extend([" "])
+            prons.append(" ")
 
         return prons[:-1]
+
+
+
 
 if __name__ == '__main__':
     texts = ["Ich habe 250 Euro in meiner Tasche.", # number -> spell-out
              "Verschiedene Haustiere, z.B. Hunde und Katzen", # z.B. -> zum Beispiel
              "KI ist ein Teilgebiet der Informatik, das sich mit der Automatisierung intelligenten Verhaltens und dem maschinellen Lernen befasst.",
              "Dazu gehören nichtsteroidale Antirheumatika (z. B. Acetylsalicylsäure oder Ibuprofen), Lithium, Digoxin, Dofetilid oder Fluconazol"]
-    g2p = G2p()
+    g2p = G2P('de')
     for text in texts:
         out = g2p(text)
         print(out)

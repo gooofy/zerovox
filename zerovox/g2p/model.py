@@ -12,7 +12,7 @@ from torch.optim import AdamW
 from torch.optim.lr_scheduler import LambdaLR
 from lightning import LightningModule
 
-from .data import G2PTokenizer
+from .data import G2PSymbols
 
 class ModelType(Enum):
     TRANSFORMER = 'transformer'
@@ -52,28 +52,6 @@ class PositionalEncoding(torch.nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:         # shape: [T, N]
         x = x + self.scale * self.pe[:x.size(0), :]
         return self.dropout(x)
-
-# class Model(torch.nn.Module, ABC):
-
-#     def __init__(self):
-#         super().__init__()
-
-#     @abstractmethod
-#     def generate(self, batch: Dict[str, torch.Tensor]) -> Tuple[torch.Tensor, torch.Tensor]:
-#         """
-#         Generates phonemes for a text batch
-
-#         Args:
-#           batch (Dict[str, torch.Tensor]): Dictionary containing 'text' (tokenized text tensor),
-#                        'text_len' (text length tensor),
-#                        'start_index' (phoneme start indices for AutoregressiveTransformer)
-
-#         Returns:
-#           Tuple[torch.Tensor, torch.Tensor]: The predictions. The first element is a tensor (phoneme tokens)
-#           and the second element  is a tensor (phoneme token probabilities)
-#         """
-#         pass
-
 
 # class ForwardTransformer(Model):
 
@@ -145,18 +123,7 @@ class PositionalEncoding(torch.nn.Module):
 #         tokens, logits = get_dedup_tokens(x)
 #         return tokens, logits
 
-#     @classmethod
-#     def from_config(cls, config: dict, tokenizer: G2PTokenizer) -> 'ForwardTransformer':
-#         # preprocessor = Preprocessor.from_config(config)
-#         return ForwardTransformer(
-#             encoder_vocab_size=tokenizer.num_graphemes,  # preprocessor.text_tokenizer.vocab_size,
-#             decoder_vocab_size=tokenizer.num_phonemes,   # preprocessor.phoneme_tokenizer.vocab_size,
-#             d_model=config['model']['d_model'],
-#             d_fft=config['model']['d_fft'],
-#             layers=config['model']['layers'],
-#             dropout=config['model']['dropout'],
-#             heads=config['model']['heads']
-#         )
+
 
 def _generate_square_subsequent_mask(sz: int) -> torch.Tensor:
     mask = torch.triu(torch.ones(sz, sz), 1)
@@ -220,64 +187,61 @@ class AutoregressiveTransformer(torch.nn.Module):
         output = output.transpose(0, 1)
         return output
 
-    # @torch.jit.export
-    # def generate(self,
-    #              batch: Dict[str, torch.Tensor],
-    #              max_len: int = 100) -> Tuple[torch.Tensor, torch.Tensor]:
-    #     """
-    #     Inference pass on a batch of tokenized texts.
+    def generate(self,
+                 input: torch.Tensor,
+                 start_token_pidx: int,
+                 max_len: int = 100) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Inference pass on a batch of tokenized texts.
 
-    #     Args:
-    #       batch (Dict[str, torch.Tensor]): Dictionary containing the input to the model with entries 'text'
-    #                                        and 'start_index'
-    #       max_len (int): Max steps of the autoregressive inference loop.
+        Args:
+          batch (torch.Tensor): tensor of batch of input token indices
+          start_token_pidx: start token phoneme index (from symbols)
+          max_len (int): Max steps of the autoregressive inference loop.
 
-    #     Returns:
-    #       Tuple: Predictions. The first element is a Tensor of phoneme tokens and the second element
-    #              is a Tensor of phoneme token probabilities.
-    #     """
+        Returns:
+          Tuple: Predictions. The first element is a Tensor of phoneme tokens and the second element
+                 is a Tensor of phoneme token probabilities.
+        """
 
-    #     input = batch['text']
-    #     start_index = batch['start_index']
+        batch_size = input.size(0)
+        input = input.transpose(0, 1)          # shape: [T, N]
+        src_pad_mask = _make_len_mask(input).to(input.device)
+        with torch.no_grad():
+            input = self.encoder(input)
+            input = self.pos_encoder(input)
+            input = self.transformer.encoder(input,
+                                             src_key_padding_mask=src_pad_mask)
+            out_indices = torch.tensor([[start_token_pidx] * batch_size], dtype=torch.long)
+            out_logits = []
+            for i in range(max_len):
+                tgt_mask = _generate_square_subsequent_mask(i + 1).to(input.device)
+                output = self.decoder(out_indices)
+                output = self.pos_decoder(output)
+                output = self.transformer.decoder(output,
+                                                  input,
+                                                  memory_key_padding_mask=src_pad_mask,
+                                                  tgt_mask=tgt_mask)
+                output = self.fc_out(output)  # shape: [T, N, V]
+                out_tokens = output.argmax(2)[-1:, :]
+                out_logits.append(output[-1:, :, :])
 
-    #     batch_size = input.size(0)
-    #     input = input.transpose(0, 1)          # shape: [T, N]
-    #     src_pad_mask = _make_len_mask(input).to(input.device)
-    #     with torch.no_grad():
-    #         input = self.encoder(input)
-    #         input = self.pos_encoder(input)
-    #         input = self.transformer.encoder(input,
-    #                                          src_key_padding_mask=src_pad_mask)
-    #         out_indices = start_index.unsqueeze(0)
-    #         out_logits = []
-    #         for i in range(max_len):
-    #             tgt_mask = _generate_square_subsequent_mask(i + 1).to(input.device)
-    #             output = self.decoder(out_indices)
-    #             output = self.pos_decoder(output)
-    #             output = self.transformer.decoder(output,
-    #                                               input,
-    #                                               memory_key_padding_mask=src_pad_mask,
-    #                                               tgt_mask=tgt_mask)
-    #             output = self.fc_out(output)  # shape: [T, N, V]
-    #             out_tokens = output.argmax(2)[-1:, :]
-    #             out_logits.append(output[-1:, :, :])
+                out_indices = torch.cat([out_indices, out_tokens], dim=0)
+                stop_rows, _ = torch.max(out_indices == self.end_index, dim=0)
+                if torch.sum(stop_rows) == batch_size:
+                    break
 
-    #             out_indices = torch.cat([out_indices, out_tokens], dim=0)
-    #             stop_rows, _ = torch.max(out_indices == self.end_index, dim=0)
-    #             if torch.sum(stop_rows) == batch_size:
-    #                 break
-
-    #     out_indices = out_indices.transpose(0, 1)  # out shape [N, T]
-    #     out_logits = torch.cat(out_logits, dim=0).transpose(0, 1) # out shape [N, T, V]
-    #     out_logits = out_logits.softmax(-1)
-    #     out_probs = torch.ones((out_indices.size(0), out_indices.size(1)))
-    #     for i in range(out_indices.size(0)):
-    #         for j in range(0, out_indices.size(1)-1):
-    #             out_probs[i, j+1] = out_logits[i, j].max()
-    #     return out_indices, out_probs
+        out_indices = out_indices.transpose(0, 1)  # out shape [N, T]
+        out_logits = torch.cat(out_logits, dim=0).transpose(0, 1) # out shape [N, T, V]
+        out_logits = out_logits.softmax(-1)
+        out_probs = torch.ones((out_indices.size(0), out_indices.size(1)))
+        for i in range(out_indices.size(0)):
+            for j in range(0, out_indices.size(1)-1):
+                out_probs[i, j+1] = out_logits[i, j].max()
+        return out_indices, out_probs
 
     @classmethod
-    def from_config(cls, config: Dict[str, Any], tokenizer: G2PTokenizer) -> 'AutoregressiveTransformer':
+    def from_config(cls, config: Dict[str, Any], symbols: G2PSymbols) -> 'AutoregressiveTransformer':
         """
         Initializes an autoregressive Transformer model from a config.
         Args:
@@ -289,9 +253,9 @@ class AutoregressiveTransformer(torch.nn.Module):
 
         #preprocessor = Preprocessor.from_config(config)
         return AutoregressiveTransformer(
-            encoder_vocab_size=tokenizer.num_graphemes,  # preprocessor.text_tokenizer.vocab_size,
-            decoder_vocab_size=tokenizer.num_phonemes,   # preprocessor.phoneme_tokenizer.vocab_size,
-            end_index=tokenizer.end_token_pidx,          # preprocessor.phoneme_tokenizer.end_index,
+            encoder_vocab_size=symbols.num_graphemes,
+            decoder_vocab_size=symbols.num_phonemes,
+            end_index=symbols.end_token_pidx,
             d_model=config['model']['d_model'],
             d_fft=config['model']['d_fft'],
             encoder_layers=config['model']['layers'],
@@ -380,7 +344,7 @@ def get_lr_scheduler(optimizer, warmup_epochs, total_epochs, min_lr=0):
 
 class LightningTransformer(LightningModule):
 
-    def __init__(self, model_type: ModelType, config: Dict[str, Any], tokenizer: G2PTokenizer, val_dir: os.PathLike, lr: float,
+    def __init__(self, model_type: ModelType, config: Dict[str, Any], symbols: G2PSymbols, val_dir: os.PathLike, lr: float,
                  weight_decay:float, max_epochs:int, warmup_epochs:int):
         super().__init__()
 
@@ -389,16 +353,16 @@ class LightningTransformer(LightningModule):
         self._config        = config
         self._lr            = lr
         self._val_dir       = val_dir
-        self._tokenizer     = tokenizer
+        self._symbols       = symbols
         self._weight_decay  = weight_decay
         self._max_epochs    = max_epochs
         self._warmup_epochs = warmup_epochs
 
         if model_type is ModelType.TRANSFORMER:
-            # FIXME model = ForwardTransformer.from_config(config, tokenizer)
+            # FIXME model = ForwardTransformer.from_config(config, symbols)
             assert False
         elif model_type is ModelType.AUTOREG_TRANSFORMER:
-            self._model = AutoregressiveTransformer.from_config(config, tokenizer)
+            self._model = AutoregressiveTransformer.from_config(config, symbols)
         else:
             raise ValueError(f'Unsupported model type: {model_type}. Supported types: {[t.value for t in ModelType]}')
         
@@ -438,9 +402,9 @@ class LightningTransformer(LightningModule):
             with open(path, "a") as f:
                 for inp, tar, pred in zip(inputs, target, prediction):
 
-                    word = self._tokenizer.convert_ids_to_graphemes(inp.tolist())
-                    phone_target = self._tokenizer.convert_ids_to_phonemes(tar.tolist())
-                    phone_pred = self._tokenizer.convert_ids_to_phonemes(pred.argmax(1).tolist())
+                    word = self._symbols.convert_ids_to_graphemes(inp.tolist())
+                    phone_target = self._symbols.convert_ids_to_phonemes(tar.tolist())
+                    phone_pred = self._symbols.convert_ids_to_phonemes(pred.argmax(1).tolist())
 
                     f.write(f'{"".join(word[1:])}: {"".join(phone_pred)} vs {"".join(phone_target)}\n')
 
@@ -472,23 +436,20 @@ class LightningTransformer(LightningModule):
 
         self._validation_step_outputs.clear()
 
-# def load_checkpoint(checkpoint_path: str, device: str = 'cpu') -> Tuple[LightningModule, Dict[str, Any]]:
-#     """
-#     Initializes a model from a checkpoint (.pt file).
+    def generate(self,
+                 input: torch.Tensor,
+                 start_token_pidx: int,
+                 max_len: int = 100) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Inference pass on a batch of tokenized texts.
 
-#     Args:
-#         checkpoint_path (str): Path to checkpoint file (.pt).
-#         device (str): Device to put the model to ('cpu' or 'cuda').
+        Args:
+          batch (torch.Tensor): tensor of batch of input token indices
+          start_token_pidx: start token phoneme index (from symbols)
+          max_len (int): Max steps of the autoregressive inference loop.
 
-#     Returns: Tuple: The first element is a Model (the loaded model)
-#              and the second element is a dictionary (config).
-#     """
-
-#     device = torch.device(device)
-#     checkpoint = torch.load(checkpoint_path, map_location=device)
-#     model_type = checkpoint['config']['model']['type']
-#     model_type = ModelType(model_type)
-#     model = create_model(model_type, config=checkpoint['config'])
-#     model.load_state_dict(checkpoint['model'])
-#     model.eval()
-#     return model, checkpoint
+        Returns:
+          Tuple: Predictions. The first element is a Tensor of phoneme tokens and the second element
+                 is a Tensor of phoneme token probabilities.
+        """
+        return self._model.generate(input, start_token_pidx, max_len=max_len)

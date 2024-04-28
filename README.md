@@ -1,6 +1,15 @@
+G2P Model Training
+==================
+
+run training:
+
+    scripts/train_de_autoreg.sh
+
+
+
+
 Credits
 =======
-
 
 Based on Efficientspeech by Rowel Atienza
 

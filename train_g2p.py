@@ -29,10 +29,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser.add_argument("config", type=str, help="Path to config.yaml")
-    parser.add_argument("lex", type=str, help="Path to lexicon.dict")
 
     choices = ['cpu', 'gpu']
     parser.add_argument("--accelerator", type=str, default=choices[0], choices=choices)
+    parser.add_argument("--lang", type=str, default="de", help="language")
     parser.add_argument("--num_workers", type=int, default=4)
     parser.add_argument("--max_epochs", type=int, default=100)
     parser.add_argument("--warmup_epochs", type=int, default=10)
@@ -63,7 +63,7 @@ if __name__ == "__main__":
 
     config = yaml.load( open(args.config, "r"), Loader=yaml.FullLoader)
 
-    datamodule = G2PDataModule (config, args.lex, num_workers=args.num_workers, batch_size=args.batch_size)
+    datamodule = G2PDataModule (config, args.lang, num_workers=args.num_workers, batch_size=args.batch_size)
 
     model_type = ModelType(config['model']['type'])
 
@@ -71,7 +71,7 @@ if __name__ == "__main__":
         model = LightningTransformer.load_from_checkpoint(args.checkpoint,
                                                           model_type=model_type,
                                                           config=config,
-                                                          tokenizer=datamodule.tokenizer,
+                                                          symbols=datamodule.symbols,
                                                           val_dir=Path(args.out_dir) / 'validation',
                                                           lr=args.lr,
                                                           weight_decay=args.weight_decay,
@@ -82,7 +82,7 @@ if __name__ == "__main__":
         shutil.rmtree(args.out_dir, ignore_errors=True)
         model = LightningTransformer(model_type=model_type,
                                      config=config,
-                                     tokenizer=datamodule.tokenizer,
+                                     symbols=datamodule.symbols,
                                      val_dir=Path(args.out_dir) / 'validation',
                                      lr=args.lr,
                                      weight_decay=args.weight_decay,

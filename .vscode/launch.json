@@ -17,7 +17,8 @@
                      "--lr=0.0001",
                      "--batch-size=512",
                      "--out-dir=models/de_autoreg_1",
-                     "configs/g2p_de_autoreg.yaml", "lexicon/german_mfa.dict"],
+                     "--lang=de",
+                     "configs/g2p_de_autoreg.yaml"],
             "cwd": "${workspaceFolder}",
             "justMyCode": false
         },
@@ -38,6 +39,16 @@
                      "configs/g2p_de_autoreg.yaml", "lexicon/german_mfa.dict"],
             "cwd": "${workspaceFolder}",
             "justMyCode": false
-        }
+        },
+        {
+            "name": "g2p",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "zerovox/g2p/g2p.py",
+            "console": "integratedTerminal",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "justMyCode": false
+        },
     ]
 }

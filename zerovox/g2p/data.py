@@ -7,62 +7,14 @@ import torch
 from torch.utils import data
 from lightning import LightningDataModule
 
+from zerovox.lexicon import Lexicon
+
 #DEBUG_LIMIT = 8192
 #DEBUG_LIMIT =128
 DEBUG_LIMIT = 0
 
-def load_lex(lexicon_path:os.PathLike, graphemes: set[str], phoneset: set[str]) -> dict [str, str]:
 
-    cnt = 0
-
-    with open (lexicon_path, 'r') as lexf:
-        for _ in lexf:
-            cnt += 1
-
-    lexicon = {} # word -> [ phonemes ]
-
-    extra_graphemes = set()
-
-    with open (lexicon_path, 'r') as lexf:
-        for line in tqdm(lexf, total=cnt, desc='load lexicon'):
-            parts = line.strip().split('\t')
-            if len(parts) != 2:
-                continue
-
-            graph = parts[0]
-
-            if graph in lexicon:
-                continue
-
-            phonemes = parts[1].split(' ')
-            valid = True
-            for c in graph:
-                if not c in graphemes:
-                    valid = False
-                    extra_graphemes.add(c)
-                    print (f"warning: skipping invalid entry {graph} : {phonemes} extra grapheme: {c}")
-                    #break
-
-            if not valid:
-                continue
-
-            for phoneme in phonemes:
-                if phoneme not in phoneset:
-                    raise Exception (f"illegal phone {phoneme} detect in entry {graph}")
-                
-            # print (f"{graph} : {phonemes}")
-
-            lexicon[graph] = phonemes
-
-            if DEBUG_LIMIT and len(lexicon) >= DEBUG_LIMIT:
-                break
-
-    print (f"extra graphemes detected: {sorted(extra_graphemes)}")
-
-    return lexicon
-
-
-class G2PTokenizer:
+class G2PSymbols:
 
     def __init__(self, graphemes: list[str], phonemes: list[str]):
 
@@ -158,28 +110,28 @@ class G2PTokenizer:
 
 class G2PDataset(data.Dataset):
 
-    def __init__(self, words, prons, tokenizer):
+    def __init__(self, words: list[str], prons : list[str], symbols:G2PSymbols):
         """
         words: list of words. e.g., ["w o r d", ]
         prons: list of prons. e.g., ['W ER1 D',]
         """
         self.words = words
         self.prons = prons
-        self._tokenizer = tokenizer
+        self._symbols = symbols
 
     def _encode_x(self, inp):
-        tokens = [self._tokenizer.start_token] + inp.lower().split() + [self._tokenizer.end_token]
+        tokens = [self._symbols.start_token] + inp.lower().split() + [self._symbols.end_token]
 
-        d = self._tokenizer.g2idx
+        d = self._symbols.g2idx
 
         x = [d[t] for t in tokens]
         return x
 
     def _encode_y(self, inp):
 
-        tokens = [self._tokenizer.start_token] + inp.split() + [self._tokenizer.end_token]
+        tokens = [self._symbols.start_token] + inp.split() + [self._symbols.end_token]
 
-        d = self._tokenizer.p2idx
+        d = self._symbols.p2idx
 
         y = [d[t] for t in tokens]
 
@@ -197,30 +149,25 @@ class G2PDataset(data.Dataset):
         #return {'graph_idxs': x, 'graph': word, decoder_input, y, y_seqlen, pron}
         return {'graph_idxs': x, 'graphemes': word, 'phone_idxs': y, 'phonemes': pron}
 
-
-
 class G2PDataModule(LightningDataModule):
 
-    def __init__ (self, config: Dict[str, Any], lex_path: os.PathLike, num_workers:int=12, batch_size:int=32):
+    def __init__ (self, config: Dict[str, Any], lang: str, num_workers:int=12, batch_size:int=32):
         super(G2PDataModule, self).__init__()
 
         self._batch_size = batch_size
         self._num_workers = num_workers
 
-        self._graphemes = set(list(config['preprocessing']['graphemes']))
+        self._graphemes = sorted(list(config['preprocessing']['graphemes']))
+        self._phonemes = sorted(config['preprocessing']['phonemes'])
 
-        self._phonemes = set(config['preprocessing']['phonemes'])
+        self._lexicon = Lexicon.load(lang)
+        self._lexicon.verify_symbols(self._graphemes, self._phonemes)
 
-        self._lexicon = load_lex(lex_path, self._graphemes, self._phonemes)
-
-        self._graphemes = sorted(list(self._graphemes))
-        self._phonemes = sorted(list(self._phonemes))
-
-        self._tokenizer = G2PTokenizer (self._graphemes, self._phonemes)
+        self._symbols = G2PSymbols (self._graphemes, self._phonemes)
 
     @property
-    def tokenizer(self):
-        return self._tokenizer
+    def symbols(self):
+        return self._symbols
 
     def prepare_data(self) -> None:
 
@@ -240,8 +187,8 @@ class G2PDataModule(LightningDataModule):
 
             print (f"# entries: train: {len(self._train_words)}, val: {len(self._val_words)}")
 
-            self._train_dataset = G2PDataset(self._train_words, self._train_prons, self._tokenizer)
-            self._val_dataset   = G2PDataset(self._val_words  , self._val_prons  , self._tokenizer)
+            self._train_dataset = G2PDataset(self._train_words, self._train_prons, self._symbols)
+            self._val_dataset   = G2PDataset(self._val_words  , self._val_prons  , self._symbols)
 
         # Assign test dataset for use in dataloader(s)
         if stage == "test":
@@ -271,9 +218,9 @@ class G2PDataModule(LightningDataModule):
         padf = lambda key, maxlen, pad_token: [sample[key]+[pad_token]*(maxlen-len(sample[key])) for sample in batch]
 
         batch_padded = {
-                'graph_idxs' : torch.tensor(padf ('graph_idxs', x_maxlen, self._tokenizer.pad_token_gidx), dtype=torch.long),
+                'graph_idxs' : torch.tensor(padf ('graph_idxs', x_maxlen, self._symbols.pad_token_gidx), dtype=torch.long),
                 'graphemes'  : [sample['graphemes'] for sample in batch],
-                'phone_idxs' : torch.tensor(padf ('phone_idxs', y_maxlen, self._tokenizer.pad_token_pidx), dtype=torch.long),
+                'phone_idxs' : torch.tensor(padf ('phone_idxs', y_maxlen, self._symbols.pad_token_pidx), dtype=torch.long),
                 'phonemes'   : [sample['phonemes'] for sample in batch],
             }
 
