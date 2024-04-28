@@ -103,8 +103,8 @@ class G2P(object):
         return res
 
     def lookup (self, token):
-        if token in self.lexicon:
-            return self.lexicon[token]
+        if token in self._lex:
+            return self._lex[token]
         return None
 
     def __call__(self, text:str) -> list[str]:

@@ -160,4 +160,4 @@ cython_debug/
 #.idea/
 
 models
-lexicon/german_mfa.dict
+preprocessed_data

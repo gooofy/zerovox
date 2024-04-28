@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "train",
+            "name": "train g2p de",
             "type": "debugpy",
             "request": "launch",
             "program": "train_g2p.py",
@@ -23,7 +23,7 @@
             "justMyCode": false
         },
         {
-            "name": "train cont",
+            "name": "train g2p de cont",
             "type": "debugpy",
             "request": "launch",
             "program": "train_g2p.py",
@@ -41,7 +41,7 @@
             "justMyCode": false
         },
         {
-            "name": "g2p",
+            "name": "g2p inference",
             "type": "debugpy",
             "request": "launch",
             "program": "zerovox/g2p/g2p.py",
@@ -50,5 +50,14 @@
             "cwd": "${workspaceFolder}",
             "justMyCode": false
         },
+        {
+            "name": "align cv 0001",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "utils/align.py",
+            "console": "integratedTerminal",
+            "args": ["--oovs=oovs.dict",
+                     "configs/corpora/cv_de_100/de_cv_speaker_0.yaml"]
+        },       
     ]
 }
