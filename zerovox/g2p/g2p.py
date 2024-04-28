@@ -7,8 +7,10 @@ https://www.github.com/kyubyong/g2p
 adaptation to german / dp models 2024 by G. Bartsch
 '''
 
+import os
 import re
 import yaml
+import argparse
 from pathlib import Path
 
 import torch
@@ -21,22 +23,25 @@ from zerovox.lexicon import Lexicon
 from zerovox.g2p.data import G2PSymbols
 from zerovox.g2p.model import ModelType, LightningTransformer
 
-
 MODEL_NAME    = "zerovox-g2p-autoreg"
 MODEL_VERSION = "1"
 
 class G2P(object):
 
-    def __init__(self, lang: str, infer_device: str='cpu'):
+    def __init__(self, lang: str, infer_device: str='cpu', model_path: os.PathLike=None):
 
         super().__init__()
 
-        self._cfg_path  = download_model_file(lang=lang, model=MODEL_NAME, version=MODEL_VERSION, relpath='config.yaml')
-        self._ckpt_path = download_model_file(lang=lang, model=MODEL_NAME, version=MODEL_VERSION, relpath='best.ckpt')
+        if model_path:
+            self._cfg_path  = Path(model_path) / 'config.yaml'
+            self._ckpt_path = Path(model_path) / 'best.ckpt'
+        else:
+            self._cfg_path  = download_model_file(lang=lang, model=MODEL_NAME, version=MODEL_VERSION, relpath='config.yaml')
+            self._ckpt_path = download_model_file(lang=lang, model=MODEL_NAME, version=MODEL_VERSION, relpath='best.ckpt')
 
         config = yaml.load( open(self._cfg_path, "r"), Loader=yaml.FullLoader)
-        self._graphemes = list(config['preprocessing']['graphemes'])
-        self._phonemes = config['preprocessing']['phonemes']
+        self._graphemes = sorted(list(config['preprocessing']['graphemes']))
+        self._phonemes = sorted(config['preprocessing']['phonemes'])
 
         model_type = ModelType(config['model']['type'])
 
@@ -60,15 +65,18 @@ class G2P(object):
     def predict(self, word:str) -> tuple [list[str], float]:
 
         tokens = [self._symbols.start_token] + list(word.lower()) + [self._symbols.end_token]
+        #print(f"tokens: {tokens}")
 
         d = self._symbols.g2idx
 
         x = [d[t] for t in tokens]
+        #print(f"-> x: {x}")
 
         with torch.no_grad():
             inputs = torch.tensor([x], dtype=torch.long).to(device=self._infer_device)
-            out_indices, out_probs = self._model.generate(inputs, self._symbols.start_token_pidx)
+            out_indices, out_probs = self._model.generate(inputs)
 
+        #print(f"-> out_indices[0]: {out_indices[0]}")
         phonemes = self._symbols.convert_ids_to_phonemes(out_indices[0].cpu().tolist()[1:])
 
         probs = out_probs[0].cpu().tolist()[1:]
@@ -127,15 +135,36 @@ class G2P(object):
 
         return prons[:-1]
 
-
-
-
 if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser()
+
+    choices = ['cpu', 'gpu']
+    parser.add_argument("--infer-device", type=str, default=choices[0], choices=choices)
+    parser.add_argument("--lang", type=str, default="de")
+    parser.add_argument("--model-path", type=str)
+
+    args = parser.parse_args()
+
+    g2p = G2P(lang=args.lang, infer_device=args.infer_device, model_path=args.model_path)
+
     texts = ["Ich habe 250 Euro in meiner Tasche.", # number -> spell-out
              "Verschiedene Haustiere, z.B. Hunde und Katzen", # z.B. -> zum Beispiel
              "KI ist ein Teilgebiet der Informatik, das sich mit der Automatisierung intelligenten Verhaltens und dem maschinellen Lernen befasst.",
              "Dazu gehören nichtsteroidale Antirheumatika (z. B. Acetylsalicylsäure oder Ibuprofen), Lithium, Digoxin, Dofetilid oder Fluconazol"]
-    g2p = G2P('de')
+
+    phonemes, p = g2p.predict('Acetylsalicylsäure')
+    print (f'Acetylsalicylsäure: {" ".join(phonemes)}')
+
+    phonemes, p = g2p.predict('Wissenschaftler')
+    print (f'Wissenschaftler: {" ".join(phonemes)}')
+
+    phonemes, p = g2p.predict('der')
+    print (f'der: {" ".join(phonemes)}')
+
+    phonemes, p = g2p.predict('aber')
+    print (f'aber: {" ".join(phonemes)}')
+
     for text in texts:
         out = g2p(text)
         print(out)

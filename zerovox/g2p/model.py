@@ -131,33 +131,32 @@ def _generate_square_subsequent_mask(sz: int) -> torch.Tensor:
     return mask
 
 
-def _make_len_mask(inp: torch.Tensor) -> torch.Tensor:
-    return (inp == 0).transpose(0, 1)
+def _make_len_mask(inp: torch.Tensor, pad_index: int) -> torch.Tensor:
+    return (inp == pad_index).transpose(0, 1)
 
 class AutoregressiveTransformer(torch.nn.Module):
 
     def __init__(self,
-                 encoder_vocab_size: int,
-                 decoder_vocab_size: int,
-                 end_index: int,
+                 symbols: G2PSymbols,
                  d_model=512,
                  d_fft=1024,
                  encoder_layers=4,
                  decoder_layers=4,
                  dropout=0.1,
                  heads=1):
+        
         super().__init__()
 
-        self.end_index = end_index
+        self._symbols = symbols
         self.d_model = d_model
-        self.encoder = torch.nn.Embedding(encoder_vocab_size, d_model)
+        self.encoder = torch.nn.Embedding(symbols.num_graphemes, d_model)
         self.pos_encoder = PositionalEncoding(d_model, dropout)
-        self.decoder = torch.nn.Embedding(decoder_vocab_size, d_model)
+        self.decoder = torch.nn.Embedding(symbols.num_phonemes, d_model)
         self.pos_decoder = PositionalEncoding(d_model, dropout)
         self.transformer = torch.nn.Transformer(d_model=d_model, nhead=heads, num_encoder_layers=encoder_layers,
                                                 num_decoder_layers=decoder_layers, dim_feedforward=d_fft,
                                                 dropout=dropout, activation='relu')
-        self.fc_out = torch.nn.Linear(d_model, decoder_vocab_size)
+        self.fc_out = torch.nn.Linear(d_model, symbols.num_phonemes)
 
     def __call__(self, src: torch.Tensor, trg: torch.Tensor):
         """
@@ -171,8 +170,8 @@ class AutoregressiveTransformer(torch.nn.Module):
 
         trg_mask = _generate_square_subsequent_mask(len(trg)).to(trg.device)
 
-        src_pad_mask = _make_len_mask(src).to(trg.device)
-        trg_pad_mask = _make_len_mask(trg).to(trg.device)
+        src_pad_mask = _make_len_mask(src, self._symbols.pad_token_gidx).to(src.device)
+        trg_pad_mask = _make_len_mask(trg, self._symbols.pad_token_pidx).to(trg.device)
 
         src = self.encoder(src)
         src = self.pos_encoder(src)
@@ -189,14 +188,12 @@ class AutoregressiveTransformer(torch.nn.Module):
 
     def generate(self,
                  input: torch.Tensor,
-                 start_token_pidx: int,
                  max_len: int = 100) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Inference pass on a batch of tokenized texts.
 
         Args:
           batch (torch.Tensor): tensor of batch of input token indices
-          start_token_pidx: start token phoneme index (from symbols)
           max_len (int): Max steps of the autoregressive inference loop.
 
         Returns:
@@ -206,13 +203,13 @@ class AutoregressiveTransformer(torch.nn.Module):
 
         batch_size = input.size(0)
         input = input.transpose(0, 1)          # shape: [T, N]
-        src_pad_mask = _make_len_mask(input).to(input.device)
+        src_pad_mask = _make_len_mask(input, self._symbols.pad_token_gidx).to(input.device)
         with torch.no_grad():
             input = self.encoder(input)
             input = self.pos_encoder(input)
             input = self.transformer.encoder(input,
                                              src_key_padding_mask=src_pad_mask)
-            out_indices = torch.tensor([[start_token_pidx] * batch_size], dtype=torch.long)
+            out_indices = torch.tensor([[self._symbols.start_token_pidx] * batch_size], dtype=torch.long)
             out_logits = []
             for i in range(max_len):
                 tgt_mask = _generate_square_subsequent_mask(i + 1).to(input.device)
@@ -227,7 +224,7 @@ class AutoregressiveTransformer(torch.nn.Module):
                 out_logits.append(output[-1:, :, :])
 
                 out_indices = torch.cat([out_indices, out_tokens], dim=0)
-                stop_rows, _ = torch.max(out_indices == self.end_index, dim=0)
+                stop_rows, _ = torch.max(out_indices == self._symbols.end_token_pidx, dim=0)
                 if torch.sum(stop_rows) == batch_size:
                     break
 
@@ -252,10 +249,7 @@ class AutoregressiveTransformer(torch.nn.Module):
         """
 
         #preprocessor = Preprocessor.from_config(config)
-        return AutoregressiveTransformer(
-            encoder_vocab_size=symbols.num_graphemes,
-            decoder_vocab_size=symbols.num_phonemes,
-            end_index=symbols.end_token_pidx,
+        return AutoregressiveTransformer(symbols,
             d_model=config['model']['d_model'],
             d_fft=config['model']['d_fft'],
             encoder_layers=config['model']['layers'],
@@ -438,7 +432,6 @@ class LightningTransformer(LightningModule):
 
     def generate(self,
                  input: torch.Tensor,
-                 start_token_pidx: int,
                  max_len: int = 100) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Inference pass on a batch of tokenized texts.
@@ -452,4 +445,4 @@ class LightningTransformer(LightningModule):
           Tuple: Predictions. The first element is a Tensor of phoneme tokens and the second element
                  is a Tensor of phoneme token probabilities.
         """
-        return self._model.generate(input, start_token_pidx, max_len=max_len)
+        return self._model.generate(input, max_len=max_len)

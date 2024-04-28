@@ -94,9 +94,11 @@ if __name__ == "__main__":
     checkpoint_callback = ForgivingModelCheckpoint(
         monitor='val',
         dirpath=Path(args.out_dir) / 'checkpoints',
-        filename='epoch={epoch:02d}-loss={val:.2f}',
+        #filename='epoch={epoch:02d}-loss={val:.5f}',
+        filename='best',
         auto_insert_metric_name=False,
-        save_top_k=2,
+        #save_top_k=2,
+        save_top_k=1,
         verbose=True,
         save_on_train_epoch_end=True,
     )
