@@ -1,6 +1,6 @@
 #!/bin/bash
 
-python3 train_g2p.py \
+python3 utils/train_g2p.py \
             --accelerator=gpu \
             --max_epochs=100 \
             --warmup_epochs=10 \
