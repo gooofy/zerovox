@@ -100,13 +100,23 @@ class G2P(object):
         res = []
         for token in tokens:
 
-            if re.search("[0-9]", token):
-                try:
-                    token = num2words(token, lang='de')
-                except:
-                    pass
+            # heal with hypens
+            if '-' in token:
+                subtokens = token.split('-')
+                minl = min([len(st) for st in subtokens])
+                if minl<3:
+                    subtokens = [token]
+            else:
+                subtokens = [token]
 
-            res.append(token)
+            for st in subtokens:
+                if re.search("[0-9]", st):
+                    try:
+                        st = num2words(st, lang=self._lang)
+                    except:
+                        pass
+
+                res.append(st)
 
         return res
 
@@ -148,24 +158,16 @@ if __name__ == '__main__':
 
     g2p = G2P(lang=args.lang, infer_device=args.infer_device, model_path=args.model_path)
 
-    texts = ["Ich habe 250 Euro in meiner Tasche.", # number -> spell-out
+    texts = ["open-access-zeitschriften, neue-heimat-bestände und actionabenteuer-adaption.", # deal with hyphens
+             "Ich habe 250 Euro in meiner Tasche.", # number -> spell-out
              "Verschiedene Haustiere, z.B. Hunde und Katzen", # z.B. -> zum Beispiel
              "KI ist ein Teilgebiet der Informatik, das sich mit der Automatisierung intelligenten Verhaltens und dem maschinellen Lernen befasst.",
              "Dazu gehören nichtsteroidale Antirheumatika (z. B. Acetylsalicylsäure oder Ibuprofen), Lithium, Digoxin, Dofetilid oder Fluconazol"]
-
-    phonemes, p = g2p.predict('Acetylsalicylsäure')
-    print (f'Acetylsalicylsäure: {" ".join(phonemes)}')
-
-    phonemes, p = g2p.predict('Wissenschaftler')
-    print (f'Wissenschaftler: {" ".join(phonemes)}')
-
-    phonemes, p = g2p.predict('der')
-    print (f'der: {" ".join(phonemes)}')
-
-    phonemes, p = g2p.predict('aber')
-    print (f'aber: {" ".join(phonemes)}')
 
     for text in texts:
         out = g2p(text)
         print(out)
 
+    for word in ['', 'Acetylsalicylsäure', 'Wissenschaftler', 'der', 'aber']:
+        phonemes, p = g2p.predict(word)
+        print (f'{word}: {" ".join(phonemes)}')
