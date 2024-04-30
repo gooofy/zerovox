@@ -162,3 +162,8 @@ cython_debug/
 models
 preprocessed_data
 oovs.dict
+priv
+configs/corpora/cv_de_100/*.yaml
+oovs
+configs/corpora/de_hui/*.yaml
+

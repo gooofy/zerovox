@@ -1,0 +1,29 @@
+dataset: "LJSpeech"
+
+path:
+  corpus_path: "/home/guenter/projects/hal9000/ennis/voices/src/hui_audio_corpus_german_clean/enh/SPEAKER"
+  lexicon_path: "lexicon/german_mfa.dict"
+  raw_path: "./preprocessed_data/de_hui_SPEAKER/wavs"
+  preprocessed_path: "./preprocessed_data/de_hui_SPEAKER"
+
+preprocessing:
+  val_size: 10
+  text:
+    language: "de"
+    speaker: "de_hui_SPEAKER"
+    max_length: 512
+  audio:
+    sampling_rate: 22050
+    # max_wav_value: 32768.0
+  stft:
+    filter_length: 1024
+    hop_length: 256
+    win_length: 1024
+  mel:
+    n_mel_channels: 80
+    mel_fmin: 0
+    mel_fmax: 8000 # please set to 8000 for HiFi-GAN vocoder, set to null for MelGAN vocoder
+  pitch:
+    normalization: True
+  energy:
+    normalization: True
