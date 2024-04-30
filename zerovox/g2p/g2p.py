@@ -14,14 +14,13 @@ import argparse
 from pathlib import Path
 
 import torch
-from nltk.tokenize import TweetTokenizer
-
-from num2words import num2words
 
 from zerovox import download_model_file
 from zerovox.lexicon import Lexicon
 from zerovox.g2p.data import G2PSymbols
 from zerovox.g2p.model import ModelType, LightningTransformer
+from zerovox.g2p.tokenizer import G2PTokenizer
+
 
 MODEL_NAME    = "zerovox-g2p-autoreg"
 MODEL_VERSION = "1"
@@ -59,8 +58,11 @@ class G2P(object):
 
         self._lex = Lexicon.load(lang)
 
-        self._word_tokenize = TweetTokenizer().tokenize
+        self._tokenizer = G2PTokenizer(lang)
 
+    @property
+    def lex(self):
+        return self._lex
 
     def predict(self, word:str) -> tuple [list[str], float]:
 
@@ -69,7 +71,11 @@ class G2P(object):
 
         d = self._symbols.g2idx
 
-        x = [d[t] for t in tokens]
+        x = []
+        for t in tokens:
+            if t not in d:
+                continue
+            x.append(d[t])
         #print(f"-> x: {x}")
 
         with torch.no_grad():
@@ -85,40 +91,8 @@ class G2P(object):
 
         return phonemes, prob
 
-
     def tokenize (self, text:str) -> list[str]:
-
-        # preprocessing
-
-        text = text.lower().encode('latin1', errors='ignore').decode('latin1')
-        text = text.replace("z.b.", "zum beispiel")
-        text = text.replace("d.h.", "das heißt")
-
-        # tokenization
-        tokens = self._word_tokenize(text)
-
-        res = []
-        for token in tokens:
-
-            # heal with hypens
-            if '-' in token:
-                subtokens = token.split('-')
-                minl = min([len(st) for st in subtokens])
-                if minl<3:
-                    subtokens = [token]
-            else:
-                subtokens = [token]
-
-            for st in subtokens:
-                if re.search("[0-9]", st):
-                    try:
-                        st = num2words(st, lang=self._lang)
-                    except:
-                        pass
-
-                res.append(st)
-
-        return res
+        return self._tokenizer.tokenize(text)
 
     def lookup (self, token):
         if token in self._lex:
@@ -144,6 +118,14 @@ class G2P(object):
             prons.append(" ")
 
         return prons[:-1]
+
+    @property
+    def phonemes(self) -> list[str]:
+        return self._phonemes
+
+    @property
+    def graphemes(self) -> list[str]:
+        return self._graphemes
 
 if __name__ == '__main__':
 

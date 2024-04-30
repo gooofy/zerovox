@@ -22,21 +22,21 @@ class G2PSymbols:
         self._end_token = '</s>'
         self._pad_token = '<pad>'
 
-        self._graphemes = graphemes
+        self._graphemes = graphemes.copy()
         self._graphemes.append(self._start_token)
         self._graphemes.append(self._end_token)
         self._graphemes.append(self._pad_token)
 
-        self._g2idx = {g: idx for idx, g in enumerate(graphemes)}
-        self._idx2g = {idx: g for idx, g in enumerate(graphemes)}
+        self._g2idx = {g: idx for idx, g in enumerate(self._graphemes)}
+        self._idx2g = {idx: g for idx, g in enumerate(self._graphemes)}
 
-        self._phonemes  = phonemes
+        self._phonemes  = phonemes.copy()
         self._phonemes.append(self._start_token)
         self._phonemes.append(self._end_token)
         self._phonemes.append(self._pad_token)
 
-        self._p2idx = {p: idx for idx, p in enumerate(phonemes)}
-        self._idx2p = {idx: p for idx, p in enumerate(phonemes)}
+        self._p2idx = {p: idx for idx, p in enumerate(self._phonemes)}
+        self._idx2p = {idx: p for idx, p in enumerate(self._phonemes)}
 
     @property
     def num_graphemes(self):
