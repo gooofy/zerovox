@@ -1,3 +1,35 @@
+Zerovox Model Training
+======================
+
+Data Preparation
+----------------
+
+(1/n) prepare corpus yamls:
+
+    pushd configs/corpora/cv_de_100
+    ./gen_cv.sh
+    popd
+
+(2/n) prepare alignment:
+
+    utils/prepare_align.py configs/corpora/cv_de_100
+
+(3/n) OOVs:
+
+    utils/oovtool.py configs/corpora/cv_de_100
+
+(4/n) align:
+
+check for oovs:
+
+    for cfg in configs/corpora/cv_de_100/*.yaml ; do utils/align.py --oovs oovs_`basename $cfg .yaml`.txt $cfg ; done
+
+
+Kaldi Accoustic Model Training
+==============================
+
+
+
 G2P Model Training
 ==================
 
