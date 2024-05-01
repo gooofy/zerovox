@@ -67,7 +67,8 @@
             "program": "utils/oovtool.py",
             "console": "integratedTerminal",
             //"args": ["configs/corpora/cv_de_100/de_cv_speaker_80.yaml"],
-            "args": ["configs/corpora/cv_de_100"],
+            "args": ["-m", "models/g2p_de_autoreg_zamia_1/checkpoints",
+                     "configs/corpora/cv_de_100"],
             "cwd": "${workspaceFolder}",
             "justMyCode": false
         },

@@ -37,6 +37,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("configs", type=str, nargs='+', help="path[s] to .yaml config file[s] or directorie[s]")
     parser.add_argument("-o", "--oovs", type=str, default="oovs.dict", help="name of oovs.dict file to store pronounciation predictions, default: oovs.dict")
+    parser.add_argument("-m", "--g2p-model", type=str, help="path to g2p model to use")
     #parser.add_argument("--limit", type=int, default=100, help="limit number auf audio files to process per config, default: 100 (0=unlimited)")
     #parser.add_argument("--num-workers", type=int, default=12, help="number of parallel processes, default: 12")
     args = parser.parse_args()
@@ -77,7 +78,7 @@ if __name__ == "__main__":
 
     print(f"gathered {len(jobs)} jobs.")
 
-    g2p = G2P(language)
+    g2p = G2P(language, model_path=args.g2p_model)
     
     oovs = set()
 
@@ -101,10 +102,12 @@ if __name__ == "__main__":
         print (f"{len(oovs)} oovs found")
         with open(args.oovs, 'w') as oovsf:
             oovs = sorted(oovs)
-            for oov in oovs:
+            cnt = 0
+            for oov in tqdm(oovs, desc="g2p"):
                 pron, _ = g2p.predict(oov)
-                print (f"  {oov} : [{''.join(pron)}]")
+                # print (f"  [{cnt:6}/{len(oovs)}:6] {oov} : [{''.join(pron)}]")
                 oovsf.write (f"{oov}\t{' '.join(pron)}\n")
+                cnt += 1
 
     else:
         print ("*** no OOVs found, all is well ***")
