@@ -1,5 +1,5 @@
 #!/bin/bash
 
-tensorboard --bind_all --logdir models/de_autoreg_1
+tensorboard --bind_all --logdir models/g2p_de_autoreg_zamia_1
 
 

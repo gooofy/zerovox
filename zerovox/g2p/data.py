@@ -181,9 +181,24 @@ class G2PDataModule(LightningDataModule):
     def setup(self, stage: str):
         # Assign train/val datasets for use in dataloaders
         if stage == "fit":
-            num_train, num_val = int(len(self._words)*.9), int(len(self._words)*.1)
-            self._train_words, self._val_words = self._words[:num_train], self._words[-num_val:]
-            self._train_prons, self._val_prons = self._prons[:num_train], self._prons[-num_val:]
+
+            self._train_words = []
+            self._train_prons = []
+            self._val_words   = []
+            self._val_prons   = []
+
+            for i in range(len(self._words)):
+
+                if i % 100 == 0:
+                    self._val_words.append(self._words[i])
+                    self._val_prons.append(self._prons[i])
+                else:
+                    self._train_words.append(self._words[i])
+                    self._train_prons.append(self._prons[i])
+
+            # num_train, num_val = int(len(self._words)*.9), int(len(self._words)*.1)
+            # self._train_words, self._val_words = self._words[:num_train], self._words[-num_val:]
+            # self._train_prons, self._val_prons = self._prons[:num_train], self._prons[-num_val:]
 
             print (f"# entries: train: {len(self._train_words)}, val: {len(self._val_words)}")
 
