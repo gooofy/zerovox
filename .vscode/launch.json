@@ -109,20 +109,11 @@
             "request": "launch",
             "program": "utils/train_kaldi.py",
             "console": "integratedTerminal",
-            "args": ["--oovs=oovs.dict",
+            "args": ["--model-name=tts_de_kaldi_zamia_1",
                      "--num-jobs=12",
+                     "configs/corpora/cv_de_100",
                      "configs/corpora/cv_de_100/de_cv_speaker_0.yaml",
-                     "configs/corpora/de_hui/de_hui_Alexandra_Bogensperger.yaml",
-                     "configs/corpora/de_hui/de_hui_Algy_Pug.yaml",
-                     "configs/corpora/de_hui/de_hui_Anka.yaml",
-                     "configs/corpora/de_hui/de_hui_Availle.yaml",
-                     "configs/corpora/de_hui/de_hui_Bernd_Ungerer.yaml",
-                     "configs/corpora/de_hui/de_hui_Boris.yaml",
-                     "configs/corpora/de_hui/de_hui_Capybara.yaml",
-                     "configs/corpora/de_hui/de_hui_caromopfen.yaml",
-                     "configs/corpora/de_hui/de_hui_Christian_Al-Kadi.yaml",
-                     "configs/corpora/de_hui/de_hui_ClaudiaSterngucker.yaml",
-                     "configs/corpora/de_hui/de_hui_Crln_Yldz_Ksr.yaml",
+                     "configs/corpora/de_hui",
                     ]
         },
         {
@@ -131,8 +122,7 @@
             "request": "launch",
             "program": "utils/align.py",
             "console": "integratedTerminal",
-            "args": ["--oovs=oovs.dict",
-                     "configs/corpora/cv_de_100/de_cv_speaker_0.yaml"]
+            "args": ["configs/corpora/cv_de_100/de_cv_speaker_0.yaml"]
         },       
     ]
 }

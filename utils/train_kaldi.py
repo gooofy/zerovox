@@ -1,5 +1,13 @@
 #!/bin/env python3
 
+#
+# based on:
+#
+# Kaldi Tutorial by Eleanor Chodroff
+# Written: 2015-07-15 | Last updated: 2018-11-13
+# https://www.eleanorchodroff.com/tutorial/kaldi/introduction.html
+#
+
 from pathlib import Path
 import argparse
 import yaml
@@ -39,10 +47,50 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    config = yaml.load(open(args.configs[0], "r"), Loader=yaml.FullLoader)
+    print ("collecting .yaml files from specified paths...")
 
-    language      = config['preprocessing']['text']['language']
-    sampling_rate = config['preprocessing']['audio']['sampling_rate']
+    cfgfns = []
+    for cfgfn in args.configs:
+        if os.path.isdir(cfgfn):
+            for cfn in os.listdir(cfgfn):
+
+                _, ext = os.path.splitext(cfn)
+                if ext != '.yaml':
+                    continue
+
+                cfpath = os.path.join(cfgfn, cfn)
+                #print (f"{cfpath} ...")
+                cfgfns.append(cfpath)
+        else:
+            #print (f"{cfgfn} ...")
+            cfgfns.append(cfgfn)
+
+    if not cfgfns:
+        print ("*** error: no .yaml files found!")
+        sys.exit(1)
+    else:
+        print (f"{len(cfgfns)} .yaml files found.")
+
+    language      = None
+    sampling_rate = None
+
+    for cfgfn in cfgfns:
+        config = yaml.load(open(cfgfn, "r"), Loader=yaml.FullLoader)
+
+        lang = config['preprocessing']['text']['language']
+        sr   = config['preprocessing']['audio']['sampling_rate']
+
+        if not language:
+            language = lang
+        else:
+            if lang != language:
+                print (f"inconsistent languages in .yaml files: {lang} vs {language} in {cfgfn}")
+
+        if not sampling_rate:
+            sampling_rate = int(sr)
+        else:
+            if int(sr) != sampling_rate:
+                print (f"inconsistent sampling rates in .yaml files: {sr} vs {sampling_rate} in {cfgfn}")
 
     g2p = G2P(language)
 
@@ -78,20 +126,20 @@ export PYTHONUNBUFFERED=1\n
     oovs = set()
 
     uttcnt = 0
+    speaker = 0
 
     with open(workdir / 'data' / 'train' / 'text', 'w') as textf:
         with open(workdir / 'data' / 'train' / 'wav.scp', 'w') as wavscpf:
             with open(workdir / 'data' / 'train' / 'utt2spk', 'w') as utt2spkf:
 
-                for cfgfn in args.configs:
+                for cfgfn in cfgfns:
                     print (f"{cfgfn} ...")
 
                     config = yaml.load(open(cfgfn, "r"), Loader=yaml.FullLoader)
                     rawpath = Path(config['path']['raw_path'])
 
-                    speaker = config['preprocessing']['text']['speaker']
-                    assert language == config['preprocessing']['text']['language']
-                    assert sampling_rate == config['preprocessing']['audio']['sampling_rate']
+                    # speaker = config['preprocessing']['text']['speaker']
+                    speaker += 1
 
                     for labfn in os.listdir(rawpath):
 
@@ -119,18 +167,21 @@ export PYTHONUNBUFFERED=1\n
                                 else:
                                     oovs.add(token)
 
-                        uttid = f"{speaker}_{uttcnt:09}"
+                        uttid = f"{speaker:06}_{uttcnt:09}"
                         uttcnt += 1
 
                         textf.write (f"{uttid} {' '.join(words)}\n")
 
                         wavscpf.write (f"{uttid} {str((rawpath / (src+'.wav')).resolve())}\n")
-                        utt2spkf.write (f"{uttid} {speaker}\n")
+                        utt2spkf.write (f"{uttid} {speaker:06}\n")
 
     print (f"\n\n*** total: {uttcnt} utterances.\n\n")
 
     if oovs:
-        print (f"*** ERROR: {len(oovs)} OOVs found - use oovtool to generate pronounciations first.")
+        print (f"*** ERROR: {len(oovs)} OOV()s found")
+        for oov in oovs:
+            print(oov)
+        print ("HINT: use oovtool to generate pronounciations first.")
         sys.exit(1)
 
     with open(workdir / 'conf' / 'mfcc.conf', 'w') as mfccf:
@@ -165,11 +216,9 @@ export PYTHONUNBUFFERED=1\n
     do_cmd( ['utils/fix_data_dir.sh', 'data/train'], workdir)
     do_cmd( ['steps/compute_cmvn_stats.sh', 'data/train', 'exp/make_mfcc/data/train', 'mfcc'], workdir)
     do_cmd( ['utils/fix_data_dir.sh', 'data/train'], workdir)
-
-    # FIXME: use 10k subset
-
-    do_cmd( ['steps/train_mono.sh', '--boost-silence', '1.25', '--nj', str(args.num_jobs), '--cmd', 'run.pl', 'data/train', 'data/lang', 'exp/mono'], workdir)
-    do_cmd( ['steps/align_si.sh', '--boost-silence', '1.25', '--nj', str(args.num_jobs), '--cmd', 'run.pl', 'data/train', 'data/lang', 'exp/mono', 'exp/mono_ali'], workdir)
+    do_cmd( ['utils/subset_data_dir.sh', '--first', 'data/train', '10000', 'data/train_10k'], workdir)
+    do_cmd( ['steps/train_mono.sh', '--boost-silence', '1.25', '--nj', str(args.num_jobs), '--cmd', 'run.pl', 'data/train_10k', 'data/lang', 'exp/mono_10k'], workdir)
+    do_cmd( ['steps/align_si.sh', '--boost-silence', '1.25', '--nj', str(args.num_jobs), '--cmd', 'run.pl', 'data/train', 'data/lang', 'exp/mono_10k', 'exp/mono_ali'], workdir)
     do_cmd( ['steps/train_deltas.sh', '--boost-silence', '1.25', '--cmd', 'run.pl', '2000', '10000', 'data/train', 'data/lang', 'exp/mono_ali', 'exp/tri1'], workdir)
     do_cmd( ['steps/align_si.sh', '--nj', str(args.num_jobs), '--cmd', 'run.pl', 'data/train', 'data/lang', 'exp/tri1', 'exp/tri1_ali'], workdir)
     do_cmd( ['steps/train_deltas.sh', '--cmd', 'run.pl', '2500', '15000', 'data/train', 'data/lang', 'exp/tri1_ali', 'exp/tri2a'], workdir)
