@@ -16,6 +16,16 @@ DEBUG_LIMIT = 0
 
 class G2PSymbols:
 
+    _symcfg = {}
+    _symcfg['en'] = { 
+                    }
+
+    _symcfg['de'] = { 
+                      'punctuation' : [",", ".", "?", "!"],
+                      'punctmap'    : {" ":"_", "":"#", ",":",", ".":".", "?":"?", "!":"!"},
+                      'silences'    : ["sil", "sp", "spn", ""],
+                    }
+
     def __init__(self, graphemes: list[str], phonemes: list[str]):
 
         self._start_token = '<s>'
@@ -26,6 +36,7 @@ class G2PSymbols:
         self._graphemes.append(self._start_token)
         self._graphemes.append(self._end_token)
         self._graphemes.append(self._pad_token)
+        self._graphset = set(graphemes)
 
         self._g2idx = {g: idx for idx, g in enumerate(self._graphemes)}
         self._idx2g = {idx: g for idx, g in enumerate(self._graphemes)}
@@ -38,9 +49,26 @@ class G2PSymbols:
         self._p2idx = {p: idx for idx, p in enumerate(self._phonemes)}
         self._idx2p = {idx: p for idx, p in enumerate(self._phonemes)}
 
+        self._puncts   = set([",", ".", "?", "!"])
+        self._punctmap = {" ":"_", "":"#", ",":",", ".":".", "?":"?", "!":"!"}
+        self._silences = set(["sil", "sp", "spn", ""])
+
+    def is_punct(self, phone):
+        return phone in self._puncts
+
+    def encode_punct(self, punct):
+        return self._punctmap[punct]
+    
+    def is_silence(self, phone):
+        return phone in self._silences
+
+
     @property
     def num_graphemes(self):
         return len(self._graphemes)
+    
+    def is_grapheme(self, graph):
+        return graph in self._graphset
 
     @property
     def num_phonemes(self):

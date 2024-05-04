@@ -4,31 +4,33 @@ Zerovox Model Training
 Data Preparation
 ----------------
 
-(1/n) prepare corpus yamls:
+(1/5) prepare corpus yamls:
 
     pushd configs/corpora/cv_de_100
     ./gen_cv.sh
     popd
 
-(2/n) prepare alignment:
+(2/5) prepare alignment:
 
     utils/prepare_align.py configs/corpora/cv_de_100
 
-(3/n) OOVs:
+(3/5) OOVs:
 
     utils/oovtool.py configs/corpora/cv_de_100
 
-(4/n) align:
+(4/5) align:
 
-check for oovs:
+    utils/align.py --kaldi-model=tts_de_kaldi_zamia_1 configs/corpora/cv_de_100
 
-    for cfg in configs/corpora/cv_de_100/*.yaml ; do utils/align.py --oovs oovs_`basename $cfg .yaml`.txt $cfg ; done
+(5/5) preprocess:
+
+    tils/preprocess.py configs/corpora/cv_de_100
 
 
 Kaldi Accoustic Model Training
 ==============================
 
-
+    utils/train_kaldi.py --model-name=tts_de_kaldi_zamia_1 --num-jobs=12 configs/corpora/cv_de_100
 
 G2P Model Training
 ==================
@@ -36,9 +38,6 @@ G2P Model Training
 run training:
 
     scripts/train_de_autoreg.sh
-
-
-
 
 Credits
 =======
