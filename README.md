@@ -26,6 +26,19 @@ Data Preparation
 
     tils/preprocess.py configs/corpora/cv_de_100
 
+TTS Model Training
+------------------
+
+    utils/train_tts.py \
+        --head=2 --reduction=1 --expansion=2 --kernel-size=5 --n-blocks=3 --block-depth=3 \
+        --accelerator=gpu --threads=24 --batch-size=64 --val_epochs=1 \
+        --infer-device=cpu \
+        --lr=0.0001 --warmup_epochs=25 \
+        --hifigan-checkpoint=VCTK_V2 \
+        --out-folder=models/tts_de_zerovox_base_1 \
+        configs/corpora/cv_de_100 \
+        configs/corpora/de_hui/de_hui_*.yaml \
+        configs/corpora/de_thorsten.yaml
 
 Kaldi Accoustic Model Training
 ==============================
