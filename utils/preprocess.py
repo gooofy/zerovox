@@ -539,9 +539,7 @@ class Preprocessor:
 
         token_pos = 0
         alignment_pos = 0
-
-        
-
+   
         phones           = []
         puncts           = []
         phone_positions  = []
@@ -582,7 +580,10 @@ class Preprocessor:
                     alignment_pos += 1
                     cur_align = alignment[alignment_pos]
 
-                assert phone == cur_align['phoneme']
+                if phone != cur_align['phoneme']:
+                    print (f"*** error: alignment async: {phone} vs {cur_align['phoneme']}")
+                    print (f"   utt: {' '.join(tokens)}")
+                    return None
 
                 start = cur_align['start']
                 stop = start + cur_align['duration']
