@@ -53,11 +53,32 @@ class G2PSymbols:
         self._punctmap = {" ":"_", "":"#", ",":",", ".":".", "?":"?", "!":"!"}
         self._silences = set(["sil", "sp", "spn", ""])
 
+        # Mappings from punctuation to numeric ID and vice versa:
+        self._punct_to_id = {}
+        self._id_to_punct = {}
+        idx = 0
+        for _, punct in self._punctmap.items():
+            self._punct_to_id[punct] = idx
+            self._id_to_punct[idx]   = punct
+            idx += 1
+
     def is_punct(self, phone):
         return phone in self._puncts
 
     def encode_punct(self, punct):
         return self._punctmap[punct]
+
+    @property
+    def num_puncts(self):
+        return len(self._punctmap)
+    
+    def puncts_to_ids(self, puncts):
+        sequence = []
+        for p in puncts:
+            if p not in self._punct_to_id:
+                continue
+            sequence.append(self._punct_to_id[p])
+        return sequence
     
     def is_silence(self, phone):
         return phone in self._silences
@@ -135,7 +156,16 @@ class G2PSymbols:
             p = self._idx2p[idx]
             phonemes.append(p)
         return phonemes
+    
+    def phones_to_ids(self, phones):
+        sequence = []
+        for p in phones:
+            if p not in self._p2idx:
+                continue
+            sequence.append(self._p2idx[p])
 
+        return sequence
+    
 class G2PDataset(data.Dataset):
 
     def __init__(self, words: list[str], prons : list[str], symbols:G2PSymbols):
