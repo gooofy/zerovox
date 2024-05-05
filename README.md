@@ -31,7 +31,7 @@ TTS Model Training
 
     utils/train_tts.py \
         --head=2 --reduction=1 --expansion=2 --kernel-size=5 --n-blocks=3 --block-depth=3 \
-        --accelerator=gpu --threads=24 --batch-size=64 --val_epochs=1 \
+        --accelerator=gpu --threads=24 --batch-size=32 --val_epochs=8 \
         --infer-device=cpu \
         --lr=0.0001 --warmup_epochs=25 \
         --hifigan-checkpoint=VCTK_V2 \
