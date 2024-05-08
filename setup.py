@@ -24,6 +24,7 @@ setup(
     'torch>=2.1.0',
     'nltk>=3.8.1',
     'num2words>=0.5.13',
+    'readline>=6.2.4.1',
   ],
   license='Apache Software License',
   include_package_data=True

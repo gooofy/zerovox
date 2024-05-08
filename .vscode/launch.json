@@ -152,6 +152,36 @@
             "justMyCode": false
         },       
         {
+            "name": "demo german",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "utils/demo.py",
+            "console": "integratedTerminal",
+            "args": ["--model=models/tts_de_zerovox_base_1",
+                     "--verbose",
+                     //"--refaudio=/home/guenter/projects/hal9000/ennis/voices/6s/en_digitalsculler_03.wav",
+                     //"--refaudio=/home/guenter/projects/hal9000/ennis/voices/6s/de_tobias_meister_03.wav",
+                     "--refaudio=/home/guenter/projects/hal9000/ennis/voices/6s/de_christoph_wittelsbürger_03.wav",
+                     "--play",
+                     //"--iter=100",
+                     "--text",
+                     "Der Regenbogen ist ein atmosphärisch-optisches Phänomen, das als kreisbogenförmiges farbiges Lichtband in einem von der Sonne beschienenen Regenschauer erscheint.",
+                     "--wav-filename=base.wav"]
+        },
+        {
+            "name": "demo german interactive",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "utils/demo.py",
+            "console": "integratedTerminal",
+            "args": ["--model=models/tts_de_zerovox_base_1",
+                     "--verbose",
+                     "--refaudio=../voices/12s/angela_merkel.wav",
+                     "--play",
+                     "-i"
+]
+        },
+        {
             "name": "foo",
             "type": "debugpy",
             "request": "launch",

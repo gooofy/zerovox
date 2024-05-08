@@ -170,3 +170,4 @@ configs/corpora/cv_de_100/*.yaml
 oovs
 configs/corpora/de_hui/*.yaml
 
+syncmodels.sh

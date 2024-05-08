@@ -45,6 +45,7 @@ class G2PSymbols:
         self._phonemes.append(self._start_token)
         self._phonemes.append(self._end_token)
         self._phonemes.append(self._pad_token)
+        self._phoneset = set(self._phonemes)
 
         self._p2idx = {p: idx for idx, p in enumerate(self._phonemes)}
         self._idx2p = {idx: p for idx, p in enumerate(self._phonemes)}
@@ -94,6 +95,9 @@ class G2PSymbols:
     @property
     def num_phonemes(self):
         return len(self._phonemes)
+
+    def is_phone(self, phone):
+        return phone in self._phoneset
 
     @property
     def g2idx(self):

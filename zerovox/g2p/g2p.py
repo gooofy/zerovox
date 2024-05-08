@@ -15,28 +15,42 @@ from pathlib import Path
 
 import torch
 
-from zerovox import download_model_file
 from zerovox.lexicon import Lexicon
 from zerovox.g2p.data import G2PSymbols
 from zerovox.g2p.model import ModelType, LightningTransformer
 from zerovox.g2p.tokenizer import G2PTokenizer
 
+DEFAULT_G2P_MODEL_NAME = "zerovox-g2p-autoreg-zamia-de"
 
-MODEL_NAME    = "zerovox-g2p-autoreg"
-MODEL_VERSION = "1"
+def _download_model_file(model:str, relpath:str) -> Path:
+
+    target_dir  = Path(os.getenv("CACHED_PATH_ZEROVOX", Path.home() / ".cache" / "zerovox")) / "model_repo" / model
+    target_path = target_dir / relpath
+
+    if target_path.exists():
+        return target_path
+
+    os.makedirs (target_dir, exist_ok=True)
+
+    url = f"https://huggingface.co/goooofy/{model}/resolve/main/{relpath}?download=true"
+
+    torch.hub.download_url_to_file(url, str(target_path))
+
+    return target_path
+
 
 class G2P(object):
 
-    def __init__(self, lang: str, infer_device: str='cpu', model_path: os.PathLike=None):
+    def __init__(self, lang: str, infer_device: str='cpu', model: str|os.PathLike=DEFAULT_G2P_MODEL_NAME):
 
         super().__init__()
 
-        if model_path:
-            self._cfg_path  = Path(model_path) / 'config.yaml'
-            self._ckpt_path = Path(model_path) / 'best.ckpt'
+        if os.path.isdir(model):
+            self._cfg_path  = Path(model) / 'config.yaml'
+            self._ckpt_path = Path(model) / 'best.ckpt'
         else:
-            self._cfg_path  = download_model_file(lang=lang, model=MODEL_NAME, version=MODEL_VERSION, relpath='config.yaml')
-            self._ckpt_path = download_model_file(lang=lang, model=MODEL_NAME, version=MODEL_VERSION, relpath='best.ckpt')
+            self._cfg_path  = _download_model_file(model=model, relpath='config.yaml')
+            self._ckpt_path = _download_model_file(model=model, relpath='best.ckpt')
 
         config = yaml.load( open(self._cfg_path, "r"), Loader=yaml.FullLoader)
         self._graphemes = sorted(list(config['preprocessing']['graphemes']))
@@ -63,6 +77,10 @@ class G2P(object):
     @property
     def lex(self):
         return self._lex
+
+    @property
+    def symbols(self):
+        return self._symbols
 
     def predict(self, word:str) -> tuple [list[str], float]:
 
