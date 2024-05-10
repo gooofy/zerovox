@@ -50,7 +50,7 @@ G2P Model Training
 
 run training:
 
-    scripts/train_de_autoreg.sh
+    scripts/train_g2p_de_autoreg.sh
 
 Credits
 =======
