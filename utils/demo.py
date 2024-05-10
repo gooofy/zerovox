@@ -19,10 +19,11 @@ import time
 import numpy as np
 import argparse
 import readline   # noqa: F401
+import multiprocessing
 
 from scipy.io import wavfile
 from zerovox.tts.synthesize import ZeroVoxTTS
-from zerovox.g2p.g2p import DEFAULT_G2P_MODEL_NAME
+from zerovox.g2p.g2p import DEFAULT_G2P_MODEL_NAME, G2P
 
 import torchaudio
 # from speechbrain.inference.speaker import EncoderClassifier
@@ -40,7 +41,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(prog='demo', description='interactive efficientspeech demo')
 
-    parser.add_argument("--threads", type=int, default=4)
+    parser.add_argument("--threads", type=int, default=multiprocessing.cpu_count())
     choices = ['cpu', 'cuda']
     parser.add_argument("--infer-device",
                         default=choices[0],
@@ -54,7 +55,7 @@ if __name__ == "__main__":
                         default=None,
                         required=True,
                         help="Path to model directory",)
-    parser.add_argument("--hifigan-model",
+    parser.add_argument("--hifigan-checkpoint",
                         default="VCTK_V2",
                         type=str,
                         help="HiFiGAN model",)
@@ -72,9 +73,11 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    g2p = G2P(args.lang, model=args.g2p_model)
+
     modelcfg, synth = ZeroVoxTTS.load_model(args.model, 
-                                            hifigan_checkpoint=args.hifigan_model,
-                                            g2p_model=args.g2p_model,
+                                            hifigan_checkpoint=args.hifigan_checkpoint,
+                                            g2p=g2p,
                                             infer_device=args.infer_device,
                                             num_threads=args.threads,
                                             do_compile=args.compile,)

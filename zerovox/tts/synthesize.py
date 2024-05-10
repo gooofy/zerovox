@@ -27,7 +27,7 @@ class ZeroVoxTTS:
                  language: str,
                  checkpoint: str | os.PathLike,
                  hifigan_checkpoint: str,
-                 g2p_model: str|os.PathLike,
+                 g2p: G2P,
                  hop_length: int,
                  sampling_rate : int,
                  infer_device: str = 'cpu',
@@ -37,7 +37,7 @@ class ZeroVoxTTS:
         self._hop_length = hop_length
         self._infer_device = infer_device
 
-        self._g2p = G2P(lang=language, infer_device=infer_device, model=g2p_model)
+        self._g2p = g2p
 
         self._model = ZeroVox.load_from_checkpoint(lang=language,
                                                    hifigan_checkpoint=hifigan_checkpoint,
@@ -166,7 +166,7 @@ class ZeroVoxTTS:
     def load_model(cls, 
                    modelpath: str | os.PathLike,
                    hifigan_checkpoint: str | os.PathLike,
-                   g2p_model: str|os.PathLike,
+                   g2p: G2P,
                    infer_device: str = 'cpu',
                    num_threads: int = None,
                    do_compile: bool = False) -> tuple[dict[str, any], "ZeroVoxTTS"]:
@@ -180,7 +180,7 @@ class ZeroVoxTTS:
         synth = ZeroVoxTTS ( language=modelcfg['lang'],
                              checkpoint=checkpoint,
                              hifigan_checkpoint=hifigan_checkpoint,
-                             g2p_model=g2p_model,
+                             g2p=g2p,
                              hop_length=modelcfg['hop_length'],
                              infer_device=infer_device,
                              num_threads=num_threads,

@@ -156,7 +156,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    g2p = G2P(lang=args.lang, infer_device=args.infer_device, model_path=args.model_path)
+    g2p = G2P(lang=args.lang, infer_device=args.infer_device, model=args.model_path)
 
     texts = ["open-access-zeitschriften, neue-heimat-bestände und actionabenteuer-adaption.", # deal with hyphens
              "Ich habe 250 Euro in meiner Tasche.", # number -> spell-out

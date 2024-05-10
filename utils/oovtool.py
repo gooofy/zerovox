@@ -5,11 +5,10 @@ import yaml
 import os
 import re
 
-import subprocess
-import multiprocessing
 from tqdm import tqdm
 
 from zerovox.g2p.g2p import G2P
+from zerovox.g2p.g2p import DEFAULT_G2P_MODEL_NAME
 
 def gather_jobs_from_config(configfn: os.PathLike):
 
@@ -37,7 +36,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("configs", type=str, nargs='+', help="path[s] to .yaml config file[s] or directorie[s]")
     parser.add_argument("-o", "--oovs", type=str, default="oovs.dict", help="name of oovs.dict file to store pronounciation predictions, default: oovs.dict")
-    parser.add_argument("-m", "--g2p-model", type=str, help="path to g2p model to use")
+    parser.add_argument("--g2p-model",
+                        default=DEFAULT_G2P_MODEL_NAME,
+                        type=str,
+                        help=f"G2P model, default={DEFAULT_G2P_MODEL_NAME}",)                     
     #parser.add_argument("--limit", type=int, default=100, help="limit number auf audio files to process per config, default: 100 (0=unlimited)")
     #parser.add_argument("--num-workers", type=int, default=12, help="number of parallel processes, default: 12")
     args = parser.parse_args()
@@ -78,7 +80,7 @@ if __name__ == "__main__":
 
     print(f"gathered {len(jobs)} jobs.")
 
-    g2p = G2P(language, model_path=args.g2p_model)
+    g2p = G2P(language, model=args.g2p_model)
     
     oovs = set()
 

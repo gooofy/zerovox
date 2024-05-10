@@ -179,13 +179,25 @@
                      "--refaudio=../voices/12s/angela_merkel.wav",
                      "--play",
                      "-i"
-]
+                    ]
+        },
+        {
+            "name": "lexedit",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "utils/lexedit.py",
+            "console": "integratedTerminal",
+            "args": ["--model=models/tts_de_zerovox_base_1",
+                     "--verbose",
+                     "--refaudio=../voices/6s/de_tobias_meister_02.wav",
+                     "-e", "times,biden,statement"
+                   ]
         },
         {
             "name": "foo",
             "type": "debugpy",
             "request": "launch",
-            "program": "priv/utils/ctm2tsv.py",
+            "program": "priv/utils/phonetable.py",
             "console": "integratedTerminal",
             "args": []
         },   ]

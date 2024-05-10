@@ -109,6 +109,11 @@ class Lexicon:
 
         return lex
 
+    def save(self):
+        with open (self._user_path, 'w') as lexf:
+            for graph in sorted(self._user_lex):
+                lexf.write(f"{graph}\t{' '.join(self._user_lex[graph])}")
+
     def verify_symbols(self, graphemes: list[str], phonemes: list[str]):
 
         g1 = set(self._graphemes)
