@@ -205,6 +205,9 @@ class LexEdit:
 
     def say(self):
 
+        if not self._synth:
+            return
+        
         #ipa = ['oː', '{sp}'] + self._ipa + ['{sp}', 'oː', '.']
         ipa = self._ipa + ['.']
 
@@ -239,7 +242,7 @@ class LexEdit:
 
                 print ("h: help")
                 print ("s: say")
-                print ("S: change speaker")
+                print ("p: predict phonemes from given grapheme")
                 print ("e: edit")
                 print ("g: generate")
                 print ("o: generate from oov lex")
@@ -257,11 +260,18 @@ class LexEdit:
             elif cmd == 's':
                 self.say()
 
+            elif cmd == 'p':
+                grapheme = input ("grapheme > ")
+                self._ipa = self._get_ipa (grapheme, oovs_lex)
+                self._lex[self._word] = self._ipa
+                self._lex.save()
+                self.say()
+
             elif cmd == 'e':
 
                 xs = []
                 for p in self._ipa:
-                    xs += ipa2xsampa [p]
+                    xs.append(ipa2xsampa [p])
 
                 xs = input_with_prefill("X-Sampa > ", ' '.join(xs))
 
@@ -349,8 +359,8 @@ if __name__ == "__main__":
     parser.add_argument('-O', '--oovs', type=str, help="OOV file to work on (reads from file, will skip existing entries)")
 
     parser.add_argument('-e', '--edit', type=str, help="entries to work on (comma separated list of entries to add or review)")
-    parser.add_argument('--verbose', action='store_true')
-    parser.add_argument("--threads", type=int, default=multiprocessing.cpu_count())
+    parser.add_argument('-v', '--verbose', action='store_true')
+    parser.add_argument('--threads', type=int, default=multiprocessing.cpu_count())
     choices = ['cpu', 'cuda']
     parser.add_argument("--infer-device",
                         default=choices[0],
@@ -368,7 +378,7 @@ if __name__ == "__main__":
                         default="VCTK_V2",
                         type=str,
                         help="HiFiGAN model",)
-    parser.add_argument('--refaudio', type=str, required=True, help="reference audio wav file")
+    parser.add_argument('--refaudio', type=str, help="reference audio wav file for synthesis")
     parser.add_argument("--g2p-model",
                         default=DEFAULT_G2P_MODEL_NAME,
                         type=str,
@@ -380,14 +390,16 @@ if __name__ == "__main__":
     g2p = G2P(args.lang, model=args.g2p_model)
     lex = g2p.lex
 
-    if args.verbose:
+    if args.refaudio:
         print ("computing speaker embedding...")
 
-    # compute speaker embedding
-    signal, _ = torchaudio.load(args.refaudio)
-    _spk_emb_encoder = MelSpectrogramEncoder.from_hparams(source="speechbrain/spkrec-ecapa-voxceleb-mel-spec")
-    spkemb = _spk_emb_encoder.encode_waveform(signal)[0][0]
-    spkemb = spkemb.cpu().detach().numpy()
+        # compute speaker embedding
+        signal, _ = torchaudio.load(args.refaudio)
+        _spk_emb_encoder = MelSpectrogramEncoder.from_hparams(source="speechbrain/spkrec-ecapa-voxceleb-mel-spec")
+        spkemb = _spk_emb_encoder.encode_waveform(signal)[0][0]
+        spkemb = spkemb.cpu().detach().numpy()
+    else:
+        spkemb = None
 
     words_to_edit = set()
     oovs_lex = {}
@@ -415,12 +427,16 @@ if __name__ == "__main__":
 
     print (f"{len(words_to_edit)} entries found to work on")
 
-    modelcfg, synth = ZeroVoxTTS.load_model(args.model, 
-                                            hifigan_checkpoint=args.hifigan_checkpoint,
-                                            g2p=g2p,
-                                            infer_device=args.infer_device,
-                                            num_threads=args.threads,
-                                            do_compile=args.compile,)
+    if args.refaudio:
+        modelcfg, synth = ZeroVoxTTS.load_model(args.model, 
+                                                hifigan_checkpoint=args.hifigan_checkpoint,
+                                                g2p=g2p,
+                                                infer_device=args.infer_device,
+                                                num_threads=args.threads,
+                                                do_compile=args.compile,)
+    else:
+        modelcfg = None
+        synth = None
 
     histfile = os.path.join(os.path.expanduser("~"), ".lextool_history")
     try:
@@ -431,12 +447,13 @@ if __name__ == "__main__":
         pass
     atexit.register(readline.write_history_file, histfile)
 
-    sounddevice.default.reset()
-    sounddevice.default.samplerate = modelcfg['sampling_rate']
-    sounddevice.default.channels = 1
-    sounddevice.default.dtype = 'int16'
-    #sounddevice.default.device = None
-    #sounddevice.default.latency = 'low'
+    if args.refaudio:
+        sounddevice.default.reset()
+        sounddevice.default.samplerate = modelcfg['sampling_rate']
+        sounddevice.default.channels = 1
+        sounddevice.default.dtype = 'int16'
+        #sounddevice.default.device = None
+        #sounddevice.default.latency = 'low'
 
     editor = LexEdit (g2p, synth, spkemb)
 
