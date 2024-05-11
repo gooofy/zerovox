@@ -45,6 +45,9 @@ class Lexicon:
             return self._user_lex[graph]
         return self._base_lex[graph]
 
+    def __setitem__(self, graph, phonemes):
+        self._user_lex[graph] = phonemes
+
     def __merge(self):
         lex = dict(self._base_lex)
         for graph, phones in self._user_lex.items():
@@ -112,7 +115,7 @@ class Lexicon:
     def save(self):
         with open (self._user_path, 'w') as lexf:
             for graph in sorted(self._user_lex):
-                lexf.write(f"{graph}\t{' '.join(self._user_lex[graph])}")
+                lexf.write(f"{graph}\t{' '.join(self._user_lex[graph])}\n")
 
     def verify_symbols(self, graphemes: list[str], phonemes: list[str]):
 
