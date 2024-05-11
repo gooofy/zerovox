@@ -189,8 +189,8 @@
             "console": "integratedTerminal",
             "args": ["--model=models/tts_de_zerovox_base_1",
                      "--verbose",
-                     "--refaudio=../voices/6s/de_tobias_meister_02.wav",
-                     "-e", "times,biden,statement"
+                     //"--refaudio=../voices/6s/de_tobias_meister_02.wav",
+                     "-e", "times,biden,statement,deutschlandfunkde,dlfde,eon,10web,1730er,1960er,1969er,1980er,1990er,2020er,2a7,30er,40er,60er,68er,70er,72b,7th,80er,a-b-a-b,a-dur"
                    ]
         },
         {
