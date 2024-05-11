@@ -36,7 +36,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("configs", type=str, nargs='+', help="path[s] to .yaml config file[s] or directorie[s]")
     parser.add_argument("-o", "--oovs", type=str, default="oovs.dict", help="name of oovs.dict file to store pronounciation predictions, default: oovs.dict")
-    parser.add_argument("--g2p-model",
+    parser.add_argument("-m", "--g2p-model",
                         default=DEFAULT_G2P_MODEL_NAME,
                         type=str,
                         help=f"G2P model, default={DEFAULT_G2P_MODEL_NAME}",)                     
