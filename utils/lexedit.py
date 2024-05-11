@@ -2,6 +2,7 @@
 
 import argparse
 import os
+import sys
 import atexit
 import random
 import readline
@@ -372,8 +373,7 @@ if __name__ == "__main__":
                         help='Infer using the compiled model')    
     parser.add_argument('-m', "--model",
                         default=None,
-                        required=True,
-                        help="Path to model dir",)
+                        help="Path to TTS model dir",)
     parser.add_argument("--hifigan-checkpoint",
                         default="VCTK_V2",
                         type=str,
@@ -390,7 +390,11 @@ if __name__ == "__main__":
     g2p = G2P(args.lang, model=args.g2p_model)
     lex = g2p.lex
 
-    if args.refaudio:
+    if args.model:
+        if not args.refaudio:
+            print ("*** ERROR: TTS model but no reference audio given.")
+            sys.exit(1)
+
         print ("computing speaker embedding...")
 
         # compute speaker embedding
@@ -427,7 +431,7 @@ if __name__ == "__main__":
 
     print (f"{len(words_to_edit)} entries found to work on")
 
-    if args.refaudio:
+    if args.model:
         modelcfg, synth = ZeroVoxTTS.load_model(args.model, 
                                                 hifigan_checkpoint=args.hifigan_checkpoint,
                                                 g2p=g2p,
@@ -447,7 +451,7 @@ if __name__ == "__main__":
         pass
     atexit.register(readline.write_history_file, histfile)
 
-    if args.refaudio:
+    if args.model:
         sounddevice.default.reset()
         sounddevice.default.samplerate = modelcfg['sampling_rate']
         sounddevice.default.channels = 1
