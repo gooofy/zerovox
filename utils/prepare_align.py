@@ -129,8 +129,8 @@ def gather_jobs_from_config(configfn: os.PathLike, limit: int=0):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("configs", type=str, nargs='+', help="path[s] to .yaml config file[s] or directorie[s]")
-    parser.add_argument("--limit", type=int, default=100, help="limit number auf audio files to process per config, default: 100 (0=unlimited)")
-    parser.add_argument("--num-workers", type=int, default=12, help="number of parallel processes, default: 12")
+    parser.add_argument("-l", "--limit", type=int, default=100, help="limit number auf audio files to process per config, default: 100 (0=unlimited)")
+    parser.add_argument("-n", "--num-workers", type=int, default=12, help="number of parallel processes, default: 12")
     args = parser.parse_args()
 
     jobs = []
