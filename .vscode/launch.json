@@ -135,7 +135,7 @@
             "args": ["configs/corpora/cv_de_100/de_cv_speaker_1.yaml"]
         },
         {
-            "name": "train hui base gpu",
+            "name": "train hui medium gpu",
             "type": "debugpy",
             "request": "launch",
             "program": "utils/train_tts.py",
@@ -144,7 +144,7 @@
                      "--accelerator=gpu", "--threads=24",
                      "--infer-device=cpu",                     
                      "--hifigan-checkpoint=VCTK_V2",
-                     "--out-folder=models/tts_de_zerovox_base_hui",
+                     "--out-folder=models/tts_de_zerovox_medium_hui",
                      //"configs/corpora/cv_de_100/de_cv_speaker_1.yaml"
                      "configs/corpora/de_hui"
                     ],
@@ -157,8 +157,8 @@
             "program": "utils/demo.py",
             "console": "integratedTerminal",
             "args": [
-                     "--model=models/tts_de_zerovox_base_1",
-                     //"--model=models/tts_de_zerovox_base_hui",
+                     "--model=models/tts_de_zerovox_medium_1",
+                     //"--model=models/tts_de_zerovox_medium_hui",
                      "--verbose",
                      //"--refaudio=/home/guenter/projects/hal9000/ennis/voices/6s/en_digitalsculler_03.wav",
                      //"--refaudio=/home/guenter/projects/hal9000/ennis/voices/6s/de_tobias_meister_03.wav",
@@ -169,7 +169,7 @@
                      //"Der Regenbogen ist ein atmosphärisch-optisches Phänomen, das als kreisbogenförmiges farbiges Lichtband in einem von der Sonne beschienenen Regenschauer erscheint.",
                      //"Der,Regenbogen!ist ein?atmosphärisch-optisches Phänomen, das.",
                      "Der,das.",
-                     "--wav-filename=base.wav"]
+                     "--wav-filename=medium.wav"]
         },
         {
             "name": "demo german interactive",
@@ -177,7 +177,7 @@
             "request": "launch",
             "program": "utils/demo.py",
             "console": "integratedTerminal",
-            "args": ["--model=models/tts_de_zerovox_base_1",
+            "args": ["--model=models/tts_de_zerovox_medium_1",
                      "--verbose",
                      "--refaudio=../voices/12s/angela_merkel.wav",
                      "--play",
@@ -191,7 +191,7 @@
             "program": "utils/lexedit.py",
             "console": "integratedTerminal",
             "args": [
-                     //"--model=models/tts_de_zerovox_base_1",
+                     //"--model=models/tts_de_zerovox_medium_1",
                      "--verbose",
                      //"--refaudio=../voices/6s/de_tobias_meister_02.wav",
                      "-e", "state,statements,staten,staters,states"
