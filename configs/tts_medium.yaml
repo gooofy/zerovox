@@ -1,11 +1,10 @@
-
-#   | Name             | Type           | Params
-# ----------------------------------------------------
-# 0 | _phoneme_encoder | PhonemeEncoder | 4.0 M 
-# 1 | _gst             | GST            | 361 K 
-# 2 | _mel_decoder     | MelDecoder     | 780 K 
-# 3 | hifigan          | Generator      | 925 K 
-# ----------------------------------------------------
+#    | Name             | Type           | Params
+#  ----------------------------------------------------
+#  0 | _phoneme_encoder | PhonemeEncoder | 16.1 M
+#  1 | _gst             | GST            | 595 K
+#  2 | _mel_decoder     | MelDecoder     | 1.4 M
+#  3 | hifigan          | Generator      | 925 K
+#  ----------------------------------------------------
 
 
 model:
