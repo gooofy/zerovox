@@ -171,3 +171,4 @@ oovs
 configs/corpora/de_hui/*.yaml
 
 syncmodels.sh
+base.wav
