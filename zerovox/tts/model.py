@@ -210,6 +210,28 @@ class ZeroVox(LightningModule):
         
         return wav, mel_len, duration
 
+    def inference(self, x, style_embed):
+
+        pred = self._phoneme_encoder(x, style_embed=style_embed, train=False)
+
+        mel = self._mel_decoder(pred["features"]) 
+        
+        mask = pred["masks"]
+        if mask is not None and mel.size(0) > 1:
+            mask = mask[:, :, :mel.shape[-1]]
+            mel = mel.masked_fill(mask, 0)
+        
+        pred["mel"] = mel
+
+        mel_len  = pred["mel_len"]
+        duration = pred["duration"]
+
+        mel = mel.transpose(1, 2)
+        wav = self.hifigan(mel).squeeze(1)
+        
+        return wav, mel_len, duration
+
+
     # def predict_step(self, batch, batch_idx=0,  dataloader_idx=0):
     #     mel, mel_len, duration = self.phoneme2mel(batch, train=False)
     #     mel = mel.transpose(1, 2)

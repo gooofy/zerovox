@@ -32,7 +32,8 @@ class G2PTokenizer:
         res = []
         for token in tokens:
 
-            token = token.replace('.','') # dlf.de, e.on, etc.
+            if token != '.':
+                token = token.replace('.','') # dlf.de, e.on, etc.
 
             # deal with hypens
             if '-' in token:

@@ -138,9 +138,15 @@ if __name__ == "__main__":
 
     modelcfg = {
         'lang'          : None,
-        'sampling_rate' : None,
-        'hop_length'    : None,
-        'n_mel_channels': None,
+        'audio': {
+            'sampling_rate' : None,
+            'hop_length'    : None,
+            'n_mel_channels': None,
+            'filter_length' : None,
+            'win_length'    : None,
+            'mel_fmin'      : None,
+            'mel_fmax'      : None,
+        },
         'model': {
             'emb_dim'       : cfg['model']['emb_dim'],
             'emb_reduction' : cfg['model']['emb_reduction'],
@@ -177,23 +183,47 @@ if __name__ == "__main__":
             if modelcfg['lang'] != pc['preprocessing']['text']['language']:
                 raise Exception ('Multiple languages detected')
 
-        if not modelcfg['sampling_rate']:
-            modelcfg['sampling_rate'] = pc['preprocessing']['audio']['sampling_rate']
+        if not modelcfg['audio']['sampling_rate']:
+            modelcfg['audio']['sampling_rate'] = pc['preprocessing']['audio']['sampling_rate']
         else:
-            if modelcfg['sampling_rate'] != pc['preprocessing']['audio']['sampling_rate']:
+            if modelcfg['audio']['sampling_rate'] != pc['preprocessing']['audio']['sampling_rate']:
                 raise Exception ('inconsistent rample rates detected')
 
-        if not modelcfg['hop_length']:
-            modelcfg['hop_length'] = pc['preprocessing']['stft']['hop_length']
+        if not modelcfg['audio']['hop_length']:
+            modelcfg['audio']['hop_length'] = pc['preprocessing']['stft']['hop_length']
         else:
-            if modelcfg['hop_length'] != pc['preprocessing']['stft']['hop_length']:
+            if modelcfg['audio']['hop_length'] != pc['preprocessing']['stft']['hop_length']:
                 raise Exception ('inconsistent hop lengths detected')
 
-        if not modelcfg['n_mel_channels']:
-            modelcfg['n_mel_channels'] = pc['preprocessing']['mel']['n_mel_channels']
+        if not modelcfg['audio']['n_mel_channels']:
+            modelcfg['audio']['n_mel_channels'] = pc['preprocessing']['mel']['n_mel_channels']
         else:
-            if modelcfg['n_mel_channels'] != pc['preprocessing']['mel']['n_mel_channels']:
+            if modelcfg['audio']['n_mel_channels'] != pc['preprocessing']['mel']['n_mel_channels']:
                 raise Exception ('inconsistent number of mel channels detected')
+
+        if not modelcfg['audio']['filter_length']:
+            modelcfg['audio']['filter_length'] = pc['preprocessing']['stft']['filter_length']
+        else:
+            if modelcfg['audio']['filter_length'] != pc['preprocessing']['stft']['filter_length']:
+                raise Exception ('inconsistent filter length detected')
+
+        if not modelcfg['audio']['win_length']:
+            modelcfg['audio']['win_length'] = pc['preprocessing']['stft']['win_length']
+        else:
+            if modelcfg['audio']['win_length'] != pc['preprocessing']['stft']['win_length']:
+                raise Exception ('inconsistent win length detected')
+
+        if not modelcfg['audio']['mel_fmin']:
+            modelcfg['audio']['mel_fmin'] = pc['preprocessing']['mel']['mel_fmin']
+        else:
+            if modelcfg['audio']['mel_fmin'] != pc['preprocessing']['mel']['mel_fmin']:
+                raise Exception ('inconsistent mel fmin detected')
+
+        if not modelcfg['audio']['mel_fmax']:
+            modelcfg['audio']['mel_fmax'] = pc['preprocessing']['mel']['mel_fmax']
+        else:
+            if modelcfg['audio']['mel_fmax'] != pc['preprocessing']['mel']['mel_fmax']:
+                raise Exception ('inconsistent mel fmax detected')
 
         with open(os.path.join(pc['path']['preprocessed_path'], 'stats.json')) as statsf:
             stats = json.load(statsf)
@@ -225,34 +255,12 @@ if __name__ == "__main__":
                                     batch_size=cfg['training']['batch_size'],
                                     num_workers=args.num_workers)
 
-#   grad_clip         : 1.0
-
-#   emb_dim           : 128  # phoneme embedding size
-#   emb_reduction     : 1    # 1 -> no phoneme embedding reduction
-#   punct_emb_dim     : 16   # punctuation embedding size
-
-#   encoder:
-#     depth           : 2
-#     n_heads         : 2
-#     kernel_size     : 5
-#     expansion       : 2    # MixFFN expansion
-
-#   decoder:
-#     block_depth     : 3
-#     n_blocks        : 3
-#     kernel_size     : 5
-
-#   gst:
-#     n_style_tokens  : 10
-#     n_heads         : 8
-#     ref_enc_filters : [32, 32, 64, 64, 128, 128]
-        
     model = ZeroVox ( symbols=symbols,
                       stats=(modelcfg['stats']['pitch_min'],modelcfg['stats']['pitch_max'],modelcfg['stats']['energy_min'],modelcfg['stats']['energy_max']),
                       hifigan_checkpoint=args.hifigan_checkpoint,
-                      sampling_rate=modelcfg['sampling_rate'],
-                      hop_length=modelcfg['hop_length'],
-                      n_mels=modelcfg['n_mel_channels'],
+                      sampling_rate=modelcfg['audio']['sampling_rate'],
+                      hop_length=modelcfg['audio']['hop_length'],
+                      n_mels=modelcfg['audio']['n_mel_channels'],
                       lr=cfg['training']['lr'],
                       weight_decay=cfg['training']['weight_decay'],
                       max_epochs=cfg['training']['max_epochs'],

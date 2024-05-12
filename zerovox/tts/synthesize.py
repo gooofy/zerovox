@@ -15,11 +15,13 @@ is based on:
 import numpy as np
 import torch
 import os
-import json
+import yaml
 import glob
+import librosa
 
 from zerovox.tts.model import ZeroVox
 from zerovox.g2p.g2p import G2P
+from zerovox.tts.mels import get_mel_from_wav, TacotronSTFT
 
 class ZeroVoxTTS:
 
@@ -30,6 +32,11 @@ class ZeroVoxTTS:
                  g2p: G2P,
                  hop_length: int,
                  sampling_rate : int,
+                 n_mel_channels : int,
+                 filter_length : int,
+                 win_length : int,
+                 mel_fmin: int,
+                 mel_fmax: int,
                  infer_device: str = 'cpu',
                  num_threads: int = None,
                  do_compile: bool = False):
@@ -57,6 +64,38 @@ class ZeroVoxTTS:
 
         self._symbols = self._g2p.symbols
 
+        self._stft = TacotronSTFT(
+                        filter_length=filter_length,
+                        hop_length=hop_length,
+                        win_length=win_length,
+                        n_mel_channels=n_mel_channels,
+                        sampling_rate=sampling_rate,
+                        mel_fmin=mel_fmin,
+                        mel_fmax=mel_fmax,
+                        use_cuda=infer_device != 'cpu')
+
+    def speaker_embed (self, wav_path: str | os.PathLike):
+
+        wav, _ = librosa.load(wav_path)
+        # wav = wav[
+        #     int(self._sampling_rate * start) : int(self._sampling_rate * end)
+        # ].astype(np.float32)
+
+        mel_spectrogram, energy = get_mel_from_wav(wav, self._stft)
+
+        # compute speaker embedding
+        # signal, _ = torchaudio.load(args.refaudio)
+        # _spk_emb_encoder = MelSpectrogramEncoder.from_hparams(source="speechbrain/spkrec-ecapa-voxceleb-mel-spec")
+        # spkemb = _spk_emb_encoder.encode_waveform(signal)[0][0]
+        # spkemb = spkemb.cpu().detach().numpy()
+
+        x = np.array([mel_spectrogram], dtype=np.float32)
+        with torch.no_grad():
+            x = torch.from_numpy(x).to(self._infer_device)
+            style_embed = self._model._gst(x)
+
+        return style_embed
+
     def ipa2phonemids(self, ipa:list[str]) -> tuple[list[int], list[int]]:
 
         phones = []
@@ -77,7 +116,7 @@ class ZeroVoxTTS:
                 pidx += 1
                 while pidx < len(ipa):
                     phone = ipa[pidx]
-                    if not self._symbols.is_punct(phone):
+                    if phone != ' ' and not self._symbols.is_punct(phone):
                         break
 
                     if phone != ' ':
@@ -126,12 +165,12 @@ class ZeroVoxTTS:
         phoneme = np.array([phone_ids], dtype=np.int32)
         puncts  = np.array([punct_ids], dtype=np.int32)
         #spkembs = np.array([[spkemb] * len(punct_ids)], dtype=np.int32)
-        spkembs = np.array([spkemb], dtype=np.int32)
+        #spkembs = np.array([spkemb], dtype=np.int32)
         with torch.no_grad():
             phoneme = torch.from_numpy(phoneme).int().to(self._infer_device)
             puncts = torch.from_numpy(puncts).int().to(self._infer_device)
-            spkembs = torch.from_numpy(spkembs).int().to(self._infer_device)
-            wavs, lengths, _ = self._model({"phoneme": phoneme, "puncts": puncts, "spkembs": spkembs})
+            #spkembs = torch.from_numpy(spkembs).int().to(self._infer_device)
+            wavs, lengths, _ = self._model.inference({"phoneme": phoneme, "puncts": puncts}, style_embed=spkemb)
             wavs = wavs.cpu().numpy()
             lengths = lengths.cpu().numpy()
 
@@ -166,13 +205,16 @@ class ZeroVoxTTS:
     def load_model(cls, 
                    modelpath: str | os.PathLike,
                    hifigan_checkpoint: str | os.PathLike,
-                   g2p: G2P,
+                   g2p: G2P | str,
                    infer_device: str = 'cpu',
                    num_threads: int = None,
                    do_compile: bool = False) -> tuple[dict[str, any], "ZeroVoxTTS"]:
         
-        with open (os.path.join(modelpath, "modelcfg.json")) as modelcfgf:
-            modelcfg = json.load(modelcfgf)
+        with open (os.path.join(modelpath, "modelcfg.yaml")) as modelcfgf:
+            modelcfg = yaml.load(modelcfgf, Loader=yaml.FullLoader)
+
+        if isinstance(g2p, str) :
+            g2p = G2P(modelcfg['lang'], model=g2p)
 
         list_of_files = glob.glob(os.path.join(modelpath, 'checkpoints/*.ckpt'))
         checkpoint = max(list_of_files, key=os.path.getctime)
@@ -181,11 +223,16 @@ class ZeroVoxTTS:
                              checkpoint=checkpoint,
                              hifigan_checkpoint=hifigan_checkpoint,
                              g2p=g2p,
-                             hop_length=modelcfg['hop_length'],
+                             hop_length=modelcfg['audio']['hop_length'],
+                             filter_length=modelcfg['audio']['filter_length'],
+                             win_length=modelcfg['audio']['win_length'],
+                             mel_fmin=modelcfg['audio']['mel_fmin'],
+                             mel_fmax=modelcfg['audio']['mel_fmax'],
+                             sampling_rate=modelcfg['audio']['sampling_rate'],
+                             n_mel_channels=modelcfg['audio']['n_mel_channels'],
                              infer_device=infer_device,
                              num_threads=num_threads,
-                             do_compile=do_compile,
-                             sampling_rate=modelcfg['sampling_rate'])
+                             do_compile=do_compile)
         
         return modelcfg, synth
 

@@ -73,19 +73,17 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    g2p = G2P(args.lang, model=args.g2p_model)
-
-    modelcfg, synth = ZeroVoxTTS.load_model(args.model, 
+    modelcfg, synth = ZeroVoxTTS.load_model(args.model,
+                                            g2p=args.g2p_model,
                                             hifigan_checkpoint=args.hifigan_checkpoint,
-                                            g2p=g2p,
                                             infer_device=args.infer_device,
                                             num_threads=args.threads,
-                                            do_compile=args.compile,)
+                                            do_compile=args.compile)
 
     if args.play or args.interactive:
         import sounddevice as sd
         sd.default.reset()
-        sd.default.samplerate = modelcfg['sampling_rate']
+        sd.default.samplerate = modelcfg['audio']['sampling_rate']
         sd.default.channels = 1
         sd.default.dtype = 'int16'
         #sd.default.device = None
@@ -94,11 +92,7 @@ if __name__ == "__main__":
     if args.verbose:
         print ("computing speaker embedding...")
 
-    # compute speaker embedding
-    signal, _ = torchaudio.load(args.refaudio)
-    _spk_emb_encoder = MelSpectrogramEncoder.from_hparams(source="speechbrain/spkrec-ecapa-voxceleb-mel-spec")
-    spkemb = _spk_emb_encoder.encode_waveform(signal)[0][0]
-    spkemb = spkemb.cpu().detach().numpy()
+    spkemb = synth.speaker_embed(args.refaudio)
 
     if args.text is not None:
         rtf = []
@@ -115,7 +109,7 @@ if __name__ == "__main__":
             elapsed_time = time.time() - start_time
 
             message = f"Synthesis time: {elapsed_time:.2f} sec"
-            wav_len = wav.shape[0] / modelcfg['sampling_rate']
+            wav_len = wav.shape[0] / modelcfg['audio']['sampling_rate']
             message += f"\nVoice length: {wav_len:.2f} sec"
             real_time_factor = wav_len / elapsed_time
             message += f"\nReal time factor: {real_time_factor:.2f}"
@@ -124,8 +118,8 @@ if __name__ == "__main__":
 
             if args.wav_filename:
                 write_wav_to_file(wav, length=length, filename=args.wav_filename,
-                                  sample_rate=modelcfg['sampling_rate'],
-                                  hop_length=modelcfg['hop_length'])
+                                  sample_rate=modelcfg['audio']['sampling_rate'],
+                                  hop_length=modelcfg['audio']['hop_length'])
 
             if i > warmup:
                 rtf.append(real_time_factor)
