@@ -135,17 +135,16 @@
             "args": ["configs/corpora/cv_de_100/de_cv_speaker_1.yaml"]
         },
         {
-            "name": "train cv 001 base gpu",
+            "name": "train hui base gpu",
             "type": "debugpy",
             "request": "launch",
             "program": "utils/train_tts.py",
             "console": "integratedTerminal",
-            "args": ["--head=2", "--reduction=1", "--expansion=2", "--kernel-size=5", "--n-blocks=3", "--block-depth=3",
-                     "--accelerator=gpu", "--threads=24", "--batch-size=64", "--val_epochs=2",
-                     "--infer-device=cpu",
-                     "--lr=0.0001", "--warmup_epochs=25",
+            "args": ["-c", "configs/tts_medium.yaml",
+                     "--accelerator=gpu", "--threads=24",
+                     "--infer-device=cpu",                     
                      "--hifigan-checkpoint=VCTK_V2",
-                     "--out-folder=models/tts_de_zerovox_base_cv001",
+                     "--out-folder=models/tts_de_zerovox_base_hui",
                      //"configs/corpora/cv_de_100/de_cv_speaker_1.yaml"
                      "configs/corpora/de_hui"
                     ],

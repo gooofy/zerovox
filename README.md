@@ -71,3 +71,19 @@ https://github.com/roatienza/efficientspeech
 The G2P transformer models are based on DeepPhonemizer by Axel Springer News Media & Tech GmbH & Co. KG - Ideas Engineering
 
 https://github.com/as-ideas/DeepPhonemizer
+
+The ZeroShot voice cloning is based on GST-Tacotron by Chengqi Deng
+
+https://github.com/KinglittleQ/GST-Tacotron
+
+which is an implementation of
+
+	@misc{wang2018style,
+		  title={Style Tokens: Unsupervised Style Modeling, Control and Transfer in End-to-End Speech Synthesis},
+		  author={Yuxuan Wang and Daisy Stanton and Yu Zhang and RJ Skerry-Ryan and Eric Battenberg and Joel Shor and Ying Xiao and Fei Ren and Ye Jia and Rif A. Saurous},
+		  year={2018},
+		  eprint={1803.09017},
+		  archivePrefix={arXiv},
+		  primaryClass={cs.CL}
+	}
+

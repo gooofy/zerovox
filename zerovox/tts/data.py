@@ -87,7 +87,6 @@ class LJSpeechDataModule(LightningDataModule):
         pitches = [x[idx]["pitch"] for idx in idxs]
         energies = [x[idx]["energy"] for idx in idxs]
         durations = [x[idx]["duration"] for idx in idxs]
-        spkembs = [x[idx]["spkemb"] for idx in idxs]
 
         phoneme_lens = np.array([phoneme.shape[0] for phoneme in phonemes])
         mel_lens = np.array([mel.shape[0] for mel in mels])
@@ -98,7 +97,6 @@ class LJSpeechDataModule(LightningDataModule):
         pitches = pad_1D(pitches)
         energies = pad_1D(energies)
         durations = pad_1D(durations)
-        spkembs = pad_1D(spkembs)
 
         phonemes = torch.from_numpy(phonemes).int()
         puncts = torch.from_numpy(puncts).int()
@@ -109,7 +107,6 @@ class LJSpeechDataModule(LightningDataModule):
         pitches = torch.from_numpy(pitches).float()
         energies = torch.from_numpy(energies).float()
         durations = torch.from_numpy(durations).int()
-        spkembs = torch.from_numpy(spkembs).float()
 
         mels = torch.from_numpy(mels).float()
         mel_lens = torch.from_numpy(mel_lens).int()
@@ -126,7 +123,7 @@ class LJSpeechDataModule(LightningDataModule):
              "pitch": pitches,
              "energy": energies,
              "duration": durations,
-             "spkembs": spkembs,}
+             "ref_mel": mels,}
 
         y = {"mel": mels,}
 
@@ -227,20 +224,13 @@ class LJSpeechDataset(Dataset):
             f"duration-{basename}.npy",
         )
         duration = np.load(duration_path)
-        spkemb_path = os.path.join(
-            preprocessed_path,
-            "spkemb",
-            f"spkemb-{basename}.npy",
-        )
-        spkemb = np.load(spkemb_path)
 
         x = {"phoneme": phonemes,
              "puncts": puncts,
              "text": raw_text,
              "pitch": pitch,
              "energy": energy,
-             "duration": duration,
-             "spkemb": spkemb}
+             "duration": duration}
 
         y = {"mel": mel,}
 

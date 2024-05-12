@@ -335,7 +335,6 @@ class Preprocessor:
         os.makedirs((os.path.join(self._out_dir, "pitch")), exist_ok=True)
         os.makedirs((os.path.join(self._out_dir, "energy")), exist_ok=True)
         os.makedirs((os.path.join(self._out_dir, "duration")), exist_ok=True)
-        os.makedirs((os.path.join(self._out_dir, "spkemb")), exist_ok=True)
 
         out = list()
         n_frames = 0
@@ -474,7 +473,7 @@ class Preprocessor:
 
         # Compute mel-scale spectrogram and energy
         mel_spectrogram, energy = get_mel_from_wav(wav, self._stft)
-        mel_spectrogram = mel_spectrogram[:, : sum(durations)]
+        # mel_spectrogram = mel_spectrogram[:, : sum(durations)]
         # energy = energy[: sum(durations)]
 
         # compute pitch per phoneme

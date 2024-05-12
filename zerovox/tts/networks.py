@@ -322,15 +322,14 @@ class PhonemeEncoder(nn.Module):
 
     def __init__(self,
                  symbols:G2PSymbols,
-                 stats=None, 
-                 depth=2, 
-                 reduction=4, 
-                 head=1, 
-                 embed_dim=128, 
-                 kernel_size=3, 
-                 expansion=1,
-                 punct_embed_dim=16,
-                 speaker_embed_dim=192):
+                 stats, 
+                 depth, 
+                 reduction,
+                 head,
+                 embed_dim, 
+                 kernel_size,
+                 expansion,
+                 punct_embed_dim):
         super().__init__()
 
         self.encoder = Encoder(symbols=symbols,
@@ -342,7 +341,7 @@ class PhonemeEncoder(nn.Module):
                                expansion=expansion,
                                punct_embed_dim=punct_embed_dim)
         
-        dim = ((embed_dim+punct_embed_dim) // reduction) + speaker_embed_dim
+        dim = ((embed_dim+punct_embed_dim) // reduction)
         self.fuse = Fuse(self.encoder.get_feature_dims(), kernel_size=kernel_size)
         self.feature_upsampler = FeatureUpsampler()
         self.pitch_decoder = AcousticDecoder(dim, pitch_stats=stats[0:2] if stats else None)
@@ -350,10 +349,9 @@ class PhonemeEncoder(nn.Module):
         self.duration_decoder = AcousticDecoder(dim, duration=True)
         
 
-    def forward(self, x, train=False):
+    def forward(self, x, style_embed, train=False):
         phoneme = x["phoneme"]
         puncts = x["puncts"]
-        spkembs = x["spkembs"]
         phoneme_mask = x["phoneme_mask"] if phoneme.shape[0] > 1 else None
 
         pitch_target = x["pitch"] if train else None
@@ -364,12 +362,10 @@ class PhonemeEncoder(nn.Module):
 
         features, mask = self.encoder(phoneme, puncts, mask=phoneme_mask)
         fused_features = self.fuse(features, mask=mask)
-        
-        # append speaker embedding to each phoneme
-        spkembs_features = spkembs.unsqueeze(1).repeat(1, fused_features.shape [1], 1)
-        fused_features = torch.cat((fused_features, spkembs_features), dim=-1)
-        if mask is not None:
-            mask = mask[:,:,0].unsqueeze(2).expand(-1,-1,fused_features.shape[2])
+
+        # add GST Tokens (style/speaker) embedding to fused_features
+        style_embed = style_embed.expand_as(fused_features)
+        fused_features = fused_features + style_embed
 
         pitch_pred = self.pitch_decoder(fused_features)
         pitch_features = self.pitch_decoder.get_embedding(pitch_pred, pitch_target, mask)
@@ -426,35 +422,5 @@ class PhonemeEncoder(nn.Module):
         return y
 
         
-class Phoneme2Mel(nn.Module):
-    """ From Phoneme Sequence to Mel Spectrogram """
 
-    def __init__(self,
-                 encoder,
-                 decoder):
-        super().__init__()
-
-        self.encoder = encoder
-        self.decoder = decoder
-
-    def forward(self, x, train=False):
-        # Dirty trick to enable ONNX compilation.
-        # Else, the torch.to_onnx complains about missing input in the forward method.
-        if isinstance(x, list):
-            x = x[0]
-            
-        pred = self.encoder(x, train=train)
-        mel = self.decoder(pred["features"]) 
-        
-        mask = pred["masks"]
-        if mask is not None and mel.size(0) > 1:
-            mask = mask[:, :, :mel.shape[-1]]
-            mel = mel.masked_fill(mask, 0)
-        
-        pred["mel"] = mel
-
-        if train: 
-            return pred
-
-        return mel, pred["mel_len"], pred["duration"]
 

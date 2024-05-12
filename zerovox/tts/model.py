@@ -26,7 +26,8 @@ from scipy.io import wavfile
 
 import zerovox.hifigan
 from zerovox.g2p.data import G2PSymbols
-from zerovox.tts.networks import PhonemeEncoder, MelDecoder, Phoneme2Mel
+from zerovox.tts.networks import PhonemeEncoder, MelDecoder
+from zerovox.tts.GST import GST
 
 def write_to_file(wavs, sampling_rate, hop_length, lengths=None, wav_path="outputs", filename="tts"):
     wavs = (wavs * 32760).astype("int16")
@@ -133,46 +134,49 @@ class ZeroVox(LightningModule):
                  hifigan_checkpoint,
                  sampling_rate,
                  hop_length,
+                 n_mels,
                  lr=1e-3,
                  weight_decay=1e-6, 
                  max_epochs=5000,
                  warmup_epochs=50,
-                 depth=2, 
-                 n_blocks=2, 
-                 block_depth=2, 
+                 encoder_depth=2, 
+                 decoder_n_blocks=2, 
+                 decoder_block_depth=2, 
                  reduction=4, 
-                 head=1,
+                 encoder_n_heads=1,
                  embed_dim=128, 
-                 kernel_size=3, 
-                 decoder_kernel_size=3, 
-                 expansion=1,
+                 encoder_kernel_size=3, 
+                 decoder_kernel_size=3,
+                 encoder_expansion=1,
                  wav_path="wavs", 
                  infer_device=None, 
                  verbose=False,
                  punct_embed_dim=16,
-                 speaker_embed_dim=192):
+                 gst_n_style_tokens=10,
+                 gst_n_heads=8,
+                 gst_ref_enc_filters=[32, 32, 64, 64, 128, 128]):
         super(ZeroVox, self).__init__()
 
         self.save_hyperparameters()
 
-        phoneme_encoder = PhonemeEncoder(symbols=symbols,
-                                         stats=stats,
-                                         depth=depth,
-                                         reduction=reduction,
-                                         head=head,
-                                         embed_dim=embed_dim,
-                                         kernel_size=kernel_size,
-                                         expansion=expansion,
-                                         punct_embed_dim=punct_embed_dim,
-                                         speaker_embed_dim=speaker_embed_dim)
+        self._phoneme_encoder = PhonemeEncoder(symbols=symbols,
+                                               stats=stats,
+                                               depth=encoder_depth,
+                                               reduction=reduction,
+                                               head=encoder_n_heads,
+                                               embed_dim=embed_dim,
+                                               kernel_size=encoder_kernel_size,
+                                               expansion=encoder_expansion,
+                                               punct_embed_dim=punct_embed_dim)
 
-        mel_decoder = MelDecoder(dim=(embed_dim+punct_embed_dim)//reduction+speaker_embed_dim, 
-                                 kernel_size=decoder_kernel_size,
-                                 n_blocks=n_blocks, 
-                                 block_depth=block_depth)
+        emb_size = (embed_dim+punct_embed_dim)//reduction
 
-        self.phoneme2mel = Phoneme2Mel(encoder=phoneme_encoder,
-                                       decoder=mel_decoder)
+        self._gst = GST(emb_size, n_mels, gst_n_style_tokens, gst_n_heads, gst_ref_enc_filters)
+
+        self._mel_decoder = MelDecoder(dim=emb_size, 
+                                       kernel_size=decoder_kernel_size,
+                                       n_blocks=decoder_n_blocks, 
+                                       block_depth=decoder_block_depth)
 
         self.hifigan = get_hifigan(checkpoint=hifigan_checkpoint,
                                    infer_device=infer_device, verbose=verbose)
@@ -182,18 +186,29 @@ class ZeroVox(LightningModule):
 
     def forward(self, x):
 
-        # return self.phoneme2mel(x, train=True) if self.training else self.predict_step(x)
+        style_embed = self._gst(x["ref_mel"])
+
+        pred = self._phoneme_encoder(x, style_embed=style_embed, train=self.training)
+
+        mel = self._mel_decoder(pred["features"]) 
+        
+        mask = pred["masks"]
+        if mask is not None and mel.size(0) > 1:
+            mask = mask[:, :, :mel.shape[-1]]
+            mel = mel.masked_fill(mask, 0)
+        
+        pred["mel"] = mel
 
         if self.training:
+            return pred
 
-            return self.phoneme2mel(x, train=True)
+        mel_len  = pred["mel_len"]
+        duration = pred["duration"]
 
-        else:
-            mel, mel_len, duration = self.phoneme2mel(x, train=False)
-            mel = mel.transpose(1, 2)
-            wav = self.hifigan(mel).squeeze(1)
-            
-            return wav, mel_len, duration
+        mel = mel.transpose(1, 2)
+        wav = self.hifigan(mel).squeeze(1)
+        
+        return wav, mel_len, duration
 
     # def predict_step(self, batch, batch_idx=0,  dataloader_idx=0):
     #     mel, mel_len, duration = self.phoneme2mel(batch, train=False)

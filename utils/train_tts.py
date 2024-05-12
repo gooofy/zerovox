@@ -47,80 +47,17 @@ def get_args():
     parser.add_argument("--precision", default="16-mixed")
 
     parser.add_argument("--num_workers", type=int, default=4)
-    parser.add_argument("--max_epochs", type=int, default=5000)
-    parser.add_argument("--warmup_epochs", type=int, default=50)
-    parser.add_argument("--val_epochs", type=int, default=10)
- 
+
+    parser.add_argument("-c", "--model-config",
+                        type=str,
+                        help="Path to model config.yaml",
+                        required=True)
+
     parser.add_argument("configs",
                         type=str,
                         help="Path to config.yamls",
                         nargs='+')
-    parser.add_argument('--weight-decay',
-                        type=float,
-                        default=1e-5,
-                        metavar='N',
-                        help='Optimizer weight decay')
-    parser.add_argument('--lr',
-                        type=float,
-                        default=1e-3,
-                        metavar='N',
-                        help='Learning rate for AdamW.')
-    parser.add_argument('--grad-clip',
-                        type=float,
-                        default=1.0,
-                        metavar='N',
-                        help='Gradient clipping value, default: 1.0')
 
-    parser.add_argument('--batch-size',
-                        type=int,
-                        default=128,
-                        metavar='N',
-                        help='Batch size')
-
-    parser.add_argument('--depth',
-                        type=int,
-                        default=2,
-                        help='Encoder depth. Default for tiny, small & base.')
-    parser.add_argument('--block-depth',
-                        type=int,
-                        default=2,
-                        help='Decoder block depth. Default for tiny & small. Base:  3')
-    parser.add_argument('--n-blocks',
-                        type=int,
-                        default=2,
-                        help='Decoder blocks. Default for tiny. Small & base: 3.')
-    parser.add_argument('--reduction',
-                        type=int,
-                        default=4,
-                        help='Embed dim reduction factor. Default for tiny. Small: 2. Base: 1.')
-    parser.add_argument('--head',
-                        type=int,
-                        default=1,
-                        help='Number of transformer encoder head. Default for tiny & small. Base: 2.')
-    parser.add_argument('--embed-dim',
-                        type=int,
-                        default=128,
-                        help='Embedding or feature dim. To be reduced by --reduction.')
-    parser.add_argument('--punct-embed-dim',
-                        type=int,
-                        default=16,
-                        help='Punctuation embedding dim. Default: 16')
-    parser.add_argument('--speaker-embed-dim',
-                        type=int,
-                        default=192,
-                        help='Speaker embedding dim. Default: 192')
-    parser.add_argument('--kernel-size',
-                        type=int,
-                        default=3,
-                        help='Conv1d kernel size (Encoder). Default for tiny & small. Base is 5.')
-    parser.add_argument('--decoder-kernel-size',
-                        type=int,
-                        default=5,
-                        help='Conv1d kernel size (Decoder). Default for tiny, small & base: 5.')
-    parser.add_argument('--expansion',
-                        type=int,
-                        default=1,
-                        help='MixFFN expansion. Default for tiny & small. Base: 2.')
     parser.add_argument('--out-folder',
                         default="mymodel1",
                         type=str,
@@ -148,15 +85,6 @@ def get_args():
                         action='store_true',
                         help='Print out debug information')
 
-    parser.add_argument('--jit',
-                        type=str,
-                        default=None,
-                        help='Convert to jit model')
-    # use jit modules 
-    parser.add_argument('--to-torchscript',
-                        action='store_true',
-                        help='Convert model to torchscript')
- 
     parser.add_argument('--compile',
                         action='store_true',
                         help='Train using the compiled model')
@@ -167,16 +95,6 @@ def get_args():
     args.num_workers *= args.devices
 
     return args
-
-
-def print_args(args):
-    opt_log =  '--------------- Options ---------------\n'
-    opt = vars(args)
-    for k, v in opt.items():
-        opt_log += f'{str(k)}: {str(v)}\n'
-    opt_log += '---------------------------------------\n'
-    print(opt_log)
-    return opt_log
 
 class ZVModelCheckpointCheckpoint(ModelCheckpoint):
 
@@ -216,27 +134,40 @@ if __name__ == "__main__":
 
     preprocess_configs = [yaml.load(open(fn, "r"), Loader=yaml.FullLoader) for fn in cfgfns]
 
+    cfg = yaml.load(open(args.model_config, 'r'), Loader=yaml.FullLoader)
+
     modelcfg = {
         'lang'          : None,
         'sampling_rate' : None,
         'hop_length'    : None,
-        'energy_min'    : sys.float_info.max,
-        'energy_max'    : sys.float_info.min,
-        'pitch_min'     : sys.float_info.max,
-        'pitch_max'     : sys.float_info.min,
-
-        'depth'               : args.depth,
-        'n_blocks'            : args.n_blocks,
-        'block_depth'         : args.block_depth,
-        'reduction'           : args.reduction,
-        'head'                : args.head,
-        'embed_dim'           : args.embed_dim,
-        'punct_embed_dim'     : args.punct_embed_dim,
-        'speaker_embed_dim'   : args.speaker_embed_dim,
-        'kernel_size'         : args.kernel_size,
-        'decoder_kernel_size' : args.decoder_kernel_size,
-        'expansion'           : args.expansion,
-
+        'n_mel_channels': None,
+        'model': {
+            'emb_dim'       : cfg['model']['emb_dim'],
+            'emb_reduction' : cfg['model']['emb_reduction'],
+            'punct_emb_dim' : cfg['model']['punct_emb_dim'],
+            'encoder'       : {
+                'depth'       : cfg['model']['encoder']['depth'],
+                'n_heads'     : cfg['model']['encoder']['n_heads'],
+                'kernel_size' : cfg['model']['encoder']['kernel_size'],
+                'expansion'   : cfg['model']['encoder']['expansion'],
+            },
+            'decoder'       : {
+                'block_depth' : cfg['model']['decoder']['block_depth'],
+                'n_blocks'    : cfg['model']['decoder']['n_blocks'],
+                'kernel_size' : cfg['model']['decoder']['kernel_size'],
+            },
+            'gst'           : {
+                'n_style_tokens' : cfg['model']['gst']['n_style_tokens'],
+                'n_heads'        : cfg['model']['gst']['n_heads'],
+                'ref_enc_filters': cfg['model']['gst']['ref_enc_filters'],
+            },
+        },
+        'stats': {
+            'energy_min'    : sys.float_info.max,
+            'energy_max'    : sys.float_info.min,
+            'pitch_min'     : sys.float_info.max,
+            'pitch_max'     : sys.float_info.min,
+        },
     }
 
     for pc in preprocess_configs:
@@ -258,62 +189,90 @@ if __name__ == "__main__":
             if modelcfg['hop_length'] != pc['preprocessing']['stft']['hop_length']:
                 raise Exception ('inconsistent hop lengths detected')
 
+        if not modelcfg['n_mel_channels']:
+            modelcfg['n_mel_channels'] = pc['preprocessing']['mel']['n_mel_channels']
+        else:
+            if modelcfg['n_mel_channels'] != pc['preprocessing']['mel']['n_mel_channels']:
+                raise Exception ('inconsistent number of mel channels detected')
+
         with open(os.path.join(pc['path']['preprocessed_path'], 'stats.json')) as statsf:
             stats = json.load(statsf)
             pitch_min, pitch_max   = stats["pitch"][:2]
             energy_min, energy_max = stats["energy"][:2]
 
-            if energy_min < modelcfg['energy_min']:
-                modelcfg['energy_min'] = energy_min
-            if energy_max > modelcfg['energy_max']:
-                modelcfg['energy_max'] = energy_max
+            if energy_min < modelcfg['stats']['energy_min']:
+                modelcfg['stats']['energy_min'] = energy_min
+            if energy_max > modelcfg['stats']['energy_max']:
+                modelcfg['stats']['energy_max'] = energy_max
 
-            if pitch_min < modelcfg['pitch_min']:
-                modelcfg['pitch_min'] = pitch_min
-            if pitch_max > modelcfg['pitch_max']:
-                modelcfg['pitch_max'] = pitch_max
+            if pitch_min < modelcfg['stats']['pitch_min']:
+                modelcfg['stats']['pitch_min'] = pitch_min
+            if pitch_max > modelcfg['stats']['pitch_max']:
+                modelcfg['stats']['pitch_max'] = pitch_max
 
     lexicon       = Lexicon.load(modelcfg['lang'])
     symbols       = G2PSymbols (lexicon.graphemes, lexicon.phonemes)
 
     os.makedirs (args.out_folder, exist_ok=True)
 
-    with open (os.path.join(args.out_folder, 'modelcfg.json'), 'w') as modelcfgf:
-        modelcfgf.write(json.dumps(modelcfg, indent=4))
+    with open (os.path.join(args.out_folder, 'modelcfg.yaml'), 'w') as modelcfgf:
+        yaml.dump(modelcfg, modelcfgf, default_flow_style=False)
 
     args.num_workers *= args.devices
 
     datamodule = LJSpeechDataModule(preprocess_configs=preprocess_configs,
                                     symbols=symbols,
-                                    batch_size=args.batch_size,
+                                    batch_size=cfg['training']['batch_size'],
                                     num_workers=args.num_workers)
 
-    model = ZeroVox ( symbols=symbols,
-                            stats=(modelcfg['pitch_min'],modelcfg['pitch_max'],modelcfg['energy_min'],modelcfg['energy_max']),
-                            sampling_rate=modelcfg['sampling_rate'],
-                            hop_length=modelcfg['hop_length'],
-                            lr=args.lr,
-                            weight_decay=args.weight_decay,
-                            max_epochs=args.max_epochs,
-                            warmup_epochs=args.warmup_epochs,
-                            depth=args.depth,
-                            n_blocks=args.n_blocks,
-                            block_depth=args.block_depth,
-                            reduction=args.reduction,
-                            head=args.head,
-                            embed_dim=args.embed_dim,
-                            punct_embed_dim=args.punct_embed_dim,
-                            speaker_embed_dim=args.speaker_embed_dim,
-                            kernel_size=args.kernel_size,
-                            decoder_kernel_size=args.decoder_kernel_size,
-                            expansion=args.expansion,
-                            wav_path=os.path.join(args.out_folder, 'validation'),
-                            hifigan_checkpoint=args.hifigan_checkpoint,
-                            infer_device=args.infer_device,
-                            verbose=args.verbose)
+#   grad_clip         : 1.0
 
-    if args.verbose:
-        print_args(args)
+#   emb_dim           : 128  # phoneme embedding size
+#   emb_reduction     : 1    # 1 -> no phoneme embedding reduction
+#   punct_emb_dim     : 16   # punctuation embedding size
+
+#   encoder:
+#     depth           : 2
+#     n_heads         : 2
+#     kernel_size     : 5
+#     expansion       : 2    # MixFFN expansion
+
+#   decoder:
+#     block_depth     : 3
+#     n_blocks        : 3
+#     kernel_size     : 5
+
+#   gst:
+#     n_style_tokens  : 10
+#     n_heads         : 8
+#     ref_enc_filters : [32, 32, 64, 64, 128, 128]
+        
+    model = ZeroVox ( symbols=symbols,
+                      stats=(modelcfg['stats']['pitch_min'],modelcfg['stats']['pitch_max'],modelcfg['stats']['energy_min'],modelcfg['stats']['energy_max']),
+                      hifigan_checkpoint=args.hifigan_checkpoint,
+                      sampling_rate=modelcfg['sampling_rate'],
+                      hop_length=modelcfg['hop_length'],
+                      n_mels=modelcfg['n_mel_channels'],
+                      lr=cfg['training']['lr'],
+                      weight_decay=cfg['training']['weight_decay'],
+                      max_epochs=cfg['training']['max_epochs'],
+                      warmup_epochs=cfg['training']['warmup_epochs'],
+                      encoder_depth=cfg['model']['encoder']['depth'],
+                      decoder_n_blocks=cfg['model']['decoder']['n_blocks'],
+                      decoder_block_depth=cfg['model']['decoder']['block_depth'],
+                      reduction=cfg['model']['emb_reduction'],
+                      encoder_n_heads=cfg['model']['encoder']['n_heads'],
+                      embed_dim=cfg['model']['emb_dim'],
+                      encoder_kernel_size=cfg['model']['encoder']['kernel_size'],
+                      decoder_kernel_size=cfg['model']['decoder']['kernel_size'],
+                      encoder_expansion=cfg['model']['encoder']['expansion'],
+                      wav_path=os.path.join(args.out_folder, 'validation'),
+                      infer_device=args.infer_device,
+                      verbose=args.verbose,
+                      punct_embed_dim=cfg['model']['punct_emb_dim'],
+                      gst_n_style_tokens=cfg['model']['gst']['n_style_tokens'],
+                      gst_n_heads=cfg['model']['gst']['n_heads'],
+                      gst_ref_enc_filters=cfg['model']['gst']['ref_enc_filters'])
 
     checkpoint_callback = ZVModelCheckpointCheckpoint(
         monitor='loss',
@@ -330,11 +289,11 @@ if __name__ == "__main__":
     trainer = Trainer(accelerator=args.accelerator,
                       devices=args.devices,
                       precision=args.precision,
-                      check_val_every_n_epoch=args.val_epochs,
-                      max_epochs=args.max_epochs,
+                      check_val_every_n_epoch=cfg['training']['val_epochs'],
+                      max_epochs=cfg['training']['max_epochs'],
                       default_root_dir=args.out_folder,
                       callbacks=[checkpoint_callback],
-                      gradient_clip_val=args.grad_clip)
+                      gradient_clip_val=cfg['training']['grad_clip'])
 
     if args.compile:
         model = torch.compile(model)
