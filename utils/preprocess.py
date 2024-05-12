@@ -297,12 +297,12 @@ class TacotronSTFT(torch.nn.Module):
 
 
 class Preprocessor:
-    def __init__(self, config: dict[str, any], lexicon: Lexicon, tokenizer: G2PTokenizer, use_cuda: bool):
+
+    def __init__(self, config: dict[str, any], lexicon: Lexicon, tokenizer: G2PTokenizer, use_cuda):
 
         np.seterr(all='raise')
 
         self._config        = config
-        self._use_cuda      = use_cuda
         self._in_dir        = config["path"]["raw_path"]
         self._out_dir       = config["path"]["preprocessed_path"]
         self._val_size      = config["preprocessing"]["val_size"]
@@ -314,8 +314,6 @@ class Preprocessor:
         self._lexicon       = lexicon
         self._tokenizer     = tokenizer
         self._symbols       = G2PSymbols (self._lexicon.graphemes, self._lexicon.phonemes)
-
-        self._spk_emb_encoder = MelSpectrogramEncoder.from_hparams(source="speechbrain/spkrec-ecapa-voxceleb-mel-spec")
 
         self._pitch_normalization = config["preprocessing"]["pitch"]["normalization"]
         self._energy_normalization = config["preprocessing"]["energy"]["normalization"]
@@ -515,11 +513,6 @@ class Preprocessor:
                 else:
                     phoneme_energy[i] = energy[-1]
 
-        # compute speaker embedding
-        signal, _ = torchaudio.load(wav_path)
-        spkemb = self._spk_emb_encoder.encode_waveform(signal)[0][0]
-        spkemb = spkemb.cpu().detach().numpy()
-
         # Save files
         dur_filename = f"duration-{basename}.npy"
         np.save(os.path.join(self._out_dir, "duration", dur_filename), durations)
@@ -536,9 +529,6 @@ class Preprocessor:
             mel_spectrogram.T,
         )
 
-        spkemb_filename = f"spkemb-{basename}.npy"
-        np.save(os.path.join(self._out_dir, "spkemb", spkemb_filename), spkemb)
-
         return (
             "|".join([basename, " ".join(phones), raw_text, " ".join(puncts)]),
             self.remove_outlier(pitch),
@@ -553,7 +543,7 @@ class Preprocessor:
 
         token_pos = 0
         alignment_pos = 0
-   
+
         phones           = []
         puncts           = []
         phone_positions  = []
@@ -561,7 +551,7 @@ class Preprocessor:
         start_time       = -1
         end_time         = -1
         last_token_start = -1
-
+        cur_align        = None 
         while True:
 
             cur_token = None
@@ -626,6 +616,9 @@ class Preprocessor:
                 alignment_pos += 1
 
             token_pos += 1
+
+        if not cur_align:
+            return None
 
         durations.append(int(np.round(cur_align['duration'] * self._sampling_rate / self._hop_length)))
         #print (phones, puncts, durations)
