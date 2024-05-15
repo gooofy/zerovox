@@ -23,11 +23,7 @@ import multiprocessing
 
 from scipy.io import wavfile
 from zerovox.tts.synthesize import ZeroVoxTTS
-from zerovox.g2p.g2p import DEFAULT_G2P_MODEL_NAME, G2P
-
-import torchaudio
-# from speechbrain.inference.speaker import EncoderClassifier
-from speechbrain.inference.encoders import MelSpectrogramEncoder
+from zerovox.g2p.g2p import DEFAULT_G2P_MODEL_NAME
 
 def write_wav_to_file(wav, length, filename, sample_rate=22050, hop_length=256):
     wav = (wav * 32760).astype("int16")
