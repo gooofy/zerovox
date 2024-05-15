@@ -43,6 +43,7 @@ class ZeroVoxTTS:
 
         self._hop_length = hop_length
         self._infer_device = infer_device
+        self._sampling_rate = sampling_rate
 
         self._g2p = g2p
 
@@ -76,7 +77,7 @@ class ZeroVoxTTS:
 
     def speaker_embed (self, wav_path: str | os.PathLike):
 
-        wav, _ = librosa.load(wav_path)
+        wav, _ = librosa.load(wav_path, sr=self._sampling_rate)
         # wav = wav[
         #     int(self._sampling_rate * start) : int(self._sampling_rate * end)
         # ].astype(np.float32)
@@ -89,7 +90,7 @@ class ZeroVoxTTS:
         # spkemb = _spk_emb_encoder.encode_waveform(signal)[0][0]
         # spkemb = spkemb.cpu().detach().numpy()
 
-        x = np.array([mel_spectrogram], dtype=np.float32)
+        x = np.array([mel_spectrogram.T], dtype=np.float32)
         with torch.no_grad():
             x = torch.from_numpy(x).to(self._infer_device)
             style_embed = self._model._gst(x)
