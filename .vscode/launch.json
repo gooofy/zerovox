@@ -128,12 +128,12 @@
                     ]
         },       
         {
-            "name": "preprocess cv 0001",
+            "name": "preprocess Karlsson",
             "type": "debugpy",
             "request": "launch",
             "program": "utils/preprocess.py",
             "console": "integratedTerminal",
-            "args": ["configs/corpora/cv_de_100/de_cv_speaker_1.yaml"]
+            "args": ["configs/corpora/de_hui/de_hui_Karlsson.yaml"]
         },
         {
             "name": "train karlsson medium cpu",

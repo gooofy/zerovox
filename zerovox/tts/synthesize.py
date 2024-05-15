@@ -79,7 +79,14 @@ class ZeroVoxTTS:
 
         wav, _ = librosa.load(wav_path, sr=self._sampling_rate)
 
+        # Trim the beginning and ending silence
+        wav, _ = librosa.effects.trim(wav, top_db=40)
+
         mel_spectrogram, energy = get_mel_from_wav(wav, self._stft)
+
+        # m = mel_spectrogram.T
+        # for mm in m[:100]:
+        #     print (mm[:6])
 
         x = np.array([mel_spectrogram.T], dtype=np.float32)
         with torch.no_grad():
