@@ -163,7 +163,7 @@ if __name__ == "__main__":
                     elapsed_time = time.time() - start_time
 
                     message = f"Synthesis time: {elapsed_time:.2f} sec"
-                    wav_len = wav.shape[0] / modelcfg['sampling_rate']
+                    wav_len = wav.shape[0] / modelcfg['audio']['sampling_rate']
                     message += f"\nVoice length: {wav_len:.2f} sec"
                     real_time_factor = wav_len / elapsed_time
                     message += f"\nReal time factor: {real_time_factor:.2f}"
