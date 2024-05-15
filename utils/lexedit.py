@@ -404,7 +404,7 @@ if __name__ == "__main__":
 
     if args.edit:
         for word in args.edit.split(','):
-            words_to_edit.add(word)
+            words_to_edit.add(word.lower())
             if word in lex:
                 oovs_lex[word] = lex[word]
 

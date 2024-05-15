@@ -6,5 +6,5 @@ if [ $# -ne 1 ] ; then
 fi
 
 utils/lexedit.py -m models/tts_de_zerovox_medium_1 \
-    --refaudio=preprocessed_data/de_hui_Karlsson/wavs/dschinnistan_dschinnistan_02_f000023.wav \
+    --refaudio=preprocessed_data/de_hui_Karlsson/wavs/dschinnistan_dschinnistan_01_f000093.wav \
     -e $1
