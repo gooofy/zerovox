@@ -179,7 +179,8 @@
             "request": "launch",
             "program": "utils/demo.py",
             "console": "integratedTerminal",
-            "args": ["--model=models/tts_de_zerovox_medium_1",
+            "args": [
+                     "--model=models/tts_de_zerovox_medium_1",
                      "--verbose",
                      "--refaudio=../voices/12s/angela_merkel.wav",
                      "--play",
@@ -206,5 +207,24 @@
             "program": "priv/utils/phonetable.py",
             "console": "integratedTerminal",
             "args": []
-        },   ]
+        },
+        {
+            "name": "review_lj_corpus",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "utils/review_lj_corpus.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--model=models/tts_de_zerovox_medium_1",
+                //"--model=models/tts_de_zerovox_medium_hui",
+                //"--verbose",
+                //"--refaudio=/home/guenter/projects/hal9000/ennis/voices/6s/en_digitalsculler_03.wav",
+                //"--refaudio=/home/guenter/projects/hal9000/ennis/voices/6s/de_tobias_meister_03.wav",
+                //"--refaudio=/home/guenter/projects/hal9000/ennis/voices/6s/de_christoph_wittelsbürger_03.wav",
+                "--refaudio=preprocessed_data/de_hui_Karlsson/wavs/dschinnistan_dschinnistan_01_f000093.wav",
+                "/home/guenter/projects/hal9000/ennis/voices/src/dlf/presseschau/sorted/de_christoph_wittelsbürger/presseschau_dlf_20230311_0704_3545b479"
+            ],
+            "justMyCode": false
+        },   
+    ]
 }
