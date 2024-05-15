@@ -4,6 +4,7 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+        
         {
             "name": "train g2p de",
             "type": "debugpy",
@@ -135,18 +136,18 @@
             "args": ["configs/corpora/cv_de_100/de_cv_speaker_1.yaml"]
         },
         {
-            "name": "train hui medium gpu",
+            "name": "train karlsson medium cpu",
             "type": "debugpy",
             "request": "launch",
             "program": "utils/train_tts.py",
             "console": "integratedTerminal",
             "args": ["-c", "configs/tts_medium.yaml",
-                     "--accelerator=gpu", "--threads=24",
+                     "--accelerator=cpu", "--threads=24",
                      "--infer-device=cpu",                     
                      "--hifigan-checkpoint=VCTK_V2",
-                     "--out-folder=models/tts_de_zerovox_medium_hui",
+                     "--out-folder=models/tts_de_zerovox_medium_karlsson",
                      //"configs/corpora/cv_de_100/de_cv_speaker_1.yaml"
-                     "configs/corpora/de_hui"
+                     "configs/corpora/de_hui/de_hui_Karlsson.yaml"
                     ],
             "justMyCode": false
         },       
@@ -162,13 +163,14 @@
                      "--verbose",
                      //"--refaudio=/home/guenter/projects/hal9000/ennis/voices/6s/en_digitalsculler_03.wav",
                      //"--refaudio=/home/guenter/projects/hal9000/ennis/voices/6s/de_tobias_meister_03.wav",
-                     "--refaudio=/home/guenter/projects/hal9000/ennis/voices/6s/de_christoph_wittelsbürger_03.wav",
+                     //"--refaudio=/home/guenter/projects/hal9000/ennis/voices/6s/de_christoph_wittelsbürger_03.wav",
+                     "--refaudio=preprocessed_data/de_hui_Karlsson/wavs/dschinnistan_dschinnistan_01_f000093.wav",
                      "--play",
                      //"--iter=100",
                      "--text",
-                     //"Der Regenbogen ist ein atmosphärisch-optisches Phänomen, das als kreisbogenförmiges farbiges Lichtband in einem von der Sonne beschienenen Regenschauer erscheint.",
+                     "Der Regenbogen ist ein atmosphärisch-optisches Phänomen, das als kreisbogenförmiges farbiges Lichtband in einem von der Sonne beschienenen Regenschauer erscheint.",
                      //"Der,Regenbogen!ist ein?atmosphärisch-optisches Phänomen, das.",
-                     "Der,das.",
+                     //"Der,das.",
                      "--wav-filename=medium.wav"]
         },
         {
