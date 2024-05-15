@@ -78,17 +78,8 @@ class ZeroVoxTTS:
     def speaker_embed (self, wav_path: str | os.PathLike):
 
         wav, _ = librosa.load(wav_path, sr=self._sampling_rate)
-        # wav = wav[
-        #     int(self._sampling_rate * start) : int(self._sampling_rate * end)
-        # ].astype(np.float32)
 
         mel_spectrogram, energy = get_mel_from_wav(wav, self._stft)
-
-        # compute speaker embedding
-        # signal, _ = torchaudio.load(args.refaudio)
-        # _spk_emb_encoder = MelSpectrogramEncoder.from_hparams(source="speechbrain/spkrec-ecapa-voxceleb-mel-spec")
-        # spkemb = _spk_emb_encoder.encode_waveform(signal)[0][0]
-        # spkemb = spkemb.cpu().detach().numpy()
 
         x = np.array([mel_spectrogram.T], dtype=np.float32)
         with torch.no_grad():
@@ -188,13 +179,11 @@ class ZeroVoxTTS:
 
         phoneme  = np.array([phone_ids], dtype=np.int32)
         puncts   = np.array([punct_ids], dtype=np.int32)
-        spkembs = np.array([spkemb], dtype=np.int32)
 
         with torch.no_grad():
             phoneme = torch.from_numpy(phoneme).int().to(self._infer_device)
             puncts = torch.from_numpy(puncts).int().to(self._infer_device)
-            spkembs = torch.from_numpy(spkembs).int().to(self._infer_device)
-            wavs, lengths, _ = self._model({"phoneme": phoneme, "puncts": puncts, "spkembs": spkembs})
+            wavs, lengths, _ = self._model.inference({"phoneme": phoneme, "puncts": puncts}, style_embed=spkemb)
             wavs = wavs.cpu().numpy()
             lengths = lengths.cpu().numpy()
 

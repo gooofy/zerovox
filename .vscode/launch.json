@@ -193,10 +193,10 @@
             "program": "utils/lexedit.py",
             "console": "integratedTerminal",
             "args": [
-                     //"--model=models/tts_de_zerovox_medium_1",
+                     "--model=models/tts_de_zerovox_medium_1",
                      "--verbose",
-                     //"--refaudio=../voices/6s/de_tobias_meister_02.wav",
-                     "-e", "state,statements,staten,staters,states"
+                     "--refaudio=preprocessed_data/de_hui_Karlsson/wavs/dschinnistan_dschinnistan_02_f000023.wav",
+                     "-e", "hallo"
                    ]
         },
         {

@@ -13,9 +13,6 @@ from zerovox.g2p.g2p import G2P
 from zerovox.tts.synthesize import ZeroVoxTTS
 from zerovox.g2p.g2p import DEFAULT_G2P_MODEL_NAME
 
-import torchaudio
-from speechbrain.inference.encoders import MelSpectrogramEncoder
-
 phonehelp = {'a': 'a', 'aɪ': 'aI', 'aʊ': 'aU', 'e': 'e', 'i': 'i', 'o': 'o', 'u': 'u', 'y': 'y', 'æ': '{', 'ø': '2', 'œ': '9', 'ɐ': '6', 'ɑ': 'A', 'ɔ': 'O', 'ɔɪ': 'OI', 'ɔʏ': 'OY', 'ə': '@', 'ɛ': 'E', 'ɜ': '3', 'ɪ': 'I', 'ʊ': 'U', 'ʌ': 'V', 'ʏ': 'Y', 'b': 'b', 'd': 'd', 'f': 'f', 'g': 'g', 'h': 'h', 'j': 'j', 'k': 'k', 'l': 'l', 'm': 'm', 'n': 'n', 'p': 'p', 'r': 'r', 's': 's', 't': 't', 'v': 'v', 'w': 'w', 'x': 'x', 'z': 'z', 'ç': 'C', 'ð': 'D', 'ɥ': 'H', 'ɳ': 'N', 'ʁ': 'R', 'ʃ': 'S', 'ʒ': 'Z', 'θ': 'T'}
 
 ipa2xsampa = {
@@ -390,21 +387,6 @@ if __name__ == "__main__":
     g2p = G2P(args.lang, model=args.g2p_model)
     lex = g2p.lex
 
-    if args.model:
-        if not args.refaudio:
-            print ("*** ERROR: TTS model but no reference audio given.")
-            sys.exit(1)
-
-        print ("computing speaker embedding...")
-
-        # compute speaker embedding
-        signal, _ = torchaudio.load(args.refaudio)
-        _spk_emb_encoder = MelSpectrogramEncoder.from_hparams(source="speechbrain/spkrec-ecapa-voxceleb-mel-spec")
-        spkemb = _spk_emb_encoder.encode_waveform(signal)[0][0]
-        spkemb = spkemb.cpu().detach().numpy()
-    else:
-        spkemb = None
-
     words_to_edit = set()
     oovs_lex = {}
 
@@ -438,9 +420,19 @@ if __name__ == "__main__":
                                                 infer_device=args.infer_device,
                                                 num_threads=args.threads,
                                                 do_compile=args.compile,)
+        
+        if not args.refaudio:
+            print ("*** ERROR: TTS model but no reference audio given.")
+            sys.exit(1)
+
+        print ("computing speaker embedding...")
+
+        spkemb = synth.speaker_embed(args.refaudio)
+
     else:
         modelcfg = None
         synth = None
+        spkemb = None
 
     histfile = os.path.join(os.path.expanduser("~"), ".lextool_history")
     try:
@@ -453,7 +445,7 @@ if __name__ == "__main__":
 
     if args.model:
         sounddevice.default.reset()
-        sounddevice.default.samplerate = modelcfg['sampling_rate']
+        sounddevice.default.samplerate = modelcfg['audio']['sampling_rate']
         sounddevice.default.channels = 1
         sounddevice.default.dtype = 'int16'
         #sounddevice.default.device = None
