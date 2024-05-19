@@ -47,13 +47,15 @@ class Reviewer:
         self._verbose     = verbose
      
         self._metadata = []
+        self._good = set()
+        self._bad  = set()
         with open (corpus_path / 'all.csv', 'r') as corpusf:
             for line in corpusf:
                 parts = line.strip().split('|')
                 self._metadata.append(parts)
+                if not os.path.exists(corpus_path / parts[0]):
+                    self._bad.add(parts[0])
 
-        self._good = set()
-        self._bad  = set()
         with open (corpus_path / 'metadata.csv', 'r') as corpusf:
             for line in corpusf:
                 parts = line.strip().split('|')
@@ -70,8 +72,8 @@ class Reviewer:
 
     def _play(self):
         wav, _ = librosa.load(str(self._corpus_path / self._wavpath))
+        sd.stop()
         sd.play(wav)
-        #sd.wait()
 
     def _save(self):
         with open (corpus_path / 'metadata.csv', 'w') as goodf:
@@ -82,15 +84,26 @@ class Reviewer:
                     elif wavpath in self._bad:
                         badf.write(f"{wavpath}|{label}\n")
 
+    def _oovcheck(self):
+        tokens = self._g2p.tokenize(self._label)
+        self._oovs = []
+        for token in tokens:
+            if self._g2p.symbols.is_punct(token):
+                continue
+            if token not in self._g2p.lex:
+                self._oovs.append(token)
+
     def _next(self):
         self._cur_md += 1
         while self._cur_md < len(self._metadata):
             self._wavpath = self._metadata[self._cur_md][0]
             self._label   = self._metadata[self._cur_md][1]
             if self._wavpath not in self._good and self._wavpath not in self._bad:
+                self._oovcheck()
                 return True
             self._cur_md += 1
         return False
+
 
     def edit(self):
 
@@ -103,6 +116,9 @@ class Reviewer:
 
             print (f"{self._cur_md+1:3}/{len(self._metadata)} {self._wavpath}: {self._label}")
 
+            if self._oovs:
+                print (f"OOVS found: {self._oovs}")
+
             cmd = input("(h for help) >")
 
             if cmd == 'h':
@@ -112,7 +128,8 @@ class Reviewer:
                 print (" s          synthesize label")
                 print (" e          edit label")
                 print (" l <word>   lexedit word")
-                print (" g          accept (good)")
+                print (" o          lexedit oovs")
+                print (" n          accept (good)")
                 print (" b          reject (bad)")
 
             elif cmd == 'q':
@@ -126,7 +143,7 @@ class Reviewer:
 
                 self._label = input_with_prefill("label > ", self._label)
                 self._metadata[self._cur_md][1] = self._label
-                # self._save()
+                self._oovcheck()
 
             elif cmd == 's':
 
@@ -138,11 +155,16 @@ class Reviewer:
                 if args.infer_device == "cuda":
                     torch.cuda.synchronize()
 
+                sd.stop()
                 sd.play(wav)
 
-            elif cmd == 'g' or cmd == 'b':
-                if cmd == 'g':
-                    self._good.add(self._wavpath)
+            elif cmd == 'n' or cmd == 'b':
+                if cmd == 'n':
+                    if not self._oovs:
+                        self._good.add(self._wavpath)
+                    else:
+                        print ("***ERROR: unresolved oovs!")
+                        continue
                 else:
                     self._bad.add(self._wavpath)
                 self._save()
@@ -162,6 +184,11 @@ class Reviewer:
                     oovsdict[graph] = self._g2p.lex[graph]
 
                 self._lexedit.edit([graph], oovsdict)
+                self._oovcheck()
+
+            elif cmd == 'o':
+                self._lexedit.edit(self._oovs, {})
+                self._oovcheck()
 
 
             else:
