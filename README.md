@@ -16,7 +16,7 @@ Data Preparation
 
 (3/5) OOVs:
 
-    utils/oovtool.py configs/corpora/cv_de_100
+    utils/oovtool.py -a configs/corpora/cv_de_100
 
 (4/5) align:
 
