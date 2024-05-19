@@ -198,6 +198,10 @@ class ZeroVoxTTS:
 
         return wav, lengths[0]
 
+    @property
+    def g2p (self):
+        return self._g2p
+
     @classmethod
     def load_model(cls, 
                    modelpath: str | os.PathLike,

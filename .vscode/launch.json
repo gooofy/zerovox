@@ -223,7 +223,8 @@
                 //"--refaudio=/home/guenter/projects/hal9000/ennis/voices/6s/de_tobias_meister_03.wav",
                 //"--refaudio=/home/guenter/projects/hal9000/ennis/voices/6s/de_christoph_wittelsbürger_03.wav",
                 "--refaudio=preprocessed_data/de_hui_Karlsson/wavs/dschinnistan_dschinnistan_01_f000093.wav",
-                "/home/guenter/projects/hal9000/ennis/voices/src/dlf/presseschau/sorted/de_christoph_wittelsbürger/presseschau_dlf_20230311_0704_3545b479"
+                //"/home/guenter/projects/hal9000/ennis/voices/src/dlf/presseschau/sorted/de_christoph_wittelsbürger/presseschau_dlf_20230311_0704_3545b479"
+                "/home/guenter/projects/hal9000/ennis/voices/src/dlf/presseschau/reviewed/de_christoph_wittelsbürger/presseschau_dlf_20230329_1250_27fd26c3"
             ],
             "justMyCode": false
         },   
