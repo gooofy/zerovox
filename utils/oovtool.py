@@ -40,8 +40,7 @@ if __name__ == "__main__":
                         default=DEFAULT_G2P_MODEL_NAME,
                         type=str,
                         help=f"G2P model, default={DEFAULT_G2P_MODEL_NAME}",)                     
-    #parser.add_argument("--limit", type=int, default=100, help="limit number auf audio files to process per config, default: 100 (0=unlimited)")
-    #parser.add_argument("--num-workers", type=int, default=12, help="number of parallel processes, default: 12")
+    parser.add_argument('-a', '--add', action='store_true',  help="auto-add generated entries to lexicon")
     args = parser.parse_args()
 
     jobs = []
@@ -104,12 +103,16 @@ if __name__ == "__main__":
         print (f"{len(oovs)} oovs found")
         with open(args.oovs, 'w') as oovsf:
             oovs = sorted(oovs)
-            cnt = 0
+            lex = g2p.lex
             for oov in tqdm(oovs, desc="g2p"):
                 pron, _ = g2p.predict(oov)
-                # print (f"  [{cnt:6}/{len(oovs)}:6] {oov} : [{''.join(pron)}]")
                 oovsf.write (f"{oov}\t{' '.join(pron)}\n")
-                cnt += 1
+                if args.add:
+                    lex[oov] = pron
+        print (f"{args.oovs} written")
+        if args.add:
+            lex.save()
+            print ("entries were added to the lexicon.")
 
     else:
         print ("*** no OOVs found, all is well ***")
