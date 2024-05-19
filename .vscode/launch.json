@@ -69,7 +69,8 @@
             "console": "integratedTerminal",
             //"args": ["configs/corpora/cv_de_100/de_cv_speaker_80.yaml"],
             "args": ["-m", "models/g2p_de_autoreg_zamia_1/checkpoints",
-                     "configs/corpora/cv_de_100"],
+                     "-a",
+                     "priv/configs/corpora/de_dlf/de_dlf_agnes_pollner.yaml"],
             "cwd": "${workspaceFolder}",
             "justMyCode": false
         },
@@ -118,13 +119,13 @@
                     ]
         },
         {
-            "name": "align cv 0001",
+            "name": "align",
             "type": "debugpy",
             "request": "launch",
             "program": "utils/align.py",
             "console": "integratedTerminal",
             "args": ["--kaldi-model=tts_de_kaldi_zamia_1",
-                     "configs/corpora/cv_de_100/de_cv_speaker_0.yaml"
+                     "priv/configs/corpora/de_dlf/de_dlf_agnes_pollner.yaml"
                     ]
         },       
         {
