@@ -45,7 +45,7 @@ class Reviewer:
         self._corpus_path = corpus_path
         self._spkemb      = spkemb
         self._verbose     = verbose
-     
+
         self._metadata = []
         self._good = set()
         self._bad  = set()
@@ -111,10 +111,12 @@ class Reviewer:
         if not self._next():
             print ("not further utterances to review.")
             return
-        
+
         while True:
 
-            print (f"{self._cur_md+1:3}/{len(self._metadata)} {self._wavpath}: {self._label}")
+            print (f"{self._cur_md+1:3}/{len(self._metadata)} [good: {len(self._good)}] {self._wavpath}: {self._label}")
+            tokens = self._g2p.tokenize(self._label)
+            print (repr(tokens))
 
             if self._oovs:
                 print (f"OOVS found: {self._oovs}")
@@ -170,6 +172,7 @@ class Reviewer:
                 self._save()
                 if not self._next():
                     break
+                self._play()
 
             elif cmd.startswith ('l '):
 
