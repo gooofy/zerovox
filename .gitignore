@@ -169,6 +169,7 @@ priv
 configs/corpora/cv_de_100/*.yaml
 oovs
 configs/corpora/de_hui/*.yaml
+configs/corpora/cv_de_s100/*.yaml
 
 syncmodels.sh
 base.wav
