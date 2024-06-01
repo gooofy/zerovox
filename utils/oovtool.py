@@ -95,6 +95,7 @@ if __name__ == "__main__":
 
             if (not pron) and (token not in oovs):
                 print (f"OOV found: {token}")
+                print (f"utterance: {job}")
                 oovs.add(token)
 
         # print(tokens)
