@@ -109,14 +109,14 @@ class Preprocessor:
 
         #print("Computing statistic quantities ...")
         # Perform normalization if necessary
-        if self._pitch_normalization:
+        if self._pitch_normalization and len(out)>1:
             pitch_mean = pitch_scaler.mean_[0]
             pitch_std = pitch_scaler.scale_[0]
         else:
             # A numerical trick to avoid normalization...
             pitch_mean = 0
             pitch_std = 1
-        if self._energy_normalization:
+        if self._energy_normalization and len(out)>1:
             energy_mean = energy_scaler.mean_[0]
             energy_std = energy_scaler.scale_[0]
         else:
