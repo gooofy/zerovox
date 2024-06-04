@@ -87,3 +87,9 @@ which is an implementation of
 		  primaryClass={cs.CL}
 	}
 
+and Speaker Conditional Layer Normalization (SCLN) which is borrowed from
+
+https://github.com/keonlee9420/Cross-Speaker-Emotion-Transfer
+by Keon Lee
+
+
