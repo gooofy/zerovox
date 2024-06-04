@@ -190,7 +190,7 @@ class ZeroVox(LightningModule):
 
         pred = self._phoneme_encoder(x, style_embed=style_embed, train=self.training)
 
-        mel = self._mel_decoder(pred["features"]) 
+        mel = self._mel_decoder(pred["features"], style_embed) 
         
         mask = pred["masks"]
         if mask is not None and mel.size(0) > 1:
