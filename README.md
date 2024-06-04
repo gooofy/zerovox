@@ -24,7 +24,7 @@ Data Preparation
 
 (5/5) preprocess:
 
-    tils/preprocess.py configs/corpora/cv_de_100
+    utils/preprocess.py configs/corpora/cv_de_100
 
 TTS Model Training
 ------------------
