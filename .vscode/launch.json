@@ -153,13 +153,13 @@
             "justMyCode": false
         },       
         {
-            "name": "train karlsson base gpu",
+            "name": "train karlsson base cpu",
             "type": "debugpy",
             "request": "launch",
             "program": "utils/train_tts.py",
             "console": "integratedTerminal",
             "args": ["-c", "configs/tts_base.yaml",
-                     "--accelerator=gpu", "--threads=24",
+                     "--accelerator=cpu", "--threads=24",
                      "--infer-device=cpu",                     
                      "--hifigan-checkpoint=VCTK_V2",
                      "--out-folder=models/tts_de_zerovox_base_karlsson",
