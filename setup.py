@@ -25,6 +25,9 @@ setup(
     'nltk>=3.8.1',
     'num2words>=0.5.13',
     'readline>=6.2.4.1',
+    'librosa>=0.10.2',
+    'lightning>=2.3.0',
+    'einops>=0.8.0',
   ],
   license='Apache Software License',
   include_package_data=True
