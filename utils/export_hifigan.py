@@ -97,7 +97,8 @@ if __name__ == "__main__":
                                          hop_length=modelcfg['audio']['hop_length'],
                                          checkpoint_path=checkpoint,
                                          infer_device=args.infer_device,
-                                         map_location=torch.device('cpu'))
+                                         map_location=args.infer_device)
+#                                         map_location=torch.device('cpu'))
 
     model = model.to(args.infer_device)
     model.eval()
