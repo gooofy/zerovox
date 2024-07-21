@@ -208,7 +208,7 @@ class ZeroVox(LightningModule):
         mel = mel.transpose(1, 2)
         wav = self.hifigan(mel).squeeze(1)
         
-        return wav, mel_len, duration
+        return wav, mel, mel_len, duration
 
     def inference(self, x, style_embed):
 
@@ -327,7 +327,7 @@ class ZeroVox(LightningModule):
         # if batch_idx==0 and self.current_epoch>=1 :
         if self.current_epoch>=1 :
             x, y = batch
-            wavs, lengths, _ = self.forward(x)
+            wavs, _, lengths, _ = self.forward(x)
             wavs = wavs.to(torch.float).cpu().numpy()
             write_to_file(wavs, self.hparams.sampling_rate, self.hparams.hop_length, lengths=lengths.cpu().numpy(), \
                 wav_path=self.hparams.wav_path, filename=f"prediction-{batch_idx}")

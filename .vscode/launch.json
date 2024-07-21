@@ -244,5 +244,21 @@
             ],
             "justMyCode": false
         },   
+        {
+            "name": "export hifigan karlsson",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "utils/export_hifigan.py",
+            "console": "integratedTerminal",
+            "args": ["--model=models/tts_de_zerovox_base_2",
+                     //"--accelerator=cpu",
+                     //"--threads=24",
+                     //"--infer-device=cpu",                     
+                     //"--hifigan-checkpoint=VCTK_V2",
+                     "--out-dir=../chat/src/hifi-gan/ft_dataset",
+                     "configs/corpora/de_hui/de_hui_Karlsson.yaml"
+                    ],
+            "justMyCode": false
+        },
     ]
 }

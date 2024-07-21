@@ -87,6 +87,8 @@ class LJSpeechDataModule(LightningDataModule):
         pitches = [x[idx]["pitch"] for idx in idxs]
         energies = [x[idx]["energy"] for idx in idxs]
         durations = [x[idx]["duration"] for idx in idxs]
+        basenames = [x[idx]["basename"] for idx in idxs]
+        preprocessed_paths = [x[idx]["preprocessed_path"] for idx in idxs]
 
         phoneme_lens = np.array([phoneme.shape[0] for phoneme in phonemes])
         mel_lens = np.array([mel.shape[0] for mel in mels])
@@ -123,7 +125,9 @@ class LJSpeechDataModule(LightningDataModule):
              "pitch": pitches,
              "energy": energies,
              "duration": durations,
-             "ref_mel": mels,}
+             "ref_mel": mels,
+             "basenames": basenames,
+             "preprocessed_paths": preprocessed_paths}
 
         y = {"mel": mels,}
 
@@ -230,7 +234,9 @@ class LJSpeechDataset(Dataset):
              "text": raw_text,
              "pitch": pitch,
              "energy": energy,
-             "duration": duration}
+             "duration": duration,
+             "basename": basename,
+             "preprocessed_path": preprocessed_path}
 
         y = {"mel": mel,}
 
