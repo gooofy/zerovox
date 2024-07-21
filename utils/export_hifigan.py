@@ -36,14 +36,13 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("configs", type=str, nargs='+', help="path to preprocess.yamls")
-    parser.add_argument("--cuda", action='store_true')
     parser.add_argument("--out-dir", type=str, help="exported corpus output path")
     parser.add_argument("--model",
                         default=None,
                         required=True,
                         help="Path to model directory",)
-    parser.add_argument("--num_workers", type=int, default=4)
-    parser.add_argument("--batch_size", type=int, default=8)
+    parser.add_argument("--num-workers", type=int, default=4)
+    parser.add_argument("--batch-size", type=int, default=8)
     parser.add_argument("--hifigan-checkpoint",
                         default="VCTK_V2",
                         type=str,
