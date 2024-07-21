@@ -120,6 +120,10 @@ if __name__ == "__main__":
             # print (x)
             # print (y)
 
+            for k in x.keys():
+                if torch.is_tensor(x[k]):
+                    x[k] = x[k].to(args.infer_device)
+
             # x, y = batch
             wavs, mels, lengths, _ = model.forward(x)
             wavs = wavs.to(torch.float).cpu().numpy()
