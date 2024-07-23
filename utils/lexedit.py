@@ -13,6 +13,7 @@ from zerovox.g2p.g2p import G2P
 from zerovox.tts.synthesize import ZeroVoxTTS
 from zerovox.g2p.g2p import DEFAULT_G2P_MODEL_NAME
 from zerovox.lexicon.lexedit import LexEdit
+from zerovox.tts.model import DEFAULT_HIFIGAN_MODEL_NAME
 
 if __name__ == "__main__":
 
@@ -37,8 +38,8 @@ if __name__ == "__main__":
     parser.add_argument('-m', "--model",
                         default=None,
                         help="Path to TTS model dir",)
-    parser.add_argument("--hifigan-checkpoint",
-                        default="VCTK_V2",
+    parser.add_argument("--hifigan-model",
+                        default=DEFAULT_HIFIGAN_MODEL_NAME,
                         type=str,
                         help="HiFiGAN model",)
     parser.add_argument('--refaudio', type=str, help="reference audio wav file for synthesis")
@@ -81,7 +82,7 @@ if __name__ == "__main__":
 
     if args.model:
         modelcfg, synth = ZeroVoxTTS.load_model(args.model, 
-                                                hifigan_checkpoint=args.hifigan_checkpoint,
+                                                hifigan_model=args.hifigan_model,
                                                 g2p=g2p,
                                                 infer_device=args.infer_device,
                                                 num_threads=args.threads,

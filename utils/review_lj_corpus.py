@@ -25,6 +25,7 @@ from pathlib import Path
 from zerovox.tts.synthesize import ZeroVoxTTS
 from zerovox.g2p.g2p import DEFAULT_G2P_MODEL_NAME
 from zerovox.lexicon.lexedit import LexEdit
+from zerovox.tts.model import DEFAULT_HIFIGAN_MODEL_NAME
 
 # https://stackoverflow.com/questions/8505163/is-it-possible-to-prefill-a-input-in-python-3s-command-line-interface
 def input_with_prefill(prompt, text):
@@ -218,8 +219,8 @@ if __name__ == "__main__":
                         default=None,
                         required=True,
                         help="Path to model directory",)
-    parser.add_argument("--hifigan-checkpoint",
-                        default="VCTK_V2",
+    parser.add_argument("--hifigan-model",
+                        default=DEFAULT_HIFIGAN_MODEL_NAME,
                         type=str,
                         help="HiFiGAN model",)
     parser.add_argument("--g2p-model",
@@ -233,7 +234,7 @@ if __name__ == "__main__":
 
     modelcfg, synth = ZeroVoxTTS.load_model(args.model,
                                             g2p=args.g2p_model,
-                                            hifigan_checkpoint=args.hifigan_checkpoint,
+                                            hifigan_model=args.hifigan_model,
                                             infer_device=args.infer_device,
                                             num_threads=args.threads,
                                             do_compile=args.compile)

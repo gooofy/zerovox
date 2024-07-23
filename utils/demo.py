@@ -24,6 +24,7 @@ import multiprocessing
 from scipy.io import wavfile
 from zerovox.tts.synthesize import ZeroVoxTTS
 from zerovox.g2p.g2p import DEFAULT_G2P_MODEL_NAME
+from zerovox.tts.model import DEFAULT_HIFIGAN_MODEL_NAME
 
 def write_wav_to_file(wav, length, filename, sample_rate=22050, hop_length=256):
     wav = (wav * 32760).astype("int16")
@@ -51,10 +52,10 @@ if __name__ == "__main__":
                         default=None,
                         required=True,
                         help="Path to model directory",)
-    parser.add_argument("--hifigan-checkpoint",
-                        default="VCTK_V2",
+    parser.add_argument("--hifigan-model",
+                        default=DEFAULT_HIFIGAN_MODEL_NAME,
                         type=str,
-                        help="HiFiGAN model",)
+                        help="HiFiGAN modelm",)
     parser.add_argument("--g2p-model",
                         default=DEFAULT_G2P_MODEL_NAME,
                         type=str,
@@ -71,7 +72,7 @@ if __name__ == "__main__":
 
     modelcfg, synth = ZeroVoxTTS.load_model(args.model,
                                             g2p=args.g2p_model,
-                                            hifigan_checkpoint=args.hifigan_checkpoint,
+                                            hifigan_model=args.hifigan_model,
                                             infer_device=args.infer_device,
                                             num_threads=args.threads,
                                             do_compile=args.compile)

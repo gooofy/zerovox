@@ -29,6 +29,7 @@ from zerovox.tts.data import LJSpeechDataModule
 from zerovox.tts.model import ZeroVox
 from zerovox.g2p.data import G2PSymbols
 from zerovox.lexicon import Lexicon
+from zerovox.tts.model import DEFAULT_HIFIGAN_MODEL_NAME
 
 from pathlib import Path
 
@@ -63,11 +64,10 @@ def get_args():
                         type=str,
                         help="Output folder for checkpoints, modelcfg and validation data",)
 
-
-    parser.add_argument("--hifigan-checkpoint",
-                        default="VCTK_V2",
+    parser.add_argument("--hifigan-model",
+                        default=DEFAULT_HIFIGAN_MODEL_NAME,
                         type=str,
-                        help="HiFiGAN checkpoint",)
+                        help="HiFiGAN model",)
 
     choices = ['cpu', 'cuda']
     parser.add_argument("--infer-device",
@@ -257,7 +257,7 @@ if __name__ == "__main__":
 
     model = ZeroVox ( symbols=symbols,
                       stats=(modelcfg['stats']['pitch_min'],modelcfg['stats']['pitch_max'],modelcfg['stats']['energy_min'],modelcfg['stats']['energy_max']),
-                      hifigan_checkpoint=args.hifigan_checkpoint,
+                      hifigan_model=args.hifigan_model,
                       sampling_rate=modelcfg['audio']['sampling_rate'],
                       hop_length=modelcfg['audio']['hop_length'],
                       n_mels=modelcfg['audio']['n_mel_channels'],

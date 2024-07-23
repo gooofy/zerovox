@@ -69,10 +69,19 @@ def download_model_file(model:str, relpath:str) -> Path:
 
     return target_path
 
-def get_hifigan(checkpoint : str, infer_device=None, verbose=False):
+DEFAULT_HIFIGAN_MODEL_NAME = "zerovox-hifigan-vctk-v2-en-1"
 
-    json_path = download_model_file(model='zerovox-hifigan-vctk-1', relpath=checkpoint + "_config.json")
-    gen_path  = download_model_file(model='zerovox-hifigan-vctk-1', relpath=checkpoint + "_generator")
+def get_hifigan(model: str|os.PathLike, infer_device=None, verbose=False):
+
+    if os.path.isdir(model):
+
+        json_path = Path(Path(model) / 'config.json')
+        gen_path  = Path(Path(model) / 'generator.ckpt')
+
+    else:
+
+        json_path = download_model_file(model=model, relpath="config.json")
+        gen_path  = download_model_file(model=model, relpath="generator.ckpt")
 
     # get the main path
     if verbose:
@@ -131,7 +140,7 @@ class ZeroVox(LightningModule):
     def __init__(self,
                  symbols: G2PSymbols,
                  stats, 
-                 hifigan_checkpoint,
+                 hifigan_model,
                  sampling_rate,
                  hop_length,
                  n_mels,
@@ -178,7 +187,7 @@ class ZeroVox(LightningModule):
                                        n_blocks=decoder_n_blocks, 
                                        block_depth=decoder_block_depth)
 
-        self.hifigan = get_hifigan(checkpoint=hifigan_checkpoint,
+        self.hifigan = get_hifigan(model=hifigan_model,
                                    infer_device=infer_device, verbose=verbose)
 
         self.training_step_outputs = []

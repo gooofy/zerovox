@@ -145,7 +145,7 @@
             "args": ["-c", "configs/tts_medium.yaml",
                      "--accelerator=cpu", "--threads=24",
                      "--infer-device=cpu",                     
-                     "--hifigan-checkpoint=VCTK_V2",
+                     //"--hifigan-model=VCTK_V2",
                      "--out-folder=models/tts_de_zerovox_medium_karlsson",
                      //"configs/corpora/cv_de_100/de_cv_speaker_1.yaml"
                      "configs/corpora/de_hui/de_hui_Karlsson.yaml"
@@ -161,7 +161,7 @@
             "args": ["-c", "configs/tts_base.yaml",
                      "--accelerator=cpu", "--threads=24",
                      "--infer-device=cpu",                     
-                     "--hifigan-checkpoint=VCTK_V2",
+                     //"--hifigan-model=VCTK_V2",
                      "--out-folder=models/tts_de_zerovox_base_karlsson",
                      //"configs/corpora/cv_de_100/de_cv_speaker_1.yaml"
                      "configs/corpora/de_hui/de_hui_Karlsson.yaml"
@@ -177,6 +177,7 @@
             "args": [
                      "--model=models/tts_de_zerovox_base_2",
                      "--verbose",
+                     "--hifigan-model=models/zerovox-hifigan-zamia-v2-de-1",
                      //"--refaudio=/home/guenter/projects/hal9000/ennis/voices/6s/en_digitalsculler_03.wav",
                      //"--refaudio=/home/guenter/projects/hal9000/ennis/voices/6s/de_tobias_meister_03.wav",
                      //"--refaudio=/home/guenter/projects/hal9000/ennis/voices/6s/de_christoph_wittelsbürger_03.wav",
@@ -254,7 +255,7 @@
                      //"--accelerator=cpu",
                      //"--threads=24",
                      //"--infer-device=cpu",                     
-                     //"--hifigan-checkpoint=VCTK_V2",
+                     //"--hifigan-model=VCTK_V2",
                      "--out-dir=../chat/src/hifi-gan/ft_dataset",
                      "configs/corpora/de_hui/de_hui_Karlsson.yaml"
                     ],

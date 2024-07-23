@@ -27,10 +27,9 @@ from tqdm import tqdm
 from scipy.io import wavfile
 
 from zerovox.g2p.data import G2PSymbols
-from zerovox.g2p.g2p  import G2PTokenizer
 from zerovox.lexicon  import Lexicon
 from zerovox.tts.data import LJSpeechDataModule
-from zerovox.tts.model import ZeroVox, write_to_file
+from zerovox.tts.model import ZeroVox, DEFAULT_HIFIGAN_MODEL_NAME
 
 if __name__ == "__main__":
 
@@ -43,8 +42,8 @@ if __name__ == "__main__":
                         help="Path to model directory",)
     parser.add_argument("--num-workers", type=int, default=4)
     parser.add_argument("--batch-size", type=int, default=8)
-    parser.add_argument("--hifigan-checkpoint",
-                        default="VCTK_V2",
+    parser.add_argument("--hifigan-model",
+                        default=DEFAULT_HIFIGAN_MODEL_NAME,
                         type=str,
                         help="HiFiGAN model",)
     choices = ['cpu', 'cuda']
@@ -92,7 +91,7 @@ if __name__ == "__main__":
     checkpoint = max(list_of_files, key=os.path.getctime)
 
     model = ZeroVox.load_from_checkpoint(lang=modelcfg['lang'],
-                                         hifigan_checkpoint=args.hifigan_checkpoint,
+                                         hifigan_model=args.hifigan_model,
                                          sampling_rate=modelcfg['audio']['sampling_rate'],
                                          hop_length=modelcfg['audio']['hop_length'],
                                          checkpoint_path=checkpoint,
