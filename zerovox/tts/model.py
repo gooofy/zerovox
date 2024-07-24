@@ -17,6 +17,7 @@ import json
 import torch
 import torch.nn as nn
 import math
+import time
 from pathlib import Path
 
 from lightning import LightningModule
@@ -221,10 +222,16 @@ class ZeroVox(LightningModule):
 
     def inference(self, x, style_embed):
 
+        #start_time = time.time()
+
         pred = self._phoneme_encoder(x, style_embed=style_embed, train=False)
+
+        #pe_time = time.time()
 
         mel = self._mel_decoder(features=pred["features"], style_embed=style_embed) 
         
+        #dec_time = time.time()
+
         mask = pred["masks"]
         if mask is not None and mel.size(0) > 1:
             mask = mask[:, :, :mel.shape[-1]]
@@ -237,7 +244,11 @@ class ZeroVox(LightningModule):
 
         mel = mel.transpose(1, 2)
         wav = self.hifigan(mel).squeeze(1)
-        
+
+        #hifigan_time = time.time()
+
+        #print (f"phoneme_encoder: {pe_time-start_time}s, mel_decoder: {dec_time-pe_time}, hifigan: {hifigan_time-dec_time}")
+
         return wav, mel_len, duration
 
 

@@ -1,3 +1,4 @@
+import time
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
@@ -107,7 +108,9 @@ class Generator(torch.nn.Module):
         self.conv_post.apply(init_weights)
 
     def forward(self, x):
+        #start_time = time.time()
         x = self.conv_pre(x)
+        #cp_time = time.time()
         for i in range(self.num_upsamples):
             x = F.leaky_relu(x, LRELU_SLOPE)
             x = self.ups[i](x)
@@ -118,14 +121,18 @@ class Generator(torch.nn.Module):
                 else:
                     xs += self.resblocks[i*self.num_kernels+j](x)
             x = xs / self.num_kernels
+        #up_time = time.time()
         x = F.leaky_relu(x)
         x = self.conv_post(x)
         x = torch.tanh(x)
+        #fin_time = time.time()
+
+        #print (f"hifigan: cp={cp_time-start_time}s, up={up_time-cp_time}s, fin={fin_time-up_time}s")
 
         return x
 
     def remove_weight_norm(self):
-        print('Removing weight norm...')
+        #print('Removing weight norm...')
         for l in self.ups:
             remove_weight_norm(l)
         for l in self.resblocks:

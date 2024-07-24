@@ -95,7 +95,7 @@ if __name__ == "__main__":
         rtf = []
         warmup = 10
 
-        for  i in range(args.iter):
+        for i in range(args.iter):
             if args.infer_device == "cuda":
                 torch.cuda.synchronize()
 
@@ -105,13 +105,15 @@ if __name__ == "__main__":
 
             elapsed_time = time.time() - start_time
 
-            message = f"Synthesis time: {elapsed_time:.2f} sec"
+            message = f"[{i+1}/{args.iter}] Synth time: {elapsed_time:.2f} sec"
             wav_len = wav.shape[0] / modelcfg['audio']['sampling_rate']
-            message += f"\nVoice length: {wav_len:.2f} sec"
+            message += f", voice length: {wav_len:.2f} sec"
             real_time_factor = wav_len / elapsed_time
-            message += f"\nReal time factor: {real_time_factor:.2f}"
-            message += "\nNote:\tFor benchmarking, load the model 1st, do a warmup run for 100x, then run the benchmark for 1000 iterations."
-            message += "\n\tGet the mean of 1000 runs. Use --iter N to run N iterations. eg N=100"
+            message += f", rtf: {real_time_factor:.2f}"
+            #message += "\nNote:\tFor benchmarking, load the model 1st, do a warmup run for 100x, then run the benchmark for 1000 iterations."
+            #message += "\n\tGet the mean of 1000 runs. Use --iter N to run N iterations. eg N=100"
+
+            print (message)
 
             if args.wav_filename:
                 write_wav_to_file(wav, length=length, filename=args.wav_filename,
