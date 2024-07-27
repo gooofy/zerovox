@@ -177,6 +177,7 @@
             "args": [
                      "--model=models/tts_de_zerovox_base_2",
                      "--verbose",
+                     //"--hifigan-model=models/hifigan-lj-v1",
                      "--hifigan-model=models/zerovox-hifigan-zamia-v2-de-1",
                      //"--refaudio=/home/guenter/projects/hal9000/ennis/voices/6s/en_digitalsculler_03.wav",
                      //"--refaudio=/home/guenter/projects/hal9000/ennis/voices/6s/de_tobias_meister_03.wav",
@@ -189,7 +190,8 @@
                      "Der Regenbogen ist ein atmosphärisch-optisches Phänomen, das als kreisbogenförmiges farbiges Lichtband in einem von der Sonne beschienenen Regenschauer erscheint.",
                      //"Der,Regenbogen!ist ein?atmosphärisch-optisches Phänomen, das.",
                      //"Der,das.",
-                     "--wav-filename=base.wav"]
+                     "--wav-filename=base.wav"],
+            "justMyCode": false
         },       
         {
             "name": "benchmark german",
@@ -285,5 +287,26 @@
                     ],
             "justMyCode": false
         },
+        {
+            "name": "export onnx",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "utils/export_onnx.py",
+            "console": "integratedTerminal",
+            "args": ["--model=models/tts_de_zerovox_base_2",
+                     "--hifigan-model=models/zerovox-hifigan-zamia-v2-de-1",
+                    ],
+            "justMyCode": false
+        },       
+        {
+            "name": "remove hifigan",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "utils/remove_hifigan_from_checkpoint.py",
+            "console": "integratedTerminal",
+            "args": [
+                     "--model=models/tts_de_zerovox_base_2"],
+            "justMyCode": false
+        }
     ]
 }

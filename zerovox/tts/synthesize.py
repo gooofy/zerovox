@@ -53,7 +53,8 @@ class ZeroVoxTTS:
                                                    hop_length=hop_length,
                                                    checkpoint_path=checkpoint,
                                                    infer_device=infer_device,                                                              
-                                                   map_location=torch.device('cpu'))
+                                                   map_location=torch.device('cpu'),
+                                                   strict=False)
 
         self._model = self._model.to(infer_device)
         self._model.eval()

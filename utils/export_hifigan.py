@@ -31,6 +31,8 @@ from zerovox.lexicon  import Lexicon
 from zerovox.tts.data import LJSpeechDataModule
 from zerovox.tts.model import ZeroVox, DEFAULT_HIFIGAN_MODEL_NAME
 
+DEBUG_LIMIT=2
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
@@ -114,6 +116,8 @@ if __name__ == "__main__":
 
     with torch.no_grad():
 
+        debug_cnt = 0
+
         for batch_idx, batch in enumerate(tqdm(dl)):
             x, y = batch
             # print (x)
@@ -148,3 +152,9 @@ if __name__ == "__main__":
                 path = os.path.join(args.out_dir, f"{batch_idx}-{i}.txt")
                 with open(path, "w") as f:
                     f.write(x['text'][i])
+
+            debug_cnt += 1
+            if DEBUG_LIMIT and debug_cnt >= DEBUG_LIMIT:
+                print (f"*** debug limit ({DEBUG_LIMIT} batches) reached ***")
+                break
+            
