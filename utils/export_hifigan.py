@@ -160,7 +160,10 @@ if __name__ == "__main__":
                         wavfile.write(path, modelcfg['audio']['sampling_rate'], wavs[i])
 
                         path = os.path.join(args.out_dir, f"{batch_idx}-{i}.npy")
-                        numpy.save(path, mels[i].cpu().numpy())
+                        mel = mels[i].cpu().numpy()
+                        l = int(int(lengths[i])/modelcfg['audio']['hop_length'])
+                        mel = mel[:, :l]
+                        numpy.save(path, mel)
 
                         # path = os.path.join(args.out_dir, f"{batch_idx}-{i}.txt")
                         # with open(path, "w") as f:
