@@ -31,7 +31,8 @@ from zerovox.lexicon  import Lexicon
 from zerovox.tts.data import LJSpeechDataModule
 from zerovox.tts.model import ZeroVox, DEFAULT_HIFIGAN_MODEL_NAME
 
-DEBUG_LIMIT=2
+#DEBUG_LIMIT=2
+DEBUG_LIMIT=0
 
 if __name__ == "__main__":
 
