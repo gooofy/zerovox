@@ -74,6 +74,7 @@ class Preprocessor:
         os.makedirs((os.path.join(self._out_dir, "pitch")), exist_ok=True)
         os.makedirs((os.path.join(self._out_dir, "energy")), exist_ok=True)
         os.makedirs((os.path.join(self._out_dir, "duration")), exist_ok=True)
+        os.makedirs((os.path.join(self._out_dir, "phonemepos")), exist_ok=True)
 
         out = list()
         n_frames = 0
@@ -255,6 +256,9 @@ class Preprocessor:
         dur_filename = f"duration-{basename}.npy"
         np.save(os.path.join(self._out_dir, "duration", dur_filename), durations)
 
+        phonemepos_filename = f"phonemepos-{basename}.npy"
+        np.save(os.path.join(self._out_dir, "phonemepos", phonemepos_filename), phone_positions)
+
         pitch_filename = f"pitch-{basename}.npy"
         np.save(os.path.join(self._out_dir, "pitch", pitch_filename), phoneme_pitches)
 
@@ -268,7 +272,7 @@ class Preprocessor:
         )
 
         return (
-            "|".join([basename, " ".join(phones), raw_text, " ".join(puncts)]),
+            "|".join([basename, " ".join(phones), raw_text, " ".join(puncts), str(start), str(end)]),
             self.remove_outlier(pitch),
             self.remove_outlier(energy),
             mel_spectrogram.shape[1],

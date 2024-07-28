@@ -114,47 +114,66 @@ if __name__ == "__main__":
     datamodule.prepare_data()
     dl = datamodule.train_dataloader()
 
-    with torch.no_grad():
+    cnt = 0
 
-        debug_cnt = 0
+    with open (os.path.join(args.out_dir, 'training.txt'), 'w') as trainf:
+        with open (os.path.join(args.out_dir, 'validation.txt'), 'w') as valf:
 
-        for batch_idx, batch in enumerate(tqdm(dl)):
-            x, y = batch
-            # print (x)
-            # print (y)
+            with torch.no_grad():
 
-            for k in x.keys():
-                if torch.is_tensor(x[k]):
-                    x[k] = x[k].to(args.infer_device)
+                debug_cnt = 0
 
-            # x, y = batch
-            wavs, mels, lengths, _ = model.forward(x)
-            wavs = wavs.to(torch.float).cpu().numpy()
-            # write_to_file(wavs, modelcfg['audio']['sampling_rate'], hop_length=modelcfg['audio']['hop_length'], lengths=lengths.cpu().numpy(), \
-            #     wav_path=args.out_dir, filename=f"prediction-{batch_idx}")
+                for batch_idx, batch in enumerate(tqdm(dl)):
+                    x, y = batch
+                    # print (x)
+                    # print (y)
 
-            wavs = (wavs * 32760).astype("int16")
-            wavs = [wav for wav in wavs]
-            lengths *= modelcfg['audio']['hop_length']
+                    for k in x.keys():
+                        if torch.is_tensor(x[k]):
+                            x[k] = x[k].to(args.infer_device)
 
-            for i in range(len(wavs)):
-                shutil.copyfile(os.path.join(x['preprocessed_paths'][i], os.path.join('wavs', x['basenames'][i]+'.wav')), 
-                                os.path.join(args.out_dir, f"{batch_idx}-{i}-orig.wav"))
+                    # x, y = batch
+                    wavs, mels, lengths, _ = model.forward(x, force_duration=True)
+                    wavs = wavs.to(torch.float).cpu().numpy()
+                    # write_to_file(wavs, modelcfg['audio']['sampling_rate'], hop_length=modelcfg['audio']['hop_length'], lengths=lengths.cpu().numpy(), \
+                    #     wav_path=args.out_dir, filename=f"prediction-{batch_idx}")
 
-                wavs[i] = wavs[i][: lengths[i]]
-                    
-                path = os.path.join(args.out_dir, f"{batch_idx}-{i}.wav")
-                wavfile.write(path, modelcfg['audio']['sampling_rate'], wavs[i])
+                    wavs = (wavs * 32760).astype("int16")
+                    wavs = [wav for wav in wavs]
+                    lengths *= modelcfg['audio']['hop_length']
 
-                path = os.path.join(args.out_dir, f"{batch_idx}-{i}.npy")
-                numpy.save(path, mels[i].cpu().numpy())
+                    for i in range(len(wavs)):
+                        #shutil.copyfile(os.path.join(x['preprocessed_paths'][i], os.path.join('wavs', x['basenames'][i]+'.wav')), 
+                        #                os.path.join(args.out_dir, f"{batch_idx}-{i}.wav"))
 
-                path = os.path.join(args.out_dir, f"{batch_idx}-{i}.txt")
-                with open(path, "w") as f:
-                    f.write(x['text'][i])
+                        _, orig_wav = wavfile.read(os.path.join(x['preprocessed_paths'][i], os.path.join('wavs', x['basenames'][i]+'.wav')), 'r')
+                        offset = int(modelcfg['audio']['sampling_rate'] * x['starts'][i])
+                        #orig_wav = orig_wav[offset : int(modelcfg['audio']['sampling_rate'] * x['ends'][i])]
+                        orig_wav = orig_wav[offset : offset+lengths[i]]
+                        path = os.path.join(args.out_dir, f"{batch_idx}-{i}.wav")
+                        wavfile.write(path, modelcfg['audio']['sampling_rate'], orig_wav)
 
-            debug_cnt += 1
-            if DEBUG_LIMIT and debug_cnt >= DEBUG_LIMIT:
-                print (f"*** debug limit ({DEBUG_LIMIT} batches) reached ***")
-                break
-            
+                        wavs[i] = wavs[i][: lengths[i]]
+                            
+                        path = os.path.join(args.out_dir, f"{batch_idx}-{i}-synth.wav")
+                        wavfile.write(path, modelcfg['audio']['sampling_rate'], wavs[i])
+
+                        path = os.path.join(args.out_dir, f"{batch_idx}-{i}.npy")
+                        numpy.save(path, mels[i].cpu().numpy())
+
+                        # path = os.path.join(args.out_dir, f"{batch_idx}-{i}.txt")
+                        # with open(path, "w") as f:
+                        #     f.write(x['text'][i])
+
+                        cnt += 1
+
+                        l = f"{batch_idx}-{i}|{x['text'][i]}\n"
+                        if cnt % 100 == 0:
+                            valf.write(l)
+                        else:
+                            trainf.write(l)
+
+                    debug_cnt += 1
+                    if DEBUG_LIMIT and debug_cnt >= DEBUG_LIMIT:
+                        print (f"*** debug limit ({DEBUG_LIMIT} batches) reached ***")
+                        break

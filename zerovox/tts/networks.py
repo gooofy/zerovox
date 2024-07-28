@@ -408,14 +408,14 @@ class PhonemeEncoder(nn.Module):
         self.duration_decoder = AcousticDecoder(dim, duration=True)
         
 
-    def forward(self, x, style_embed, train=False):
+    def forward(self, x, style_embed, train=False, force_duration=False):
         phoneme = x["phoneme"]
         puncts = x["puncts"]
         phoneme_mask = x["phoneme_mask"] if phoneme.shape[0] > 1 else None
 
         pitch_target = x["pitch"] if train else None
         energy_target = x["energy"] if train  else None
-        duration_target = x["duration"] if train  else None
+        duration_target = x["duration"] if train or force_duration else None
         mel_len = x["mel_len"] if train  else None
         max_mel_len = torch.max(mel_len).item() if train else None
 

@@ -89,6 +89,8 @@ class LJSpeechDataModule(LightningDataModule):
         durations = [x[idx]["duration"] for idx in idxs]
         basenames = [x[idx]["basename"] for idx in idxs]
         preprocessed_paths = [x[idx]["preprocessed_path"] for idx in idxs]
+        starts = [x[idx]["start"] for idx in idxs]
+        ends = [x[idx]["end"] for idx in idxs]
 
         phoneme_lens = np.array([phoneme.shape[0] for phoneme in phonemes])
         mel_lens = np.array([mel.shape[0] for mel in mels])
@@ -127,7 +129,9 @@ class LJSpeechDataModule(LightningDataModule):
              "duration": durations,
              "ref_mel": mels,
              "basenames": basenames,
-             "preprocessed_paths": preprocessed_paths}
+             "preprocessed_paths": preprocessed_paths,
+             "starts": starts,
+             "ends": ends}
 
         y = {"mel": mels,}
 
@@ -181,19 +185,23 @@ class LJSpeechDataset(Dataset):
         self.texts              = []
         self.raw_texts          = []
         self.puncts             = []
+        self.starts             = []
+        self.ends               = []
 
         for pc in preprocess_configs:
 
             if pc["preprocessing"]["text"]["max_length"] > self.max_text_length:
                 self.max_text_length = pc["preprocessing"]["text"]["max_length"]
 
-            preprocessed_paths, basename, text, raw_text, punct = self.process_meta(filename, pc["path"]["preprocessed_path"],
+            preprocessed_paths, basename, text, raw_text, punct, starts, ends = self.process_meta(filename, pc["path"]["preprocessed_path"],
                                                                                     )
             self.preprocessed_paths.extend(preprocessed_paths)
             self.basenames.extend(basename)
             self.texts.extend(text)
             self.raw_texts.extend(raw_text)
             self.puncts.extend(punct)
+            self.starts.extend(starts)
+            self.ends.extend(ends)
 
     def __len__(self):
         return len(self.texts)
@@ -204,6 +212,8 @@ class LJSpeechDataset(Dataset):
         phonemes = np.array(self._symbols.phones_to_ids(self.texts[idx].split(' ')))
         puncts   = np.array(self._symbols.puncts_to_ids(self.puncts[idx].split(' ')))
         preprocessed_path = self.preprocessed_paths[idx]
+        start = self.starts[idx]
+        end = self.ends[idx]
         mel_path = os.path.join(
             preprocessed_path,
             "mel",
@@ -228,6 +238,12 @@ class LJSpeechDataset(Dataset):
             f"duration-{basename}.npy",
         )
         duration = np.load(duration_path)
+        phonemepos_path = os.path.join(
+            preprocessed_path,
+            "phonemepos",
+            f"phonemepos-{basename}.npy",
+        )
+        phonemepos = np.load(phonemepos_path)
 
         x = {"phoneme": phonemes,
              "puncts": puncts,
@@ -235,8 +251,11 @@ class LJSpeechDataset(Dataset):
              "pitch": pitch,
              "energy": energy,
              "duration": duration,
+             "phonemepos": phonemepos,
              "basename": basename,
-             "preprocessed_path": preprocessed_path}
+             "preprocessed_path": preprocessed_path,
+             "start": start,
+             "end": end}
 
         y = {"mel": mel,}
 
@@ -251,8 +270,10 @@ class LJSpeechDataset(Dataset):
             phonemes = []
             raw_text = []
             puncts = []
+            starts = []
+            ends = []
             for line in f.readlines():
-                n, p, r, punct = line.strip("\n").split("|")
+                n, p, r, punct, start, end = line.strip("\n").split("|")
                 if len(r) > self.max_text_length:
                     continue
                 preprocessed_paths.append(preprocessed_path)
@@ -260,4 +281,6 @@ class LJSpeechDataset(Dataset):
                 phonemes.append(p)
                 raw_text.append(r)
                 puncts.append(punct)
-            return preprocessed_paths, name, phonemes, raw_text, puncts
+                starts.append(float(start))
+                ends.append(float(end))
+            return preprocessed_paths, name, phonemes, raw_text, puncts, starts, ends

@@ -129,12 +129,12 @@
                     ]
         },       
         {
-            "name": "preprocess cvs 2370",
+            "name": "preprocess cvs 2371",
             "type": "debugpy",
             "request": "launch",
             "program": "utils/preprocess.py",
             "console": "integratedTerminal",
-            "args": ["configs/corpora/cv_de_s100/de_cvs_speaker_2370.yaml"]
+            "args": ["configs/corpora/cv_de_s100/de_cvs_speaker_2371.yaml"]
         },
         {
             "name": "train karlsson medium cpu",
@@ -272,7 +272,7 @@
             "justMyCode": false
         },   
         {
-            "name": "export hifigan karlsson",
+            "name": "export hifigan cvs speaker 2371",
             "type": "debugpy",
             "request": "launch",
             "program": "utils/export_hifigan.py",
@@ -283,7 +283,7 @@
                      //"--infer-device=cpu",                     
                      //"--hifigan-model=VCTK_V2",
                      "--out-dir=../chat/src/hifi-gan/ft_dataset",
-                     "configs/corpora/de_hui/de_hui_Karlsson.yaml"
+                     "configs/corpora/cv_de_s100/de_cvs_speaker_2371.yaml"
                     ],
             "justMyCode": false
         },

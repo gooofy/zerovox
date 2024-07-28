@@ -194,11 +194,11 @@ class ZeroVox(LightningModule):
         self.training_step_outputs = []
 
 
-    def forward(self, x):
+    def forward(self, x, force_duration=False):
 
         style_embed = self._gst(x["ref_mel"])
 
-        pred = self._phoneme_encoder(x, style_embed=style_embed, train=self.training)
+        pred = self._phoneme_encoder(x, style_embed=style_embed, train=self.training, force_duration=force_duration)
 
         mel = self._mel_decoder(pred["features"], style_embed) 
         
