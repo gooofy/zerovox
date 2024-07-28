@@ -164,19 +164,13 @@ class ZeroVoxTTS:
 
         phoneme = np.array([phone_ids], dtype=np.int32)
         puncts  = np.array([punct_ids], dtype=np.int32)
-        #spkembs = np.array([[spkemb] * len(punct_ids)], dtype=np.int32)
-        #spkembs = np.array([spkemb], dtype=np.int32)
         with torch.no_grad():
             phoneme = torch.from_numpy(phoneme).int().to(self._infer_device)
             puncts = torch.from_numpy(puncts).int().to(self._infer_device)
-            #spkembs = torch.from_numpy(spkembs).int().to(self._infer_device)
-            wavs, lengths, _ = self._model.inference({"phoneme": phoneme, "puncts": puncts}, style_embed=spkemb)
-            wavs = wavs.cpu().numpy()
-            lengths = lengths.cpu().numpy()
+            wav, length, _ = self._model.inference({"phoneme": phoneme, "puncts": puncts}, style_embed=spkemb)
+            wav = wav.cpu().numpy()
 
-        wav = np.reshape(wavs, (-1, 1))
-
-        return wav, phoneme, lengths[0]
+        return wav, phoneme, length
 
     def ipa (self, ipa:list[str], spkemb):
 
@@ -191,13 +185,10 @@ class ZeroVoxTTS:
         with torch.no_grad():
             phoneme = torch.from_numpy(phoneme).int().to(self._infer_device)
             puncts = torch.from_numpy(puncts).int().to(self._infer_device)
-            wavs, lengths, _ = self._model.inference({"phoneme": phoneme, "puncts": puncts}, style_embed=spkemb)
-            wavs = wavs.cpu().numpy()
-            lengths = lengths.cpu().numpy()
+            wav, length, _ = self._model.inference({"phoneme": phoneme, "puncts": puncts}, style_embed=spkemb)
+            wav = wav.cpu().numpy()
 
-        wav = np.reshape(wavs, (-1, 1))
-
-        return wav, lengths[0]
+        return wav, length
 
     @property
     def g2p (self):

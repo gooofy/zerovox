@@ -193,6 +193,10 @@ class ZeroVox(LightningModule):
 
         self.training_step_outputs = []
 
+        # self._min_mel_len = 1500 # 1500 * 256 / 22050 -> 17.4s
+        self._min_mel_len = 689 # 689 * 256 / 22050 -> 8s
+        self._hop_length = hop_length
+
 
     def forward(self, x, force_duration=False):
 
@@ -232,32 +236,24 @@ class ZeroVox(LightningModule):
         
         #dec_time = time.time()
 
-        mask = pred["masks"]
-        if mask is not None and mel.size(0) > 1:
-            mask = mask[:, :, :mel.shape[-1]]
-            mel = mel.masked_fill(mask, 0)
-        
-        pred["mel"] = mel
-
-        mel_len  = pred["mel_len"]
+        mel_len  = int(pred["mel_len"].cpu().detach().numpy())
         duration = pred["duration"]
 
         mel = mel.transpose(1, 2)
-        wav = self.hifigan(mel).squeeze(1)
+
+        # try to keep mel size constant to reduce hifigan latency (no torch/coda recompile on every utterance)
+        if mel_len < self._min_mel_len:
+            mel = torch.nn.functional.pad(mel, (0, self._min_mel_len - mel_len))
+        elif mel_len > self._min_mel_len:
+            self._min_mel_len = mel_len
+
+        wav = self.hifigan(mel).squeeze()
 
         #hifigan_time = time.time()
 
         #print (f"phoneme_encoder: {pe_time-start_time}s, mel_decoder: {dec_time-pe_time}, hifigan: {hifigan_time-dec_time}")
 
-        return wav, mel_len, duration
-
-
-    # def predict_step(self, batch, batch_idx=0,  dataloader_idx=0):
-    #     mel, mel_len, duration = self.phoneme2mel(batch, train=False)
-    #     mel = mel.transpose(1, 2)
-    #     wav = self.hifigan(mel).squeeze(1)
-        
-    #     return wav, mel_len, duration
+        return wav[:mel_len * self._hop_length], mel_len, duration
 
 
     def loss(self, y_hat, y, x):
