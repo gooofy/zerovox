@@ -87,6 +87,7 @@ class LJSpeechDataModule(LightningDataModule):
         pitches = [x[idx]["pitch"] for idx in idxs]
         energies = [x[idx]["energy"] for idx in idxs]
         durations = [x[idx]["duration"] for idx in idxs]
+        phonemposs = [x[idx]["phonemepos"] for idx in idxs]
         basenames = [x[idx]["basename"] for idx in idxs]
         preprocessed_paths = [x[idx]["preprocessed_path"] for idx in idxs]
         starts = [x[idx]["start"] for idx in idxs]
@@ -101,6 +102,7 @@ class LJSpeechDataModule(LightningDataModule):
         pitches = pad_1D(pitches)
         energies = pad_1D(energies)
         durations = pad_1D(durations)
+        phonemposs = pad_1D(phonemposs)
 
         phonemes = torch.from_numpy(phonemes).int()
         puncts = torch.from_numpy(puncts).int()
@@ -111,6 +113,7 @@ class LJSpeechDataModule(LightningDataModule):
         pitches = torch.from_numpy(pitches).float()
         energies = torch.from_numpy(energies).float()
         durations = torch.from_numpy(durations).int()
+        phonemposs = torch.from_numpy(phonemposs).int()
 
         mels = torch.from_numpy(mels).float()
         mel_lens = torch.from_numpy(mel_lens).int()
@@ -127,6 +130,7 @@ class LJSpeechDataModule(LightningDataModule):
              "pitch": pitches,
              "energy": energies,
              "duration": durations,
+             "phonemepos": phonemposs,
              "ref_mel": mels,
              "basenames": basenames,
              "preprocessed_paths": preprocessed_paths,
