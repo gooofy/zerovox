@@ -149,11 +149,15 @@ if __name__ == "__main__":
 
                         assert wav_len == dur_sum
 
-                        _, orig_wav = wavfile.read(os.path.join(x['preprocessed_paths'][i], os.path.join('wavs', x['basenames'][i]+'.wav')), 'r')
+                        orig_wav_path = os.path.join(x['preprocessed_paths'][i], os.path.join('wavs', x['basenames'][i]+'.wav'))
+                        _, orig_wav = wavfile.read(orig_wav_path, 'r')
                         offset = int(sr * x['starts'][i])
                         orig_wav = orig_wav[offset : ]
 
-                        assert len(orig_wav) >= wav_len*hop_length
+                        padding_needed = wav_len*hop_length - len(orig_wav)
+                        if padding_needed > 0:
+                            print (f"warning: padding of {padding_needed} samples needed for {orig_wav_path}")
+                            orig_wav = numpy.pad(orig_wav, (0, padding_needed))
 
                         path = os.path.join(args.out_dir, f"{batch_idx}-{i}.wav")
                         wavfile.write(path, sr, orig_wav[:wav_len*hop_length])
