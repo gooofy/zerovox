@@ -16,6 +16,7 @@ import json
 import torch
 import os
 import numpy as np
+from random import randrange
 from torch.utils.data import Dataset, DataLoader
 
 from lightning import LightningDataModule
@@ -96,9 +97,16 @@ class LJSpeechDataModule(LightningDataModule):
         phoneme_lens = np.array([phoneme.shape[0] for phoneme in phonemes])
         mel_lens = np.array([mel.shape[0] for mel in mels])
 
+        ref_mel_len = np.min(mel_lens)
+        ref_mels = []
+        for i, mel in enumerate(mels):
+            off = randrange(0, mel_lens[i]-ref_mel_len+1)
+            ref_mels.append(mel[off:off+ref_mel_len])
+
         phonemes = pad_1D(phonemes)
         puncts  = pad_1D(puncts)
         mels = pad_2D(mels)
+        ref_mels = pad_2D(ref_mels)
         pitches = pad_1D(pitches)
         energies = pad_1D(energies)
         durations = pad_1D(durations)
@@ -116,6 +124,7 @@ class LJSpeechDataModule(LightningDataModule):
         phonemposs = torch.from_numpy(phonemposs).int()
 
         mels = torch.from_numpy(mels).float()
+        ref_mels = torch.from_numpy(ref_mels).float()
         mel_lens = torch.from_numpy(mel_lens).int()
         max_mel_len = torch.max(mel_lens).item()
         mel_mask = get_mask_from_lengths(mel_lens, max_mel_len)
@@ -131,7 +140,7 @@ class LJSpeechDataModule(LightningDataModule):
              "energy": energies,
              "duration": durations,
              "phonemepos": phonemposs,
-             "ref_mel": mels,
+             "ref_mel": ref_mels,
              "basenames": basenames,
              "preprocessed_paths": preprocessed_paths,
              "starts": starts,
