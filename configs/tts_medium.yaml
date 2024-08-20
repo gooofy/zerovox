@@ -29,12 +29,12 @@ model:
     ref_enc_filters : [32, 32, 64, 64, 128, 128]
 
 training:
-    max_epochs      : 1000
+    max_epochs      : 5000
     warmup_epochs   : 25
     val_epochs      : 2
 
     weight_decay    : 0.00001
-    lr              : 0.0001
+    lr              : 0.00001
     grad_clip       : 1.0
 
     batch_size      : 32
