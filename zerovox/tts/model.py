@@ -16,6 +16,7 @@ import os
 import json
 import torch
 import torch.nn as nn
+from torch.optim.lr_scheduler import LRScheduler
 import math
 import time
 from pathlib import Path
@@ -108,34 +109,41 @@ def get_hifigan(model: str|os.PathLike, infer_device=None, verbose=False):
 
     return vocoder
 
-def get_lr_scheduler(optimizer, warmup_epochs, total_epochs, min_lr=0):
-    """
-    Create a learning rate scheduler with linear warm-up and cosine learning rate decay.
+class LinearWarmUpCosineDecayLR(LRScheduler):
+    
+    def __init__(
+        self,
+        optimizer: torch.optim.Optimizer,
+        base_lr: float,
+        min_lr: float,
+        warmup_epochs: int,
+        total_epochs: int
+    ):  
+        self.optimizer = optimizer
+        self.base_lr = base_lr
+        self.min_lr  = min_lr
+        self.warmup_epochs = warmup_epochs
+        self.total_epochs = total_epochs
 
-    Args:
-        optimizer (torch.optim.Optimizer): The optimizer for which to create the scheduler.
-        warmup_steps (int): The number of warm-up steps.
-        total_steps (int): The total number of steps.
-        min_lr (float, optional): The minimum learning rate at the end of the decay. Default: 0.
+        super().__init__(optimizer)
 
-    Returns:
-        torch.optim.lr_scheduler.LambdaLR: The learning rate scheduler.
-    """
+    def state_dict(self):
+        return {}
 
-    def lr_lambda(current_epoch):
-        if current_epoch < warmup_epochs:
+    def load_state_dict(self, state_dict):
+        pass
+
+    def get_lr(self):
+
+        if self.last_epoch < self.warmup_epochs:
             # Linear warm-up
-            f = float(current_epoch+1) / float(warmup_epochs)
+            f = float(self.last_epoch+1) / float(self.warmup_epochs)
         else:
             # Cosine learning rate decay
-            progress = float(current_epoch - warmup_epochs) / float(max(1, total_epochs - warmup_epochs))
-            f = max(min_lr, 0.5 * (1.0 + math.cos(math.pi * progress)))
+            progress = float(self.last_epoch - self.warmup_epochs) / float(max(1, self.total_epochs - self.warmup_epochs))
+            f = max(self.min_lr, 0.5 * (1.0 + math.cos(math.pi * progress)))
 
-        return f
-
-    scheduler = LambdaLR(optimizer, lr_lambda)
-    return scheduler
-
+        return [ self.base_lr * f ]
 
 class ZeroVox(LightningModule):
     def __init__(self,
@@ -373,6 +381,11 @@ class ZeroVox(LightningModule):
 
     def configure_optimizers(self):
         optimizer = AdamW(self.parameters(), lr=self.hparams.lr, weight_decay=self.hparams.weight_decay)
-        self.scheduler = get_lr_scheduler(optimizer, warmup_epochs=self.hparams.warmup_epochs, total_epochs=self.hparams.max_epochs, min_lr=0.1)
+
+        self.scheduler = LinearWarmUpCosineDecayLR (optimizer,
+                                                    base_lr=self.hparams.lr,
+                                                    min_lr=0.1,
+                                                    warmup_epochs=self.hparams.warmup_epochs,
+                                                    total_epochs=self.hparams.max_epochs)
 
         return [optimizer], [self.scheduler]
