@@ -28,6 +28,7 @@ setup(
     'librosa>=0.10.2',
     'lightning>=2.3.0',
     'einops>=0.8.0',
+    'sounddevice>=0.4.7',
   ],
   license='Apache Software License',
   include_package_data=True
