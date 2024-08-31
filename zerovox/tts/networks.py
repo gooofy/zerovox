@@ -327,8 +327,8 @@ class MelDecoder(nn.Module):
         super().__init__()
 
         self.n_mel_channels = n_mel_channels
-        dim_x2 = min(4*dim, 256)
-        dim_x4 = 4*dim
+        dim_x2 = 2*dim # min(4*dim, 256)    # dim=272 -> dim_x2 = 256 (!)
+        dim_x4 = 4*dim              # dim_x4 = 1088
         padding = kernel_size // 2
 
         # self.proj = nn.Sequential(

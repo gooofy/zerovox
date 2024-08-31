@@ -200,6 +200,7 @@ class ZeroVox(LightningModule):
                                    infer_device=infer_device, verbose=verbose)
 
         self.training_step_outputs = []
+        self.validation_step_outputs = []
 
         # self._min_mel_len = 1500 # 1500 * 256 / 22050 -> 17.4s
         self._min_mel_len = 689 # 689 * 256 / 22050 -> 8s
@@ -346,24 +347,22 @@ class ZeroVox(LightningModule):
 
 
     def validation_step(self, batch, batch_idx):
-        # TODO: use predict step for wav file generation
 
         # if batch_idx==0 and self.current_epoch>=1 :
         if self.current_epoch>=1 :
             x, y = batch
-            wavs, _, lengths, _ = self.forward(x)
+            wavs, mel_pred, len_pred, _ = self.forward(x)
             wavs = wavs.to(torch.float).cpu().numpy()
-            write_to_file(wavs, self.hparams.sampling_rate, self.hparams.hop_length, lengths=lengths.cpu().numpy(), \
+            write_to_file(wavs, self.hparams.sampling_rate, self.hparams.hop_length, lengths=len_pred.cpu().numpy(), \
                 wav_path=self.hparams.wav_path, filename=f"prediction-{batch_idx}")
 
-            mel = y["mel"]
-            mel = mel.transpose(1, 2)
-            lengths = x["mel_len"]
+            mel_target = y["mel"]
             with torch.no_grad():
-                wavs = self.hifigan(mel).squeeze(1)
+                wavs = self.hifigan(mel_target.transpose(1, 2)).squeeze(1)
                 wavs = wavs.to(torch.float).cpu().numpy()
 
-            write_to_file(wavs, self.hparams.sampling_rate, self.hparams.hop_length, lengths=lengths.cpu().numpy(),\
+            len_target = x["mel_len"]
+            write_to_file(wavs, self.hparams.sampling_rate, self.hparams.hop_length, lengths=len_target.cpu().numpy(),\
                     wav_path=self.hparams.wav_path, filename=f"reconstruction-{batch_idx}")
 
             # write the text to be converted to file
@@ -373,11 +372,36 @@ class ZeroVox(LightningModule):
                 for i in range(len(text)):
                     f.write(text[i] + "\n")
 
+            # compute validation mel loss
+
+            max_len = torch.cat((len_pred, len_target)).cpu().max().item()
+            mel_pred = mel_pred.transpose(1,2)
+            mel_pred = torch.nn.functional.pad(input=mel_pred, pad=(0, 0, 0, max_len-mel_pred.shape[1], 0, 0), mode='constant', value=0)
+            mel_target = torch.nn.functional.pad(input=mel_target, pad=(0, 0, 0, max_len-mel_target.shape[1], 0, 0), mode='constant', value=0)
+
+            range_tensor = torch.arange(max_len).expand(len(len_target), max_len)
+
+            mask_pred    = range_tensor < len_pred.cpu().unsqueeze(1)
+            mask_target  = range_tensor < len_target.cpu().unsqueeze(1)
+
+            mask_pred   = ~mask_pred.unsqueeze(-1)
+            mask_target = ~mask_target.unsqueeze(-1)
+            target = mel_target.cpu().masked_fill(mask_target, 0)
+            pred = mel_pred.cpu().masked_fill(mask_pred, 0)
+            mel_loss = nn.L1Loss()(pred, target)
+
+            self.validation_step_outputs.append(mel_loss)
+
+
     def on_test_epoch_end(self):
         pass
 
     def on_validation_epoch_end(self):
-        pass
+        if not self.validation_step_outputs:
+            return
+        avg_mel_loss = torch.stack([mel_loss for mel_loss in self.validation_step_outputs]).mean()
+        self.log("val_mel", avg_mel_loss, on_epoch=True, prog_bar=True, sync_dist=True)
+        self.validation_step_outputs.clear()
 
     def configure_optimizers(self):
         optimizer = AdamW(self.parameters(), lr=self.hparams.lr, weight_decay=self.hparams.weight_decay)

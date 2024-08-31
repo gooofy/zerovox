@@ -302,7 +302,8 @@ if __name__ == "__main__":
                       max_epochs=cfg['training']['max_epochs'],
                       default_root_dir=args.out_folder,
                       callbacks=[checkpoint_callback],
-                      gradient_clip_val=cfg['training']['grad_clip'])
+                      gradient_clip_val=cfg['training']['grad_clip'],
+                      num_sanity_val_steps=0)
 
     if args.compile:
         model = torch.compile(model)

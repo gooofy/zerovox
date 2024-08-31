@@ -31,10 +31,10 @@ model:
 training:
     max_epochs      : 5000
     warmup_epochs   : 25
-    val_epochs      : 2
+    val_epochs      : 1
 
     weight_decay    : 0.00001
     lr              : 0.00001
     grad_clip       : 1.0
 
-    batch_size      : 32
+    batch_size      : 16

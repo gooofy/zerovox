@@ -137,7 +137,7 @@
             "args": ["configs/corpora/cv_de_s100/de_cvs_speaker_2371.yaml"]
         },
         {
-            "name": "train karlsson medium cpu incr",
+            "name": "train karlsson medium incr",
             "type": "debugpy",
             "request": "launch",
             "program": "utils/train_tts.py",
@@ -154,7 +154,7 @@
             "justMyCode": false
         },
         {
-            "name": "train karlsson medium cpu",
+            "name": "train karlsson medium",
             "type": "debugpy",
             "request": "launch",
             "program": "utils/train_tts.py",
