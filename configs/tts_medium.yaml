@@ -1,36 +1,29 @@
-#    | Name             | Type           | Params
-#  ----------------------------------------------------
-#  0 | _phoneme_encoder | PhonemeEncoder | 16.1 M
-#  1 | _gst             | GST            | 595 K
-#  2 | _mel_decoder     | MelDecoder     | 1.4 M
-#  3 | hifigan          | Generator      | 925 K
-#  ----------------------------------------------------
 
 
 model:
-  emb_dim           : 256  # base: 128 phoneme embedding size
-  emb_reduction     : 1    # 1 -> no phoneme embedding reduction
-  punct_emb_dim     : 16   # base: 16  punctuation embedding size
+  emb_dim           : 256  # phoneme embedding size     medium: 256, base: 128, small: 128, tiny: 128
+  emb_reduction     : 1    #                            medium:   1, base:   1, small:   2, tiny:   4
+  punct_emb_dim     : 16   # punctuation embedding size medium:  16, base:  16, small:  16, tiny:  16
 
   encoder:
-    depth           : 2    # base: 2, tiny: 2
-    n_heads         : 2    # tiny: 1
-    kernel_size     : 5    # tiny: 3
-    expansion       : 2    # MixFFN expansion, tiny: 1
+    depth           : 2    #         medium: 2, base: 2, small: 2, tiny: 2
+    n_heads         : 2    #         medium: 2, base: 2, small: 1, tiny: 1
+    kernel_size     : 5    #         medium: 5, base: 5, small: 3, tiny: 3
+    expansion       : 2    # MixFFN, medium: 2, base: 2, small: 1, tiny: 1
 
   decoder:
-    block_depth     : 4    # base: 3 tiny: 2
-    n_blocks        : 4    # base: 3 tiny: 2
-    kernel_size     : 5
+    block_depth     : 4    #         medium: 4, base: 3, small: 2, tiny: 2
+    n_blocks        : 4    #         medium: 4, base: 3, small: 3, tiny: 2
+    kernel_size     : 5    #         medium: 5, base: 5, small: 5, tiny: 5
 
   gst:
-    n_style_tokens  : 2000
+    n_style_tokens  : 2000 # medium: 2000, base: 2000, small: 2000, tiny: 500
     n_heads         : 8
     ref_enc_filters : [32, 32, 64, 64, 128, 128]
 
 training:
-    max_epochs      : 5000
-    warmup_epochs   : 25
+    max_epochs      : 1000
+    warmup_epochs   : 10
     val_epochs      : 1
 
     weight_decay    : 0.00001
