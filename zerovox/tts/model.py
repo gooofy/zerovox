@@ -197,7 +197,7 @@ class ZeroVox(LightningModule):
                                        kernel_size=decoder_kernel_size,
                                        n_blocks=decoder_n_blocks, 
                                        block_depth=decoder_block_depth,
-                                       x2_fix=x2_fix)
+                                       x2_fix=decoder_x2_fix)
 
         self.hifigan = get_hifigan(model=hifigan_model,
                                    infer_device=infer_device, verbose=verbose)

@@ -37,6 +37,7 @@ class ZeroVoxTTS:
                  win_length : int,
                  mel_fmin: int,
                  mel_fmax: int,
+                 decoder_x2_fix: bool,
                  infer_device: str = 'cpu',
                  num_threads: int = None,
                  do_compile: bool = False):
@@ -54,7 +55,8 @@ class ZeroVoxTTS:
                                                    checkpoint_path=checkpoint,
                                                    infer_device=infer_device,                                                              
                                                    map_location=torch.device('cpu'),
-                                                   strict=False)
+                                                   strict=False,
+                                                   decoder_x2_fix=decoder_x2_fix)
 
         self._model = self._model.to(infer_device)
         self._model.eval()
@@ -225,7 +227,8 @@ class ZeroVoxTTS:
                              n_mel_channels=modelcfg['audio']['n_mel_channels'],
                              infer_device=infer_device,
                              num_threads=num_threads,
-                             do_compile=do_compile)
+                             do_compile=do_compile,
+                             decoder_x2_fix=modelcfg['model']['decoder']['x2_fix'])
         
         return modelcfg, synth
 
