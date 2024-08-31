@@ -158,9 +158,10 @@ class ZeroVox(LightningModule):
                  weight_decay=1e-6, 
                  max_epochs=5000,
                  warmup_epochs=50,
-                 encoder_depth=2, 
-                 decoder_n_blocks=2, 
-                 decoder_block_depth=2, 
+                 encoder_depth=2,
+                 decoder_n_blocks=2,
+                 decoder_block_depth=2,
+                 decoder_x2_fix=True,
                  reduction=4, 
                  encoder_n_heads=1,
                  embed_dim=128, 
@@ -195,7 +196,8 @@ class ZeroVox(LightningModule):
         self._mel_decoder = MelDecoder(dim=emb_size, 
                                        kernel_size=decoder_kernel_size,
                                        n_blocks=decoder_n_blocks, 
-                                       block_depth=decoder_block_depth)
+                                       block_depth=decoder_block_depth,
+                                       x2_fix=x2_fix)
 
         self.hifigan = get_hifigan(model=hifigan_model,
                                    infer_device=infer_device, verbose=verbose)

@@ -323,11 +323,14 @@ class MelDecoder(nn.Module):
     """ Mel Spectrogram Decoder """
 
     def __init__(self, dim, kernel_size=5, n_mel_channels=80,
-                 n_blocks=2, block_depth=2, ):
+                 n_blocks=2, block_depth=2, x2_fix=True):
         super().__init__()
 
         self.n_mel_channels = n_mel_channels
-        dim_x2 = 2*dim # min(4*dim, 256)    # dim=272 -> dim_x2 = 256 (!)
+        if x2_fix:
+            dim_x2 = 2*dim
+        else:
+            dim_x2 = min(4*dim, 256)
         dim_x4 = 4*dim              # dim_x4 = 1088
         padding = kernel_size // 2
 

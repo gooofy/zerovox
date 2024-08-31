@@ -161,6 +161,7 @@ if __name__ == "__main__":
                 'block_depth' : cfg['model']['decoder']['block_depth'],
                 'n_blocks'    : cfg['model']['decoder']['n_blocks'],
                 'kernel_size' : cfg['model']['decoder']['kernel_size'],
+                'x2_fix'      : True,
             },
             'gst'           : {
                 'n_style_tokens' : cfg['model']['gst']['n_style_tokens'],
@@ -268,6 +269,7 @@ if __name__ == "__main__":
                       encoder_depth=cfg['model']['encoder']['depth'],
                       decoder_n_blocks=cfg['model']['decoder']['n_blocks'],
                       decoder_block_depth=cfg['model']['decoder']['block_depth'],
+                      decoder_x2_fix=True,
                       reduction=cfg['model']['emb_reduction'],
                       encoder_n_heads=cfg['model']['encoder']['n_heads'],
                       embed_dim=cfg['model']['emb_dim'],
