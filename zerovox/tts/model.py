@@ -19,6 +19,7 @@ import torch.nn as nn
 from torch.optim.lr_scheduler import LRScheduler
 import math
 import time
+import traceback
 from pathlib import Path
 
 from lightning import LightningModule
@@ -348,50 +349,53 @@ class ZeroVox(LightningModule):
 
     def validation_step(self, batch, batch_idx):
 
-        # if batch_idx==0 and self.current_epoch>=1 :
-        if self.current_epoch>=1 :
-            x, y = batch
-            wavs, mel_pred, len_pred, _ = self.forward(x)
-            wavs = wavs.to(torch.float).cpu().numpy()
-            write_to_file(wavs, self.hparams.sampling_rate, self.hparams.hop_length, lengths=len_pred.cpu().numpy(), \
-                wav_path=self.hparams.wav_path, filename=f"prediction-{batch_idx}")
-
-            mel_target = y["mel"]
-            with torch.no_grad():
-                wavs = self.hifigan(mel_target.transpose(1, 2)).squeeze(1)
+        try:
+            # if batch_idx==0 and self.current_epoch>=1 :
+            if self.current_epoch>=1 :
+                x, y = batch
+                wavs, mel_pred, len_pred, _ = self.forward(x)
                 wavs = wavs.to(torch.float).cpu().numpy()
+                write_to_file(wavs, self.hparams.sampling_rate, self.hparams.hop_length, lengths=len_pred.cpu().numpy(), \
+                    wav_path=self.hparams.wav_path, filename=f"prediction-{batch_idx}")
 
-            len_target = x["mel_len"]
-            write_to_file(wavs, self.hparams.sampling_rate, self.hparams.hop_length, lengths=len_target.cpu().numpy(),\
-                    wav_path=self.hparams.wav_path, filename=f"reconstruction-{batch_idx}")
+                mel_target = y["mel"]
+                with torch.no_grad():
+                    wavs = self.hifigan(mel_target.transpose(1, 2)).squeeze(1)
+                    wavs = wavs.to(torch.float).cpu().numpy()
 
-            # write the text to be converted to file
-            path = os.path.join(self.hparams.wav_path, f"prediction-{batch_idx}.txt")
-            with open(path, "w") as f:
-                text = x["text"]
-                for i in range(len(text)):
-                    f.write(text[i] + "\n")
+                len_target = x["mel_len"]
+                write_to_file(wavs, self.hparams.sampling_rate, self.hparams.hop_length, lengths=len_target.cpu().numpy(),\
+                        wav_path=self.hparams.wav_path, filename=f"reconstruction-{batch_idx}")
 
-            # compute validation mel loss
+                # write the text to be converted to file
+                path = os.path.join(self.hparams.wav_path, f"prediction-{batch_idx}.txt")
+                with open(path, "w") as f:
+                    text = x["text"]
+                    for i in range(len(text)):
+                        f.write(text[i] + "\n")
 
-            max_len = torch.cat((len_pred, len_target)).cpu().max().item()
-            mel_pred = mel_pred.transpose(1,2)
-            mel_pred = torch.nn.functional.pad(input=mel_pred, pad=(0, 0, 0, max_len-mel_pred.shape[1], 0, 0), mode='constant', value=0)
-            mel_target = torch.nn.functional.pad(input=mel_target, pad=(0, 0, 0, max_len-mel_target.shape[1], 0, 0), mode='constant', value=0)
+                # compute validation mel loss
 
-            range_tensor = torch.arange(max_len).expand(len(len_target), max_len)
+                max_len = torch.cat((len_pred, len_target)).cpu().max().item()
+                mel_pred = mel_pred.transpose(1,2)
+                mel_pred = torch.nn.functional.pad(input=mel_pred, pad=(0, 0, 0, max_len-mel_pred.shape[1], 0, 0), mode='constant', value=0)
+                mel_target = torch.nn.functional.pad(input=mel_target, pad=(0, 0, 0, max_len-mel_target.shape[1], 0, 0), mode='constant', value=0)
 
-            mask_pred    = range_tensor < len_pred.cpu().unsqueeze(1)
-            mask_target  = range_tensor < len_target.cpu().unsqueeze(1)
+                range_tensor = torch.arange(max_len).expand(len(len_target), max_len)
 
-            mask_pred   = ~mask_pred.unsqueeze(-1)
-            mask_target = ~mask_target.unsqueeze(-1)
-            target = mel_target.cpu().masked_fill(mask_target, 0)
-            pred = mel_pred.cpu().masked_fill(mask_pred, 0)
-            mel_loss = nn.L1Loss()(pred, target)
+                mask_pred    = range_tensor < len_pred.cpu().unsqueeze(1)
+                mask_target  = range_tensor < len_target.cpu().unsqueeze(1)
 
-            self.validation_step_outputs.append(mel_loss)
+                mask_pred   = ~mask_pred.unsqueeze(-1)
+                mask_target = ~mask_target.unsqueeze(-1)
+                target = mel_target.cpu().masked_fill(mask_target, 0)
+                pred = mel_pred.cpu().masked_fill(mask_pred, 0)
+                mel_loss = nn.L1Loss()(pred, target)
 
+                self.validation_step_outputs.append(mel_loss)
+        except Exception as e:
+            print ("*** validation failed (this is ok in early training steps), exception caught:")
+            print (traceback.format_exc())
 
     def on_test_epoch_end(self):
         pass

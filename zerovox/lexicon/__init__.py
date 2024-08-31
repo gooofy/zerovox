@@ -4,7 +4,7 @@ from tqdm import tqdm
 
 class Lexicon:
 
-    def __init__(self, path: os.PathLike, verbose: bool = True):
+    def __init__(self, path: os.PathLike, verbose: bool = True, load_dicts: bool = True):
 
         self._verbose = verbose
 
@@ -26,8 +26,9 @@ class Lexicon:
         self._base_path = os.path.join(path, self._cfg['paths']['base'])
         self._user_path = os.path.join(path, self._cfg['paths']['user'])
 
-        self._base_lex = self._load_dict(self._base_path)
-        self._user_lex = self._load_dict(self._user_path)
+        if load_dicts:
+            self._base_lex = self._load_dict(self._base_path)
+            self._user_lex = self._load_dict(self._user_path)
 
     @property
     def graphemes(self) -> list[str]:
@@ -129,7 +130,7 @@ class Lexicon:
 
 
     @classmethod
-    def load(cls, lang: str):
-        return Lexicon(os.path.join(os.path.dirname(__file__), lang))
+    def load(cls, lang: str, load_dicts: bool = True):
+        return Lexicon(os.path.join(os.path.dirname(__file__), lang), load_dicts=load_dicts)
     
 

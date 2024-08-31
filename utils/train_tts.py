@@ -240,7 +240,7 @@ if __name__ == "__main__":
             if pitch_max > modelcfg['stats']['pitch_max']:
                 modelcfg['stats']['pitch_max'] = pitch_max
 
-    lexicon       = Lexicon.load(modelcfg['lang'])
+    lexicon       = Lexicon.load(modelcfg['lang'], load_dicts=False)
     symbols       = G2PSymbols (lexicon.graphemes, lexicon.phonemes)
 
     os.makedirs (args.out_folder, exist_ok=True)
