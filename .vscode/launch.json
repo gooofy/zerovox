@@ -200,6 +200,17 @@
                      "configs/corpora/de_hui/de_hui_Karlsson.yaml"
                     ],
             "justMyCode": false
+        },
+        {
+            "name": "stats",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "utils/stats.py",
+            "console": "integratedTerminal",
+            "args": ["configs/corpora/cv_de_100/de_cv_speaker_1.yaml",
+                     "configs/corpora/de_hui/de_hui_Karlsson.yaml"
+                    ],
+            "justMyCode": false
         },       
         {
             "name": "demo german",

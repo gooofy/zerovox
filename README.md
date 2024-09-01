@@ -5,6 +5,11 @@ TODO
    https://github.com/snakers4/silero-vad
 
 
+Audio Corpus Stats
+==================
+
+    german audio corpus: 15981 speakers, 289.88 hours audio
+
 Zerovox Model Training
 ======================
 
