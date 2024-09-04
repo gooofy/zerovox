@@ -15,52 +15,21 @@ is based on:
 import json
 import torch
 import os
+import sys
 import numpy as np
 from random import randrange
 from torch.utils.data import Dataset, DataLoader
+from torch.nn.utils.rnn import pad_sequence
 
 from lightning import LightningDataModule
 
 from zerovox.lexicon  import Lexicon
 from zerovox.g2p.data import G2PSymbols
 
-def pad_1D(inputs, PAD=0):
-    def pad_data(x, length, PAD):
-        x_padded = np.pad(
-            x, (0, length - x.shape[0]), mode="constant", constant_values=PAD
-        )
-        return x_padded
+MAX_REF_LEN = 500 # approx 6 seconds (22050/256*6)
 
-    max_len = max((len(x) for x in inputs))
-    padded = np.stack([pad_data(x, max_len, PAD) for x in inputs])
-
-    return padded
-
-
-def pad_2D(inputs, maxlen=None):
-    def pad(x, max_len):
-        PAD = 0
-        if np.shape(x)[0] > max_len:
-            raise ValueError("not max_len")
-
-        s = np.shape(x)[1]
-        x_padded = np.pad(
-            x, (0, max_len - np.shape(x)[0]), mode="constant", constant_values=PAD
-        )
-        return x_padded[:, :s]
-
-    if maxlen:
-        output = np.stack([pad(x, maxlen) for x in inputs])
-    else:
-        max_len = max(np.shape(x)[0] for x in inputs)
-        output = np.stack([pad(x, max_len) for x in inputs])
-
-    return output
-
-def get_mask_from_lengths(lengths, max_len=None):
+def get_mask_from_lengths(lengths, max_len):
     batch_size = lengths.shape[0]
-    if max_len is None:
-        max_len = torch.max(lengths).item()
 
     ids = torch.arange(0, max_len).unsqueeze(0).expand(batch_size, -1) #.to(device)
     mask = ids >= lengths.unsqueeze(1).expand(-1, max_len)
@@ -77,55 +46,37 @@ class LJSpeechDataModule(LightningDataModule):
         self.num_workers = num_workers
 
     def collate_fn(self, batch):
-        x, y = zip(*batch)
-        len_arr = np.array([d["phoneme"].shape[0] for d in x])
-        idxs = np.argsort(-len_arr).tolist()
 
-        phonemes = [x[idx]["phoneme"] for idx in idxs]
-        puncts = [x[idx]["puncts"] for idx in idxs]
-        texts = [x[idx]["text"] for idx in idxs]
-        mels = [y[idx]["mel"] for idx in idxs]
-        pitches = [x[idx]["pitch"] for idx in idxs]
-        energies = [x[idx]["energy"] for idx in idxs]
-        durations = [x[idx]["duration"] for idx in idxs]
-        phonemposs = [x[idx]["phonemepos"] for idx in idxs]
-        basenames = [x[idx]["basename"] for idx in idxs]
-        preprocessed_paths = [x[idx]["preprocessed_path"] for idx in idxs]
-        starts = [x[idx]["start"] for idx in idxs]
-        ends = [x[idx]["end"] for idx in idxs]
+        phoneme_lens = torch.tensor([sample[0]["phoneme"].shape[0] for sample in batch], dtype=torch.int32)
+        mel_lens     = torch.tensor([sample[1]["mel"].shape[0]     for sample in batch], dtype=torch.int32)
 
-        phoneme_lens = np.array([phoneme.shape[0] for phoneme in phonemes])
-        mel_lens = np.array([mel.shape[0] for mel in mels])
+        # phonemes   = pad_sequence([torch.tensor(sample[0]["phoneme" ], dtype=torch.int32  ) for sample in batch], batch_first=True)
+        # puncts     = pad_sequence([torch.tensor(sample[0]["puncts"  ], dtype=torch.int32  ) for sample in batch], batch_first=True)
+        phonemes   = pad_sequence([sample[0]["phoneme" ] for sample in batch], batch_first=True)
+        puncts     = pad_sequence([sample[0]["puncts"  ] for sample in batch], batch_first=True)
+        texts      = [sample[0]["text"] for sample in batch]
+        mels       = pad_sequence([sample[1]["mel"     ] for sample in batch], batch_first=True)
+        pitches    = pad_sequence([sample[0]["pitch"   ] for sample in batch], batch_first=True)
+        energies   = pad_sequence([sample[0]["energy"  ] for sample in batch], batch_first=True)
+        durations  = pad_sequence([sample[0]["duration"] for sample in batch], batch_first=True)
+        # phonemposs = pad_sequence([torch.tensor(sample[0][""], dtype=torch.) for sample in batch], batch_first=True)
+        # basenames = [x[idx]["basename"] for idx in idxs]
+        # preprocessed_paths = [x[idx]["preprocessed_path"] for idx in idxs]
+        # starts = [x[idx]["start"] for idx in idxs]
+        # ends = [x[idx]["end"] for idx in idxs]
 
-        ref_mel_len = np.min(mel_lens)
+        ref_mel_len = min(mel_lens)
+        if ref_mel_len > MAX_REF_LEN:
+            ref_mel_len = MAX_REF_LEN
         ref_mels = []
         for i, mel in enumerate(mels):
             off = randrange(0, mel_lens[i]-ref_mel_len+1)
             ref_mels.append(mel[off:off+ref_mel_len])
+        ref_mels = torch.stack(ref_mels, dim=0)
 
-        phonemes = pad_1D(phonemes)
-        puncts  = pad_1D(puncts)
-        mels = pad_2D(mels)
-        ref_mels = pad_2D(ref_mels)
-        pitches = pad_1D(pitches)
-        energies = pad_1D(energies)
-        durations = pad_1D(durations)
-        phonemposs = pad_1D(phonemposs)
-
-        phonemes = torch.from_numpy(phonemes).int()
-        puncts = torch.from_numpy(puncts).int()
-        phoneme_lens = torch.from_numpy(phoneme_lens).int()
         max_phoneme_len = torch.max(phoneme_lens).item()
         phoneme_mask = get_mask_from_lengths(phoneme_lens, max_phoneme_len) 
 
-        pitches = torch.from_numpy(pitches).float()
-        energies = torch.from_numpy(energies).float()
-        durations = torch.from_numpy(durations).int()
-        phonemposs = torch.from_numpy(phonemposs).int()
-
-        mels = torch.from_numpy(mels).float()
-        ref_mels = torch.from_numpy(ref_mels).float()
-        mel_lens = torch.from_numpy(mel_lens).int()
         max_mel_len = torch.max(mel_lens).item()
         mel_mask = get_mask_from_lengths(mel_lens, max_mel_len)
 
@@ -139,12 +90,13 @@ class LJSpeechDataModule(LightningDataModule):
              "pitch": pitches,
              "energy": energies,
              "duration": durations,
-             "phonemepos": phonemposs,
+             #"phonemepos": phonemposs,
              "ref_mel": ref_mels,
-             "basenames": basenames,
-             "preprocessed_paths": preprocessed_paths,
-             "starts": starts,
-             "ends": ends}
+             #"basenames": basenames,
+             #"preprocessed_paths": preprocessed_paths,
+             #"starts": starts,
+             #"ends": ends
+             }
 
         y = {"mel": mels,}
 
@@ -222,8 +174,8 @@ class LJSpeechDataset(Dataset):
     def __getitem__(self, idx):
         basename = self.basenames[idx]
         raw_text = self.raw_texts[idx]
-        phonemes = np.array(self._symbols.phones_to_ids(self.texts[idx].split(' ')))
-        puncts   = np.array(self._symbols.puncts_to_ids(self.puncts[idx].split(' ')))
+        phonemes = torch.tensor(self._symbols.phones_to_ids(self.texts[idx].split(' ')), dtype=torch.int32)
+        puncts   = torch.tensor(self._symbols.puncts_to_ids(self.puncts[idx].split(' ')), dtype=torch.int32)
         preprocessed_path = self.preprocessed_paths[idx]
         start = self.starts[idx]
         end = self.ends[idx]
@@ -232,31 +184,31 @@ class LJSpeechDataset(Dataset):
             "mel",
             f"mel-{basename}.npy",
         )
-        mel = np.load(mel_path)
+        mel = torch.from_numpy(np.load(mel_path)).to(torch.float32)
         pitch_path = os.path.join(
             preprocessed_path,
             "pitch",
             f"pitch-{basename}.npy",
         )
-        pitch = np.load(pitch_path)
+        pitch = torch.from_numpy(np.load(pitch_path)).to(torch.float32)
         energy_path = os.path.join(
             preprocessed_path,
             "energy",
             f"energy-{basename}.npy",
         )
-        energy = np.load(energy_path)
+        energy = torch.from_numpy(np.load(energy_path)).to(torch.float32)
         duration_path = os.path.join(
             preprocessed_path,
             "duration",
             f"duration-{basename}.npy",
         )
-        duration = np.load(duration_path)
+        duration = torch.from_numpy(np.load(duration_path)).to(torch.int32)
         phonemepos_path = os.path.join(
             preprocessed_path,
             "phonemepos",
             f"phonemepos-{basename}.npy",
         )
-        phonemepos = np.load(phonemepos_path)
+        phonemepos = torch.from_numpy(np.load(phonemepos_path))
 
         x = {"phoneme": phonemes,
              "puncts": puncts,
@@ -297,3 +249,42 @@ class LJSpeechDataset(Dataset):
                 starts.append(float(start))
                 ends.append(float(end))
             return preprocessed_paths, name, phonemes, raw_text, puncts, starts, ends
+
+if __name__ == "__main__":
+
+    import tracemalloc
+    import yaml
+    from tqdm import tqdm
+    from setproctitle import setproctitle
+
+    setproctitle("ZeroTTS_data_memprof")
+
+    # memory profiling test code
+
+    CFG='configs/corpora/de_hui/de_hui_Karlsson.yaml'
+
+    preprocess_configs = [yaml.load(open(CFG, "r"), Loader=yaml.FullLoader)]
+    lexicon       = Lexicon.load('de', load_dicts=False)
+    symbols       = G2PSymbols (lexicon.graphemes, lexicon.phonemes)
+
+    data_module = LJSpeechDataModule(preprocess_configs=preprocess_configs, symbols=symbols, batch_size=16)
+    data_module.prepare_data()
+
+    # Start tracing memory allocations
+    tracemalloc.start()
+
+    dl_train = data_module.train_dataloader()
+    for i in range(100):
+        # Iterate through the train dataloader
+        for batch in tqdm(dl_train, desc=f"i={i}"):
+            #print ('.', end='')
+            #sys.stdout.flush()
+            pass
+
+    # Stop tracing memory allocations
+    snapshot = tracemalloc.take_snapshot()
+    top_stats = snapshot.statistics('lineno')
+
+    print("[ Top 10 memory-consuming lines ]")
+    for stat in top_stats[:10]:
+        print(stat)

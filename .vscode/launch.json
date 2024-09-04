@@ -367,6 +367,15 @@
             "args": [
                      "--model=models/tts_de_zerovox_base_2"],
             "justMyCode": false
+        },
+        {
+            "name": "profile dataloader",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "zerovox/tts/data.py",
+            "console": "integratedTerminal",
+            "args": [],
+            "justMyCode": false
         }
     ]
 }

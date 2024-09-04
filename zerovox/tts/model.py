@@ -16,10 +16,13 @@ import os
 import json
 import torch
 import torch.nn as nn
+import numpy as np
 from torch.optim.lr_scheduler import LRScheduler
 import math
 import time
 import traceback
+import psutil
+import gc
 from pathlib import Path
 
 from lightning import LightningModule
@@ -29,8 +32,16 @@ from scipy.io import wavfile
 
 import zerovox.hifigan
 from zerovox.g2p.data import G2PSymbols
-from zerovox.tts.networks import PhonemeEncoder, MelDecoder
+from zerovox.tts.networks import PhonemeEncoder
 from zerovox.tts.GST import GST
+from zerovox.tts.fs2 import FS2Decoder
+
+# FIXME
+DEBUG_MALLOC = False
+
+if DEBUG_MALLOC:
+    import tracemalloc
+
 
 def write_to_file(wavs, sampling_rate, hop_length, lengths=None, wav_path="outputs", filename="tts"):
     wavs = (wavs * 32760).astype("int16")
@@ -159,45 +170,63 @@ class ZeroVox(LightningModule):
                  max_epochs=5000,
                  warmup_epochs=50,
                  encoder_depth=2,
-                 decoder_n_blocks=2,
-                 decoder_block_depth=2,
-                 decoder_x2_fix=True,
-                 reduction=4, 
                  encoder_n_heads=1,
                  embed_dim=128, 
+                 punct_embed_dim=16,
+                 dpe_embed_dim=64,
+                 emb_reduction=1,
                  encoder_kernel_size=3, 
-                 decoder_kernel_size=3,
                  encoder_expansion=1,
+
+                 gst_n_style_tokens=10,
+                 gst_n_heads=8,
+                 gst_ref_enc_filters=[32, 32, 64, 64, 128, 128],
+
+                 decoder_max_seq_len=1000,
+                 decoder_n_layers=6,
+                 decoder_n_head=2,
+                 decoder_conv_filter_size=1024,
+                 decoder_conv_kernel_size=[9, 1],
+                 decoder_dropout=0.2,
+
                  wav_path="wavs", 
                  infer_device=None, 
                  verbose=False,
-                 punct_embed_dim=16,
-                 gst_n_style_tokens=10,
-                 gst_n_heads=8,
-                 gst_ref_enc_filters=[32, 32, 64, 64, 128, 128]):
+                 ):
         super(ZeroVox, self).__init__()
 
         self.save_hyperparameters()
 
+        if DEBUG_MALLOC:
+            self._last_snapshot = None
+            tracemalloc.start()
+
         self._phoneme_encoder = PhonemeEncoder(symbols=symbols,
                                                stats=stats,
                                                depth=encoder_depth,
-                                               reduction=reduction,
+                                               reduction=emb_reduction,
                                                head=encoder_n_heads,
                                                embed_dim=embed_dim,
                                                kernel_size=encoder_kernel_size,
                                                expansion=encoder_expansion,
-                                               punct_embed_dim=punct_embed_dim)
+                                               punct_embed_dim=punct_embed_dim,
+                                               dpe_embed_dim=dpe_embed_dim)
 
-        emb_size = (embed_dim+punct_embed_dim)//reduction
+        emb_size = (embed_dim+punct_embed_dim)//emb_reduction
 
         self._gst = GST(emb_size, n_mels, gst_n_style_tokens, gst_n_heads, gst_ref_enc_filters)
 
-        self._mel_decoder = MelDecoder(dim=emb_size, 
-                                       kernel_size=decoder_kernel_size,
-                                       n_blocks=decoder_n_blocks, 
-                                       block_depth=decoder_block_depth,
-                                       x2_fix=decoder_x2_fix)
+        self._mel_decoder = FS2Decoder(dec_max_seq_len=decoder_max_seq_len,
+                                       dec_hidden = emb_size+3*dpe_embed_dim,
+                                       dec_n_layers = decoder_n_layers,
+                                       dec_n_head = decoder_n_head,
+                                       dec_conv_filter_size = decoder_conv_filter_size,
+                                       dec_conv_kernel_size = decoder_conv_kernel_size,
+                                       dec_dropout = decoder_dropout,
+                                       n_mel_channels=n_mels)
+
+        # FIXME
+        # self._fake_mel_decoder = torch.nn.Linear(emb_size+3*dpe_embed_dim, n_mels)
 
         self.hifigan = get_hifigan(model=hifigan_model,
                                    infer_device=infer_device, verbose=verbose)
@@ -212,17 +241,38 @@ class ZeroVox(LightningModule):
 
     def forward(self, x, force_duration=False):
 
+        # x["ref_mel"].shape torch.Size([8, 423, 80])
+        # style_embed.shape torch.Size([8, 1, 144])
+        # FIXME
+        # style_embed = None
         style_embed = self._gst(x["ref_mel"])
 
         pred = self._phoneme_encoder(x, style_embed=style_embed, train=self.training, force_duration=force_duration)
 
-        mel = self._mel_decoder(pred["features"], style_embed) 
-        
         mask = pred["masks"]
+
+        if mask is None:
+            max_len = pred["features"].shape[1] # pred["mel_len"].cpu().max().item()
+            range_tensor = torch.arange(max_len).expand(len(pred["mel_len"]), max_len).to(device=pred['mel_len'].device)
+            dec_mask = range_tensor < pred["mel_len"].unsqueeze(1)
+            dec_mask = ~dec_mask
+        else:
+            dec_mask = mask[:,:,0]
+
+        # FIXME
+        # pred["features"].shape torch.Size([8, 1221, 240])
+        # mel.shape torch.Size([8, 1221, 80])
+
+        mel, dec_mask = self._mel_decoder(pred["features"], dec_mask) 
+        
         if mask is not None and mel.size(0) > 1:
             mask = mask[:, :, :mel.shape[-1]]
             mel = mel.masked_fill(mask, 0)
-        
+
+        # FIXME
+        # mel = self._fake_mel_decoder(pred["features"])
+
+
         pred["mel"] = mel
 
         if self.training:
@@ -320,17 +370,38 @@ class ZeroVox(LightningModule):
         mel_loss, pitch_loss, energy_loss, duration_loss = self.loss(y_hat, y, x)
         loss = (10. * mel_loss) + (2. * pitch_loss) + (2. * energy_loss) + duration_loss
         
-        losses = {"loss": loss, 
-                  "mel_loss": mel_loss, 
-                  "pitch_loss": pitch_loss,
-                  "energy_loss": energy_loss, 
-                  "duration_loss": duration_loss}
+        losses = {"loss": loss.detach(), 
+                  "mel_loss": mel_loss.detach(), 
+                  "pitch_loss": pitch_loss.detach(),
+                  "energy_loss": energy_loss.detach(), 
+                  "duration_loss": duration_loss.detach()}
         self.training_step_outputs.append(losses)
         
         return loss
 
 
     def on_train_epoch_end(self):
+
+        gc.collect()
+        process = psutil.Process(os.getpid())
+        resident_size = process.memory_info().rss / (1024 * 1024)  # Convert bytes to MB
+        print(f"on_train_epoch_end: resident size = {resident_size} MB")
+
+        if DEBUG_MALLOC:
+
+            snapshot = tracemalloc.take_snapshot()
+
+            if self._last_snapshot:
+
+                top_stats = snapshot.compare_to(self._last_snapshot, 'traceback')
+
+                print("[ Top 10 differences ]")
+                for stat in top_stats[:10]:
+                    print(stat)
+                print()
+
+            self._last_snapshot = snapshot
+
         if not self.training_step_outputs:
             return
         avg_loss = torch.stack([x["loss"] for x in self.training_step_outputs]).mean()
@@ -354,47 +425,48 @@ class ZeroVox(LightningModule):
         try:
             # if batch_idx==0 and self.current_epoch>=1 :
             if self.current_epoch>=1 :
-                x, y = batch
-                wavs, mel_pred, len_pred, _ = self.forward(x)
-                wavs = wavs.to(torch.float).cpu().numpy()
-                write_to_file(wavs, self.hparams.sampling_rate, self.hparams.hop_length, lengths=len_pred.cpu().numpy(), \
-                    wav_path=self.hparams.wav_path, filename=f"prediction-{batch_idx}")
-
-                mel_target = y["mel"]
                 with torch.no_grad():
-                    wavs = self.hifigan(mel_target.transpose(1, 2)).squeeze(1)
+                    x, y = batch
+                    wavs, mel_pred, len_pred, _ = self.forward(x)
                     wavs = wavs.to(torch.float).cpu().numpy()
+                    write_to_file(wavs, self.hparams.sampling_rate, self.hparams.hop_length, lengths=len_pred.cpu().numpy(), \
+                        wav_path=self.hparams.wav_path, filename=f"prediction-{batch_idx}")
 
-                len_target = x["mel_len"]
-                write_to_file(wavs, self.hparams.sampling_rate, self.hparams.hop_length, lengths=len_target.cpu().numpy(),\
-                        wav_path=self.hparams.wav_path, filename=f"reconstruction-{batch_idx}")
+                    mel_target = y["mel"]
+                    with torch.no_grad():
+                        wavs = self.hifigan(mel_target.transpose(1, 2)).squeeze(1)
+                        wavs = wavs.to(torch.float).cpu().numpy()
 
-                # write the text to be converted to file
-                path = os.path.join(self.hparams.wav_path, f"prediction-{batch_idx}.txt")
-                with open(path, "w") as f:
-                    text = x["text"]
-                    for i in range(len(text)):
-                        f.write(text[i] + "\n")
+                    len_target = x["mel_len"]
+                    write_to_file(wavs, self.hparams.sampling_rate, self.hparams.hop_length, lengths=len_target.cpu().numpy(), wav_path=self.hparams.wav_path, filename=f"reconstruction-{batch_idx}")
 
-                # compute validation mel loss
+                    # write the text to be converted to file
+                    path = os.path.join(self.hparams.wav_path, f"prediction-{batch_idx}.txt")
+                    with open(path, "w") as f:
+                        text = x["text"]
+                        for i in range(len(text)):
+                            f.write(text[i] + "\n")
 
-                max_len = torch.cat((len_pred, len_target)).cpu().max().item()
-                mel_pred = mel_pred.transpose(1,2)
-                mel_pred = torch.nn.functional.pad(input=mel_pred, pad=(0, 0, 0, max_len-mel_pred.shape[1], 0, 0), mode='constant', value=0)
-                mel_target = torch.nn.functional.pad(input=mel_target, pad=(0, 0, 0, max_len-mel_target.shape[1], 0, 0), mode='constant', value=0)
+                    # compute validation mel loss
 
-                range_tensor = torch.arange(max_len).expand(len(len_target), max_len)
+                    max_len = torch.cat((len_pred, len_target)).cpu().max().item()
+                    mel_pred = mel_pred.transpose(1,2)
+                    mel_pred = torch.nn.functional.pad(input=mel_pred, pad=(0, 0, 0, max_len-mel_pred.shape[1], 0, 0), mode='constant', value=0)
+                    mel_target = torch.nn.functional.pad(input=mel_target, pad=(0, 0, 0, max_len-mel_target.shape[1], 0, 0), mode='constant', value=0)
 
-                mask_pred    = range_tensor < len_pred.cpu().unsqueeze(1)
-                mask_target  = range_tensor < len_target.cpu().unsqueeze(1)
+                    range_tensor = torch.arange(max_len).expand(len(len_target), max_len)
 
-                mask_pred   = ~mask_pred.unsqueeze(-1)
-                mask_target = ~mask_target.unsqueeze(-1)
-                target = mel_target.cpu().masked_fill(mask_target, 0)
-                pred = mel_pred.cpu().masked_fill(mask_pred, 0)
-                mel_loss = nn.L1Loss()(pred, target)
+                    mask_pred    = range_tensor < len_pred.cpu().unsqueeze(1)
+                    mask_target  = range_tensor < len_target.cpu().unsqueeze(1)
 
-                self.validation_step_outputs.append(mel_loss)
+                    mask_pred   = ~mask_pred.unsqueeze(-1)
+                    mask_target = ~mask_target.unsqueeze(-1)
+                    target = mel_target.cpu().masked_fill(mask_target, 0)
+                    pred = mel_pred.cpu().masked_fill(mask_pred, 0)
+                    mel_loss = nn.L1Loss()(pred, target)
+
+                    self.validation_step_outputs.append(mel_loss)
+
         except Exception as e:
             print ("*** validation failed (this is ok in early training steps), exception caught:")
             print (traceback.format_exc())

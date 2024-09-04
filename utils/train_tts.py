@@ -21,6 +21,7 @@ import torch
 import datetime
 import argparse
 import json
+import random
 
 from lightning import Trainer
 from lightning.pytorch.callbacks import ModelCheckpoint
@@ -106,6 +107,12 @@ class ZVModelCheckpointCheckpoint(ModelCheckpoint):
         return super(ZVModelCheckpointCheckpoint, self)._save_topk_checkpoint(trainer, monitor_candidates)
 
 if __name__ == "__main__":
+
+    from setproctitle import setproctitle
+
+    setproctitle("ZeroTTS_train")
+    random.seed(42)
+
     args = get_args()
 
     print ("collecting .yaml files from specified paths...")
@@ -158,10 +165,12 @@ if __name__ == "__main__":
                 'expansion'   : cfg['model']['encoder']['expansion'],
             },
             'decoder'       : {
-                'block_depth' : cfg['model']['decoder']['block_depth'],
-                'n_blocks'    : cfg['model']['decoder']['n_blocks'],
-                'kernel_size' : cfg['model']['decoder']['kernel_size'],
-                'x2_fix'      : True,
+                'max_seq_len'      : cfg['model']['decoder']['max_seq_len'],
+                'n_layers'         : cfg['model']['decoder']['n_layers'],
+                'n_head'           : cfg['model']['decoder']['n_head'],
+                'conv_filter_size' : cfg['model']['decoder']['conv_filter_size'],
+                'conv_kernel_size' : cfg['model']['decoder']['conv_kernel_size'],
+                'dropout'          : cfg['model']['decoder']['dropout'],
             },
             'gst'           : {
                 'n_style_tokens' : cfg['model']['gst']['n_style_tokens'],
@@ -266,23 +275,30 @@ if __name__ == "__main__":
                       weight_decay=cfg['training']['weight_decay'],
                       max_epochs=cfg['training']['max_epochs'],
                       warmup_epochs=cfg['training']['warmup_epochs'],
+
                       encoder_depth=cfg['model']['encoder']['depth'],
-                      decoder_n_blocks=cfg['model']['decoder']['n_blocks'],
-                      decoder_block_depth=cfg['model']['decoder']['block_depth'],
-                      decoder_x2_fix=True,
-                      reduction=cfg['model']['emb_reduction'],
                       encoder_n_heads=cfg['model']['encoder']['n_heads'],
                       embed_dim=cfg['model']['emb_dim'],
-                      encoder_kernel_size=cfg['model']['encoder']['kernel_size'],
-                      decoder_kernel_size=cfg['model']['decoder']['kernel_size'],
-                      encoder_expansion=cfg['model']['encoder']['expansion'],
-                      wav_path=os.path.join(args.out_folder, 'validation'),
-                      infer_device=args.infer_device,
-                      verbose=args.verbose,
                       punct_embed_dim=cfg['model']['punct_emb_dim'],
+                      dpe_embed_dim=cfg['model']['dpe_emb_dim'],
+                      emb_reduction=cfg['model']['emb_reduction'],
+                      encoder_expansion=cfg['model']['encoder']['expansion'],
+                      encoder_kernel_size=cfg['model']['encoder']['kernel_size'],
+
                       gst_n_style_tokens=cfg['model']['gst']['n_style_tokens'],
                       gst_n_heads=cfg['model']['gst']['n_heads'],
-                      gst_ref_enc_filters=cfg['model']['gst']['ref_enc_filters'])
+                      gst_ref_enc_filters=cfg['model']['gst']['ref_enc_filters'],
+
+                      decoder_max_seq_len=cfg['model']['decoder']['max_seq_len'],
+                      decoder_n_layers=cfg['model']['decoder']['n_layers'],
+                      decoder_n_head=cfg['model']['decoder']['n_head'],
+                      decoder_conv_filter_size=cfg['model']['decoder']['conv_filter_size'],
+                      decoder_conv_kernel_size=cfg['model']['decoder']['conv_kernel_size'],
+                      decoder_dropout=cfg['model']['decoder']['dropout'],
+
+                      wav_path=os.path.join(args.out_folder, 'validation'),
+                      infer_device=args.infer_device,
+                      verbose=args.verbose)
 
     checkpoint_callback = ZVModelCheckpointCheckpoint(
         monitor='loss',

@@ -1,19 +1,49 @@
+#
+# this code originates from:
+#
+# GST-Tacotron by Chengqi Deng
+#
+# https://github.com/KinglittleQ/GST-Tacotron
+#
+# which is an implementation of
+#
+# 	@misc{wang2018style,
+# 		  title={Style Tokens: Unsupervised Style Modeling, Control and Transfer in End-to-End Speech Synthesis},
+# 		  author={Yuxuan Wang and Daisy Stanton and Yu Zhang and RJ Skerry-Ryan and Eric Battenberg and Joel Shor and Ying Xiao and Fei Ren and Ye Jia and Rif A. Saurous},
+# 		  year={2018},
+# 		  eprint={1803.09017},
+# 		  archivePrefix={arXiv},
+# 		  primaryClass={cs.CL}
+# 	}
+#
+# License: MIT
+#
+
+
 import torch
 import torch.nn as nn
 import torch.nn.init as init
 import torch.nn.functional as F
 
 class GST(nn.Module):
-
+    # emb_size=144, n_mels=80, n_style_tokens=2000, n_heads=8, ref_enc_filters=[32, 32, 64, 64, 128, 128]
     def __init__(self, emb_size:int, n_mels:int, n_style_tokens: int, n_heads: int, ref_enc_filters):
 
         super().__init__()
         self.encoder = ReferenceEncoder(emb_size, n_mels, ref_enc_filters)
         self.stl = STL(emb_size, n_style_tokens, n_heads)
 
+        # FIXME
+        #self.fake_stl = nn.Linear(in_features=emb_size//2, out_features=emb_size)
+
+
     def forward(self, inputs):
-        enc_out = self.encoder(inputs)
-        style_embed = self.stl(enc_out)
+        enc_out = self.encoder(inputs)   # inputs [8, 487, 80] enc_out [8, 72]
+        style_embed = self.stl(enc_out)  # style_embed [8, 1, 144]
+
+        # FIXME
+        #style_embed = self.fake_stl(enc_out)
+        #style_embed = torch.unsqueeze(style_embed, 1)
 
         return style_embed
 

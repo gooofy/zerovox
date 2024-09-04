@@ -103,7 +103,7 @@ class Encoder(nn.Module):
 class AcousticDecoder(nn.Module):
     """ Pitch, Duration, Energy Predictor """
 
-    def __init__(self, dim, 
+    def __init__(self, dim, dim_out,
                  pitch_stats=None, 
                  energy_stats=None,
                  n_mel_channels=80, 
@@ -121,21 +121,24 @@ class AcousticDecoder(nn.Module):
         
         if pitch_stats is not None:
             pitch_min, pitch_max = pitch_stats
-            self.pitch_bins = nn.Parameter(torch.linspace(pitch_min, pitch_max, dim - 1),\
+            self.pitch_bins = nn.Parameter(torch.linspace(pitch_min, pitch_max, dim_out - 1),\
                                            requires_grad=False,)
-            self.pitch_embedding = nn.Embedding(dim, dim)
+            self.pitch_embedding = nn.Embedding(dim_out, dim_out)
         else:
             self.pitch_bins = None
             self.pitch_embedding = None
 
         if energy_stats is not None:
             energy_min, energy_max = energy_stats
-            self.energy_bins = nn.Parameter(torch.linspace(energy_min, energy_max, dim - 1), \
+            self.energy_bins = nn.Parameter(torch.linspace(energy_min, energy_max, dim_out - 1), \
                                             requires_grad=False,)
-            self.energy_embedding = nn.Embedding(dim, dim)
+            self.energy_embedding = nn.Embedding(dim_out, dim_out)
         else:
             self.energy_bins = None
             self.energy_embedding = None
+
+        if duration:
+            self.dur_lin = nn.Linear(dim, dim_out)
 
 
     def get_pitch_embedding(self, pred, target, mask, control=1.):
@@ -173,6 +176,7 @@ class AcousticDecoder(nn.Module):
         y = self.linear(y)
         if self.duration:
             y = nn.ReLU()(y)
+            features = self.dur_lin(features)
             return y, features
 
         return y
@@ -273,110 +277,110 @@ class FeatureUpsampler(nn.Module):
 # source: https://github.com/keonlee9420/Cross-Speaker-Emotion-Transfer
 # by Keon Lee
 
-class SCLN(nn.Module):
-    """ Speaker Condition Layer Normalization """
+# class SCLN(nn.Module):
+#     """ Speaker Condition Layer Normalization """
 
-    def __init__(self, s_size, hidden_size, eps=1e-8, bias=False):
-        super(SCLN, self).__init__()
-        self.hidden_size = hidden_size
-        self.affine_layer = LinearNorm(
-            s_size,
-            2 * hidden_size,  # For both b (bias) and g (gain)
-            bias,
-        )
-        self.eps = eps
+#     def __init__(self, s_size, hidden_size, eps=1e-8, bias=False):
+#         super(SCLN, self).__init__()
+#         self.hidden_size = hidden_size
+#         self.affine_layer = LinearNorm(
+#             s_size,
+#             2 * hidden_size,  # For both b (bias) and g (gain)
+#             bias,
+#         )
+#         self.eps = eps
 
-    def forward(self, x, s):
+#     def forward(self, x, s):
 
-        # Normalize Input Features
-        mu, sigma = torch.mean(
-            x, dim=-1, keepdim=True), torch.std(x, dim=-1, keepdim=True)
-        y = (x - mu) / (sigma + self.eps)  # [B, T, H_m]
+#         # Normalize Input Features
+#         mu, sigma = torch.mean(
+#             x, dim=-1, keepdim=True), torch.std(x, dim=-1, keepdim=True)
+#         y = (x - mu) / (sigma + self.eps)  # [B, T, H_m]
 
-        # Get Bias and Gain
-        # [B, 1, 2 * H_m] --> 2 * [B, 1, H_m]
-        b, g = torch.split(self.affine_layer(s), self.hidden_size, dim=-1)
+#         # Get Bias and Gain
+#         # [B, 1, 2 * H_m] --> 2 * [B, 1, H_m]
+#         b, g = torch.split(self.affine_layer(s), self.hidden_size, dim=-1)
 
-        # Perform Scailing and Shifting
-        o = g * y + b  # [B, T, H_m]
+#         # Perform Scailing and Shifting
+#         o = g * y + b  # [B, T, H_m]
 
-        return o
-
-
-class LinearNorm(nn.Module):
-    """ LinearNorm Projection """
-
-    def __init__(self, in_features, out_features, bias=False):
-        super(LinearNorm, self).__init__()
-        self.linear = nn.Linear(in_features, out_features, bias)
-
-        nn.init.xavier_uniform_(self.linear.weight)
-        if bias:
-            nn.init.constant_(self.linear.bias, 0.0)
-
-    def forward(self, x):
-        x = self.linear(x)
-        return x
+#         return o
 
 
-class MelDecoder(nn.Module):
-    """ Mel Spectrogram Decoder """
+# class LinearNorm(nn.Module):
+#     """ LinearNorm Projection """
 
-    def __init__(self, dim, kernel_size=5, n_mel_channels=80,
-                 n_blocks=2, block_depth=2, x2_fix=True):
-        super().__init__()
+#     def __init__(self, in_features, out_features, bias=False):
+#         super(LinearNorm, self).__init__()
+#         self.linear = nn.Linear(in_features, out_features, bias)
 
-        self.n_mel_channels = n_mel_channels
-        if x2_fix:
-            dim_x2 = 2*dim
-        else:
-            dim_x2 = min(4*dim, 256)
-        dim_x4 = 4*dim              # dim_x4 = 1088
-        padding = kernel_size // 2
+#         nn.init.xavier_uniform_(self.linear.weight)
+#         if bias:
+#             nn.init.constant_(self.linear.bias, 0.0)
 
-        # self.proj = nn.Sequential(
-        #     nn.Linear(dim_x4, dim_x2), nn.Tanh(), nn.LayerNorm(dim_x2),)
-
-        self.proj = nn.Sequential(nn.Linear(dim_x4, dim_x2), nn.Tanh())
-
-        self.proj_norm = SCLN(s_size=dim, hidden_size=dim_x2)
-
-        self.blocks = nn.ModuleList([])
-        for _ in range(n_blocks):
-            conv = nn.ModuleList([])
-            for _ in range(block_depth):
-                # conv.append(nn.ModuleList([nn.Sequential(\
-                #         nn.Conv1d(dim_x2, dim_x2, groups=dim_x2, kernel_size=kernel_size, padding=padding),\
-                #         nn.Conv1d(dim_x2, dim_x2, kernel_size=1), \
-                #         nn.Tanh(),),
-                #         nn.LayerNorm(dim_x2)]))
-                conv.append(nn.ModuleList([nn.Sequential(\
-                        nn.Conv1d(dim_x2, dim_x2, groups=dim_x2, kernel_size=kernel_size, padding=padding),\
-                        nn.Conv1d(dim_x2, dim_x2, kernel_size=1), \
-                        nn.Tanh(),),
-                        SCLN(s_size=dim, hidden_size=dim_x2)]))
-
-            # self.blocks.append(nn.ModuleList([conv, nn.LayerNorm(dim_x2)]))
-            self.blocks.append(nn.ModuleList([conv, SCLN(s_size=dim, hidden_size=dim_x2)]))
-
-        self.mel_linear = nn.Linear(dim_x2, self.n_mel_channels)
+#     def forward(self, x):
+#         x = self.linear(x)
+#         return x
 
 
-    def forward(self, features, style_embed):
-        skip = self.proj(features)
-        skip = self.proj_norm (skip, style_embed)
-        for convs, skip_norm in self.blocks:
-            x = skip
-            for conv, norm in convs:
-                x = conv(x.permute(0, 2, 1))
-                x = norm(x.permute(0, 2, 1), style_embed)
+# class MelDecoder(nn.Module):
+#     """ Mel Spectrogram Decoder """
 
-            skip = skip_norm(x + skip, style_embed)
+#     def __init__(self, dim, kernel_size=5, n_mel_channels=80,
+#                  n_blocks=2, block_depth=2, x2_fix=True):
+#         super().__init__()
 
-        # resize channel to mel length (eg 80)
-        mel = self.mel_linear(skip)
+#         self.n_mel_channels = n_mel_channels
+#         if x2_fix:
+#             dim_x2 = 2*dim
+#         else:
+#             dim_x2 = min(4*dim, 256)
+#         dim_x4 = 4*dim              # dim_x4 = 1088
+#         padding = kernel_size // 2
 
-        return mel
+#         # self.proj = nn.Sequential(
+#         #     nn.Linear(dim_x4, dim_x2), nn.Tanh(), nn.LayerNorm(dim_x2),)
+
+#         self.proj = nn.Sequential(nn.Linear(dim_x4, dim_x2), nn.Tanh())
+
+#         self.proj_norm = SCLN(s_size=dim, hidden_size=dim_x2)
+
+#         self.blocks = nn.ModuleList([])
+#         for _ in range(n_blocks):
+#             conv = nn.ModuleList([])
+#             for _ in range(block_depth):
+#                 # conv.append(nn.ModuleList([nn.Sequential(\
+#                 #         nn.Conv1d(dim_x2, dim_x2, groups=dim_x2, kernel_size=kernel_size, padding=padding),\
+#                 #         nn.Conv1d(dim_x2, dim_x2, kernel_size=1), \
+#                 #         nn.Tanh(),),
+#                 #         nn.LayerNorm(dim_x2)]))
+#                 conv.append(nn.ModuleList([nn.Sequential(\
+#                         nn.Conv1d(dim_x2, dim_x2, groups=dim_x2, kernel_size=kernel_size, padding=padding),\
+#                         nn.Conv1d(dim_x2, dim_x2, kernel_size=1), \
+#                         nn.Tanh(),),
+#                         SCLN(s_size=dim, hidden_size=dim_x2)]))
+
+#             # self.blocks.append(nn.ModuleList([conv, nn.LayerNorm(dim_x2)]))
+#             self.blocks.append(nn.ModuleList([conv, SCLN(s_size=dim, hidden_size=dim_x2)]))
+
+#         self.mel_linear = nn.Linear(dim_x2, self.n_mel_channels)
+
+
+#     def forward(self, features, style_embed):
+#         skip = self.proj(features)
+#         skip = self.proj_norm (skip, style_embed)
+#         for convs, skip_norm in self.blocks:
+#             x = skip
+#             for conv, norm in convs:
+#                 x = conv(x.permute(0, 2, 1))
+#                 x = norm(x.permute(0, 2, 1), style_embed)
+
+#             skip = skip_norm(x + skip, style_embed)
+
+#         # resize channel to mel length (eg 80)
+#         mel = self.mel_linear(skip)
+
+#         return mel
 
 
 class PhonemeEncoder(nn.Module):
@@ -391,7 +395,8 @@ class PhonemeEncoder(nn.Module):
                  embed_dim, 
                  kernel_size,
                  expansion,
-                 punct_embed_dim):
+                 punct_embed_dim,
+                 dpe_embed_dim):
         super().__init__()
 
         self.encoder = Encoder(symbols=symbols,
@@ -406,9 +411,10 @@ class PhonemeEncoder(nn.Module):
         dim = ((embed_dim+punct_embed_dim) // reduction)
         self.fuse = Fuse(self.encoder.get_feature_dims(), kernel_size=kernel_size)
         self.feature_upsampler = FeatureUpsampler()
-        self.pitch_decoder = AcousticDecoder(dim, pitch_stats=stats[0:2] if stats else None)
-        self.energy_decoder = AcousticDecoder(dim, energy_stats=stats[2:4] if stats else None)
-        self.duration_decoder = AcousticDecoder(dim, duration=True)
+        self.pitch_decoder = AcousticDecoder(dim, dpe_embed_dim, pitch_stats=stats[0:2] if stats else None)
+        self.energy_decoder = AcousticDecoder(dim, dpe_embed_dim, energy_stats=stats[2:4] if stats else None)
+        self.duration_decoder = AcousticDecoder(dim, dpe_embed_dim, duration=True)
+        self._dpe_embed_dim = dpe_embed_dim
         
 
     def forward(self, x, style_embed, train=False, force_duration=False):
@@ -420,20 +426,21 @@ class PhonemeEncoder(nn.Module):
         energy_target = x["energy"] if train  else None
         duration_target = x["duration"] if train or force_duration else None
         mel_len = x["mel_len"] if train  else None
-        max_mel_len = torch.max(mel_len).item() if train else None
+        max_mel_len = max(mel_len) if train else None
 
         features, mask = self.encoder(phoneme, puncts, mask=phoneme_mask)
         fused_features = self.fuse(features, mask=mask)
 
-        # add GST Tokens (style/speaker) embedding to fused_features
-        style_embed = style_embed.expand_as(fused_features)
-        fused_features = fused_features + style_embed
+        if style_embed is not None:
+            # add GST Tokens (style/speaker) embedding to fused_features
+            style_embed = style_embed.expand_as(fused_features)
+            fused_features = fused_features + style_embed
 
         pitch_pred = self.pitch_decoder(fused_features)
         pitch_features = self.pitch_decoder.get_embedding(pitch_pred, pitch_target, mask)
         pitch_features = pitch_features.squeeze(2)
         if mask is not None:
-            pitch_features = pitch_features.masked_fill(mask, 0)
+            pitch_features = pitch_features.masked_fill(mask[:,:,:self._dpe_embed_dim], 0)
         # elif pitch_features.dim() != 3:
         #    pitch_features = pitch_features.unsqueeze(0)
 
@@ -442,13 +449,13 @@ class PhonemeEncoder(nn.Module):
         energy_features = energy_features.squeeze(2)
 
         if mask is not None:
-            energy_features = energy_features.masked_fill(mask, 0)
+            energy_features = energy_features.masked_fill(mask[:,:,:self._dpe_embed_dim], 0)
         # elif energy_features.dim() != 3:
         #    energy_features = energy_features.unsqueeze(0)
 
         duration_pred, duration_features = self.duration_decoder(fused_features)
         if mask is not None:
-            duration_features = duration_features.masked_fill(mask, 0)
+            duration_features = duration_features.masked_fill(mask[:,:,:self._dpe_embed_dim], 0)
        
         fused_features = torch.cat([fused_features, pitch_features, \
                                     energy_features, duration_features], dim=-1)
@@ -457,7 +464,7 @@ class PhonemeEncoder(nn.Module):
         if mask is None:
             fused_masks = torch.zeros_like(fused_features).bool()
         else:
-            fused_masks = torch.cat([mask, mask, mask, mask], dim=-1)
+            fused_masks = torch.cat([mask, mask[:,:,:self._dpe_embed_dim], mask[:,:,:self._dpe_embed_dim], mask[:,:,:self._dpe_embed_dim]], dim=-1)
         
         if duration_target is None:
             duration_target = torch.round(duration_pred).squeeze()
@@ -483,6 +490,4 @@ class PhonemeEncoder(nn.Module):
 
         return y
 
-        
-
-
+    
