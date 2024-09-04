@@ -1,10 +1,3 @@
-TODO
-====
-
- * Silero VAD: pre-trained enterprise-grade Voice Activity Detector
-   https://github.com/snakers4/silero-vad
-
-
 Audio Corpus Stats
 ==================
 
@@ -99,9 +92,12 @@ which is an implementation of
 		  primaryClass={cs.CL}
 	}
 
-and Speaker Conditional Layer Normalization (SCLN) which is borrowed from
+Speaker Conditional Layer Normalization (SCLN) which is borrowed from
 
 https://github.com/keonlee9420/Cross-Speaker-Emotion-Transfer
 by Keon Lee
 
+The decoder is borrowed (under MIT license) from Chung-Ming Chien's implementation of FastSpeech2
+
+https://github.com/ming024/FastSpeech2
 
