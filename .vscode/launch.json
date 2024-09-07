@@ -219,7 +219,7 @@
             "program": "utils/demo.py",
             "console": "integratedTerminal",
             "args": [
-                     "--model=models/tts_de_zerovox_base_2",
+                     "--model=models/tts_de_zerovox_fs2dec_base_1",
                      "--verbose",
                      //"--hifigan-model=models/hifigan-lj-v1",
                      "--hifigan-model=models/zerovox-hifigan-zamia-v2-de-1",
@@ -244,7 +244,7 @@
             "program": "utils/demo.py",
             "console": "integratedTerminal",
             "args": [
-                     "--model=models/tts_de_zerovox_base_2",
+                     "--model=models/tts_de_zerovox_fs2dec_base_1",
                      //"--verbose",
                      "--hifigan-model=models/zerovox-hifigan-zamia-v2-de-1",
                      //"--refaudio=/home/guenter/projects/hal9000/ennis/voices/6s/en_digitalsculler_03.wav",
@@ -321,7 +321,7 @@
             "request": "launch",
             "program": "utils/export_hifigan.py",
             "console": "integratedTerminal",
-            "args": ["--model=models/tts_de_zerovox_base_2",
+            "args": ["--model=models/tts_de_zerovox_fs2dec_base_1",
                      //"--accelerator=cpu",
                      //"--threads=24",
                      //"--infer-device=cpu",                     
@@ -337,7 +337,7 @@
             "request": "launch",
             "program": "utils/export_hifigan.py",
             "console": "integratedTerminal",
-            "args": ["--model=models/tts_de_zerovox_base_2",
+            "args": ["--model=models/tts_de_zerovox_fs2dec_base_1",
                      //"--accelerator=cpu",
                      //"--threads=24",
                      //"--infer-device=cpu",                     
@@ -353,7 +353,7 @@
             "request": "launch",
             "program": "utils/export_onnx.py",
             "console": "integratedTerminal",
-            "args": ["--model=models/tts_de_zerovox_base_2",
+            "args": ["--model=models/tts_de_zerovox_fs2dec_base_1",
                      "--hifigan-model=models/zerovox-hifigan-zamia-v2-de-1",
                     ],
             "justMyCode": false
@@ -365,7 +365,7 @@
             "program": "utils/remove_hifigan_from_checkpoint.py",
             "console": "integratedTerminal",
             "args": [
-                     "--model=models/tts_de_zerovox_base_2"],
+                     "--model=models/tts_de_zerovox_fs2dec_base_1"],
             "justMyCode": false
         },
         {

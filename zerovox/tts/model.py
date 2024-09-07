@@ -272,7 +272,6 @@ class ZeroVox(LightningModule):
         # FIXME
         # mel = self._fake_mel_decoder(pred["features"])
 
-
         pred["mel"] = mel
 
         if self.training:
@@ -294,7 +293,12 @@ class ZeroVox(LightningModule):
 
         #pe_time = time.time()
 
-        mel = self._mel_decoder(features=pred["features"], style_embed=style_embed) 
+        max_len = pred["features"].shape[1] # pred["mel_len"].cpu().max().item()
+        range_tensor = torch.arange(max_len).expand(len(pred["mel_len"]), max_len).to(device=pred['mel_len'].device)
+        dec_mask = range_tensor < pred["mel_len"].unsqueeze(1)
+        dec_mask = ~dec_mask
+
+        mel, dec_mask = self._mel_decoder(pred["features"], dec_mask) 
         
         #dec_time = time.time()
 
