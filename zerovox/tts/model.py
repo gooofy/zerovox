@@ -140,10 +140,12 @@ class LinearWarmUpCosineDecayLR(LRScheduler):
         super().__init__(optimizer)
 
     def state_dict(self):
-        return {}
+        return {'epoch': self.last_epoch}
 
     def load_state_dict(self, state_dict):
-        pass
+        #pass
+        if 'epoch' in state_dict:
+            self.last_epoch=state_dict['epoch']
 
     def get_lr(self):
 
@@ -223,7 +225,8 @@ class ZeroVox(LightningModule):
                                        dec_conv_filter_size = decoder_conv_filter_size,
                                        dec_conv_kernel_size = decoder_conv_kernel_size,
                                        dec_dropout = decoder_dropout,
-                                       n_mel_channels=n_mels)
+                                       n_mel_channels=n_mels,
+                                       spk_emb_size=emb_size)
 
         # FIXME
         # self._fake_mel_decoder = torch.nn.Linear(emb_size+3*dpe_embed_dim, n_mels)
@@ -263,7 +266,7 @@ class ZeroVox(LightningModule):
         # pred["features"].shape torch.Size([8, 1221, 240])
         # mel.shape torch.Size([8, 1221, 80])
 
-        mel, dec_mask = self._mel_decoder(pred["features"], dec_mask) 
+        mel, dec_mask = self._mel_decoder(pred["features"], dec_mask, spk_emb=style_embed) 
         
         if mask is not None and mel.size(0) > 1:
             mask = mask[:, :, :mel.shape[-1]]

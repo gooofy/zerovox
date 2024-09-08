@@ -12,7 +12,8 @@ model:
     expansion       : 2    # MixFFN, medium: 2, base: 2, small: 1, tiny: 1
 
   decoder:
-    max_seq_len      : 3500 # 1000
+#    max_seq_len      : 3500 # 1000
+    max_seq_len      : 1500 # 1000
     n_layers         : 6
     n_head           : 2
     conv_filter_size : 1024
@@ -25,7 +26,7 @@ model:
     ref_enc_filters : [32, 32, 64, 64, 128, 128]
 
 training:
-    max_epochs      : 1000
+    max_epochs      : 100
     warmup_epochs   : 10
     val_epochs      : 1
 

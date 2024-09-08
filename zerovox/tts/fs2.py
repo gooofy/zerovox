@@ -54,10 +54,58 @@ class ScaledDotProductAttention(nn.Module):
 
         return output, attn
 
+# source: https://github.com/keonlee9420/Cross-Speaker-Emotion-Transfer
+# by Keon Lee
+
+class SCLN(nn.Module):
+    """ Speaker Condition Layer Normalization """
+
+    def __init__(self, s_size, hidden_size, eps=1e-8, bias=False):
+        super(SCLN, self).__init__()
+        self.hidden_size = hidden_size
+        self.affine_layer = LinearNorm(
+            s_size,
+            2 * hidden_size,  # For both b (bias) and g (gain)
+            bias,
+        )
+        self.eps = eps
+
+    def forward(self, x, s):
+
+        # Normalize Input Features
+        mu, sigma = torch.mean(
+            x, dim=-1, keepdim=True), torch.std(x, dim=-1, keepdim=True)
+        y = (x - mu) / (sigma + self.eps)  # [B, T, H_m]
+
+        # Get Bias and Gain
+        # [B, 1, 2 * H_m] --> 2 * [B, 1, H_m]
+        b, g = torch.split(self.affine_layer(s), self.hidden_size, dim=-1)
+
+        # Perform Scailing and Shifting
+        o = g * y + b  # [B, T, H_m]
+
+        return o
+
+
+class LinearNorm(nn.Module):
+    """ LinearNorm Projection """
+
+    def __init__(self, in_features, out_features, bias=False):
+        super(LinearNorm, self).__init__()
+        self.linear = nn.Linear(in_features, out_features, bias)
+
+        nn.init.xavier_uniform_(self.linear.weight)
+        if bias:
+            nn.init.constant_(self.linear.bias, 0.0)
+
+    def forward(self, x):
+        x = self.linear(x)
+        return x
+
 class MultiHeadAttention(nn.Module):
     """ Multi-Head Attention module """
 
-    def __init__(self, n_head, d_model, d_k, d_v, dropout=0.1):
+    def __init__(self, n_head, d_model, d_k, d_v, spk_emb_size, dropout=0.1):
         super().__init__()
 
         self.n_head = n_head
@@ -69,13 +117,14 @@ class MultiHeadAttention(nn.Module):
         self.w_vs = nn.Linear(d_model, n_head * d_v)
 
         self.attention = ScaledDotProductAttention(temperature=np.power(d_k, 0.5))
-        self.layer_norm = nn.LayerNorm(d_model)
+        #self.layer_norm = nn.LayerNorm(d_model)
+        self.layer_norm = SCLN(s_size=spk_emb_size, hidden_size=d_model)
 
         self.fc = nn.Linear(n_head * d_v, d_model)
 
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, q, k, v, mask=None):
+    def forward(self, q, k, v, spk_emb, mask=None):
 
         d_k, d_v, n_head = self.d_k, self.d_v, self.n_head
 
@@ -101,14 +150,14 @@ class MultiHeadAttention(nn.Module):
         )  # b x lq x (n*dv)
 
         output = self.dropout(self.fc(output))
-        output = self.layer_norm(output + residual)
+        output = self.layer_norm(output + residual, spk_emb)
 
         return output, attn
 
 class PositionwiseFeedForward(nn.Module):
     """ A two-feed-forward-layer module """
 
-    def __init__(self, d_in, d_hid, kernel_size, dropout=0.1):
+    def __init__(self, d_in, d_hid, kernel_size, spk_emb_size, dropout=0.1):
         super().__init__()
 
         # Use Conv1D
@@ -127,39 +176,104 @@ class PositionwiseFeedForward(nn.Module):
             padding=(kernel_size[1] - 1) // 2,
         )
 
-        self.layer_norm = nn.LayerNorm(d_in)
+        # self.layer_norm = nn.LayerNorm(d_in)
+        self.layer_norm = SCLN(s_size=spk_emb_size, hidden_size=d_in)
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, x):
+    def forward(self, x, spk_emb):
         residual = x
         output = x.transpose(1, 2)
         output = self.w_2(F.relu(self.w_1(output)))
         output = output.transpose(1, 2)
         output = self.dropout(output)
-        output = self.layer_norm(output + residual)
+        output = self.layer_norm(output + residual, s=spk_emb)
 
         return output
 
 class FFTBlock(torch.nn.Module):
     """FFT Block"""
 
-    def __init__(self, d_model, n_head, d_k, d_v, d_inner, kernel_size, dropout=0.1):
+    def __init__(self, d_model, n_head, d_k, d_v, d_inner, kernel_size, spk_emb_size, dropout=0.1):
         super(FFTBlock, self).__init__()
-        self.slf_attn = MultiHeadAttention(n_head, d_model, d_k, d_v, dropout=dropout)
+        self.slf_attn = MultiHeadAttention(n_head, d_model, d_k, d_v, spk_emb_size=spk_emb_size, dropout=dropout)
         self.pos_ffn = PositionwiseFeedForward(
-            d_model, d_inner, kernel_size, dropout=dropout
+            d_model, d_inner, kernel_size, spk_emb_size=spk_emb_size, dropout=dropout
         )
 
-    def forward(self, enc_input, mask=None, slf_attn_mask=None):
+    def forward(self, enc_input, spk_emb, mask=None, slf_attn_mask=None):
         enc_output, enc_slf_attn = self.slf_attn(
-            enc_input, enc_input, enc_input, mask=slf_attn_mask
+            enc_input, enc_input, enc_input, spk_emb, mask=slf_attn_mask
         )
         enc_output = enc_output.masked_fill(mask.unsqueeze(-1), 0)
 
-        enc_output = self.pos_ffn(enc_output)
+        enc_output = self.pos_ffn(enc_output, spk_emb)
         enc_output = enc_output.masked_fill(mask.unsqueeze(-1), 0)
 
         return enc_output, enc_slf_attn
+
+
+# class MelDecoder(nn.Module):
+#     """ Mel Spectrogram Decoder """
+
+#     def __init__(self, dim, kernel_size=5, n_mel_channels=80,
+#                  n_blocks=2, block_depth=2, x2_fix=True):
+#         super().__init__()
+
+#         self.n_mel_channels = n_mel_channels
+#         if x2_fix:
+#             dim_x2 = 2*dim
+#         else:
+#             dim_x2 = min(4*dim, 256)
+#         dim_x4 = 4*dim              # dim_x4 = 1088
+#         padding = kernel_size // 2
+
+#         # self.proj = nn.Sequential(
+#         #     nn.Linear(dim_x4, dim_x2), nn.Tanh(), nn.LayerNorm(dim_x2),)
+
+#         self.proj = nn.Sequential(nn.Linear(dim_x4, dim_x2), nn.Tanh())
+
+#         self.proj_norm = SCLN(s_size=dim, hidden_size=dim_x2)
+
+#         self.blocks = nn.ModuleList([])
+#         for _ in range(n_blocks):
+#             conv = nn.ModuleList([])
+#             for _ in range(block_depth):
+#                 # conv.append(nn.ModuleList([nn.Sequential(\
+#                 #         nn.Conv1d(dim_x2, dim_x2, groups=dim_x2, kernel_size=kernel_size, padding=padding),\
+#                 #         nn.Conv1d(dim_x2, dim_x2, kernel_size=1), \
+#                 #         nn.Tanh(),),
+#                 #         nn.LayerNorm(dim_x2)]))
+#                 conv.append(nn.ModuleList([nn.Sequential(\
+#                         nn.Conv1d(dim_x2, dim_x2, groups=dim_x2, kernel_size=kernel_size, padding=padding),\
+#                         nn.Conv1d(dim_x2, dim_x2, kernel_size=1), \
+#                         nn.Tanh(),),
+#                         SCLN(s_size=dim, hidden_size=dim_x2)]))
+
+#             # self.blocks.append(nn.ModuleList([conv, nn.LayerNorm(dim_x2)]))
+#             self.blocks.append(nn.ModuleList([conv, SCLN(s_size=dim, hidden_size=dim_x2)]))
+
+#         self.mel_linear = nn.Linear(dim_x2, self.n_mel_channels)
+
+
+#     def forward(self, features, style_embed):
+#         skip = self.proj(features)
+#         skip = self.proj_norm (skip, style_embed)
+#         for convs, skip_norm in self.blocks:
+#             x = skip
+#             for conv, norm in convs:
+#                 x = conv(x.permute(0, 2, 1))
+#                 x = norm(x.permute(0, 2, 1), style_embed)
+
+#             skip = skip_norm(x + skip, style_embed)
+
+#         # resize channel to mel length (eg 80)
+#         mel = self.mel_linear(skip)
+
+#         return mel
+
+
+
+
 
 class FS2Decoder(nn.Module):
 
@@ -172,6 +286,7 @@ class FS2Decoder(nn.Module):
                  dec_conv_kernel_size : list[int], # [9, 1]
                  dec_dropout          : float, # 0.2
                  n_mel_channels       : int, # 80
+                 spk_emb_size         : int
                 ):
         super(FS2Decoder, self).__init__()
 
@@ -199,7 +314,7 @@ class FS2Decoder(nn.Module):
         self.layer_stack = nn.ModuleList(
             [
                 FFTBlock(
-                    d_model, n_head, d_k, d_v, d_inner, kernel_size, dropout=dropout
+                    d_model, n_head, d_k, d_v, d_inner, kernel_size, spk_emb_size=spk_emb_size, dropout=dropout
                 )
                 for _ in range(n_layers)
             ]
@@ -208,7 +323,7 @@ class FS2Decoder(nn.Module):
         self.mel_linear = nn.Linear(dec_hidden, n_mel_channels)
 
     # enc_seq [bs, 1546, 576] mask
-    def forward(self, enc_seq, mask, return_attns=False):
+    def forward(self, enc_seq, mask, spk_emb, return_attns=False):
 
         dec_slf_attn_list = []
         batch_size, max_len = enc_seq.shape[0], enc_seq.shape[1]
@@ -235,7 +350,7 @@ class FS2Decoder(nn.Module):
 
         for dec_layer in self.layer_stack:
             dec_output, dec_slf_attn = dec_layer(
-                dec_output, mask=mask, slf_attn_mask=slf_attn_mask
+                dec_output, mask=mask, slf_attn_mask=slf_attn_mask, spk_emb=spk_emb
             )
             if return_attns:
                 dec_slf_attn_list += [dec_slf_attn]

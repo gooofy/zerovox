@@ -49,6 +49,7 @@ class Preprocessor:
         self._hop_length    = config["preprocessing"]["stft"]["hop_length"]
         self._language      = config['preprocessing']['text']['language']
         self._speaker       = config['preprocessing']['text']['speaker']
+        self._max_seq_len   = config["preprocessing"]["mel"]["max_len"]
 
         self._lexicon       = lexicon
         self._tokenizer     = tokenizer
@@ -213,6 +214,9 @@ class Preprocessor:
 
         # Compute mel-scale spectrogram and energy
         mel_spectrogram, energy = get_mel_from_wav(wav, self._stft)
+        if mel_spectrogram.shape[1] > self._max_seq_len:
+            print (f"*** dropping sample because it exceeds mel max_len: {wav_path}")
+            return None
         # mel_spectrogram = mel_spectrogram[:, : sum(durations)]
         # energy = energy[: sum(durations)]
 
