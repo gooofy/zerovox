@@ -3616,6 +3616,7 @@ arbeitsentgelts	'ʔa ɐ b aɪ t s ʔɛ n t g ɛ l t s
 arbeitsergebnisse	'ʔa ɐ b aɪ t s ʔɛ ɐ g eː p n ɪ s ə
 arbeitsfelder	'ʔa ɐ b aɪ t s f ɛ l d ɐ
 arbeitsfeldern	'ʔa ɐ b aɪ t s f ɛ l d ɐ n
+arbeitsflow	'ʔa ɐ b aɪ t s f l ɔ ʊ
 arbeitsfrequenz	'ʔa ɐ b aɪ t s f ʁ eː k v ɛ n t s
 arbeitsfreude	'ʔa ɐ b aɪ t s f ʁ ɔʏ d ə
 arbeitsfront	'ʔa ɐ b aɪ t s f ʁ ɔ n t
@@ -4375,6 +4376,7 @@ asymmetrie	'ʔa z yː m ə t ʁ 'iː
 asynchrone	ʔa z y n k ʁ 'oː n ə
 asynchronen	ʔa z y n k ʁ 'oː n ə n
 asynchronmotoren	ʔa z y n k ʁ 'oː n m oː t oː ʁ ə n
+asyncio	'ʔɛ ɪ z y n k ɛ ɪ oː
 asyut	ʔa z 'yː ʔuː t
 aszites	ʔa s t s 'iː t ə s
 at	'ʔɛ t
@@ -9962,6 +9964,7 @@ bläulichgrau	b l 'ɔʏ l ɪ ç g ʁ aʊ
 bläulichgrün	b l 'ɔʏ l ɪ ç g ʁ yː n
 bläulichweiß	b l 'ɔʏ l ɪ ç v aɪ s
 blót	b l 'ɛ t
+blöcke	b l 'ø k ə
 blömerweg	b l 'øː m ɐ v eː k
 blücher	b l 'ʏ ç ɐ
 blühendem	b l 'yː ə n d ə m
@@ -10757,6 +10760,7 @@ braidwood	b r 'aɪ t v ʊ d
 brailas	b r 'ɛ ɪ l a s
 braille	b r 'ɛ ɪ l
 brailleschrift	b ʁ 'aɪ l ə ʃ ʁ ɪ f t
+braindump	b r 'e ɪ n d 'a m p
 brainstormen	b r 'e ɪ n s t 'ɔ ɐ m ə n
 braith	b ʁ 'aɪ t
 braithwaite	b ʁ 'aɪ t v aɪ t ə
@@ -10774,7 +10778,7 @@ bramsche	b ʁ 'aː m ʃ ə
 bramstedt	b ʁ 'aː m ʃ t ɛ t
 bran	b ʁ 'aː n
 branca	b ʁ 'aː n k aː
-branch	b ʁ 'oː ʃ
+branch	b r æ n ʃ
 branchenlösungen	b ʁ 'oː ʃ ə n l øː z ʊ ɳ ə n
 branchenorganisationen	b ʁ 'oː ʃ ə n ʔɔ ɐ g aː n iː z aː t s j oː n ə n
 branchenprimus	b ʁ 'oː ʃ ə n p ʁ 'iː m ʊ s
@@ -10903,6 +10907,7 @@ breakage	b r 'ɛ ɪ k ə d ʒ
 breakcore	b r 'i k ə r
 breakdance	b r 'i k d ə n s
 breakfast	b r 'iː k f a s t
+breakpoint	b r 'ɛ ʏ k p 'ɔʏ n t
 breaks	b r 'ɛ ɪ k s
 bream	b r 'iː m
 breathitt	b r 'ɛ ɪ θ ɪ t
@@ -14441,7 +14446,7 @@ co-trainerin	k 'oː a t ʁ ɛː n ɐ ʁ ɪ n
 co-vorsitzender	k 'oː l f oː ɐ z ɪ t s ə n d ɐ
 co-zwei-äquivalenten	k 'oː s v aɪ s ʔɛ k v iː v a l 'ɛ n t ə n
 coa	k 'oː aː
-coaching	k 'oː a x ɪ ɳ
+coaching	k 'ɔ ʊ d ʃ ɪ ɳ
 coachte	k 'oː a x t ə
 coafield	k 'oː a f iː l t
 coahuila	k 'oː aː h uː iː l aː
@@ -14590,6 +14595,7 @@ collector	k ɔ l 'ɛ k t ɔ ɐ
 colledge	k ɔ l 'ɛ d ʒ
 colleen	k ɔ l 'eː ə n
 colleferro	k ɔ l 'eː f ɐ ʁ oː
+college	k 'ɔ l ɪ d ʒ
 collegelaufbahn	k ɔ l 'eː g ə l ʔaʊ f b aː n
 collegezeit	k ɔ l 'eː g ə t s aɪ t
 collegiate	k ɔ l 'eː g j 'aː t ə
@@ -14714,6 +14720,7 @@ commercy	k ə m 'ɛ r s i
 commerzbank	k ɔ m 'ɛ ʁ t s b a ɳ k
 commission	k ə m ɪ s j 'oː n
 commissioner	k ə m ɪ s j 'oː n ɐ
+commit	k 'ɔ m ɪ t
 committee	k ə m 'ɪ t eː
 commodores	k ə m oː d 'oː ʁ ə s
 commodus	k ə m oː d ʊ s
@@ -17032,7 +17039,8 @@ deventer	d 'eː v ɛ n t ɐ
 dever	d 'eː v ɐ
 devers	d 'eː v ɐ s
 devianz	d 'eː v iː a n t s
-devices	d 'eː v ɪ t s
+device	d 'iː v ɑ ɪ z
+devices	d 'iː v ɑ ɪ s ə z
 devid	d 'eː v ɪ t
 devil	d 'eː v iː l
 devil's	d 'eː v iː l ə s
@@ -18201,7 +18209,7 @@ dotzauer	d 'ɔ t s 'aʊ ɐ
 douai	d 'u aɪ
 douala	d uː 'aː l aː
 douay	d 'u w ɛ ɪ
-double	d 'u b ə l
+double	d 'a b l
 double-h	d uː b l 'ɛ
 doubleday	d uː b l 'ɛ d ɛ ɪ
 doubles	d 'u b ə l s
@@ -21524,7 +21532,7 @@ engesohde	'ʔɛ n g ə z oː d ə
 enghien	'ʔɛ ɳ h iː ə n
 engin	'ʔɛ ɳ ɪ n
 engineer	'ʔɛ ɳ ʔɪ n 'eː ɐ
-engineering	'ʔɛ ɳ 'ʔɪ n ɛ ʁ ɪ ɳ
+engineering	'ʔɪ n d ʒ ə n iː r ɪ ɳ
 engineers	'ʔɛ ɳ ʔɪ n 'eː ɐ s
 engines	'ʔɛ ɳ iː n ə s
 engl	'ʔɛ ɳ l
@@ -23720,7 +23728,7 @@ faith	f 'aɪ t
 faithful	f 'aɪ t h uː l
 faizabad	f 'aɪ t s aː b aː t
 fajardo	f a j 'aː ɐ d oː
-fake	f 'aː k ə
+fake	f 'ɛ ɪ k
 fakel	f 'aː k ə l
 faktenlage	f a k t ə n l 'aː g ə
 faktion	f a k t s j 'oː n
@@ -26412,7 +26420,8 @@ fraktionsübergreifend	f ʁ a k t s j 'oː n s ʔyː b ɐ g ʁ aɪ f ə n t
 fram	f ʁ a m
 frame	f ʁ a m ə
 frames	f ʁ 'aː m ə s
-framework	f ʁ a m 'eː v ɔ ɐ k
+framework	f ʁ 'ɛ ɪ m v œ r k
+frameworks	f ʁ 'ɛ ɪ m v œ r k s
 frampton	f ʁ a m p t 'oː n
 fran	f ʁ 'aː n
 franc	f ʁ 'ɛ ɳ k
@@ -27624,6 +27633,7 @@ füllmaterial	f 'ʏ l m a t e ʁ iː 'aː l
 füllmenge	f 'ʏ l m ɛ ɳ ə
 füllstand	f 'ʏ l ʃ t a n t
 füllstandsanzeige	f 'ʏ l ʃ t a n t s ʔa n t s aɪ g ə
+füllten	f 'ʏ l t ə n
 fünf-g-frequenzauktion	f 'ʏ n f 'ʔuː k s f ʁ eː k v ɛ n t s ʔaʊ k t s j 'oː n
 fünf-in-fünf-auspuffanlage	f 'ʏ n f ʔaɪ n ʃ p f ʏ n f ʔaʊ s p ʊ f ʔa n l aː g ə
 fünfachsig	f 'ʏ n f f a x z ɪ ç
@@ -35907,6 +35917,7 @@ hiestand	h 'iː ʃ t a n t
 hiester	h 'iː s t ɐ
 hietaniemi	h 'iː t a n iː m iː
 hietzinger	h 'iː t s ɪ ɳ ɐ
+hifi	h 'a ɪ f a ɪ
 hifthorn	h 'ɪ f t h ɔ ɐ n
 higashi	h 'ɪ g a ʃ iː
 higashiyama	h 'iː g aː s h iː a m aː
@@ -40402,6 +40413,7 @@ joysticks	d ʒ 'ɔ ø s t ɪ k s
 joël	j 'oː l
 jpmorgan	d ʒ p m ɔ ɐ g 'aː n
 jr	d ʒ 'ɛ r
+json	d ʒ 'ɛ ɪ s ə n
 juaben	j 'uː aː b ə n
 juana	j 'uː aː n aː
 juanes	j 'uː aː n ə s
@@ -52623,9 +52635,9 @@ mesquite	m 'ɛ s k v 'iː t ə
 mesrour	m 'ɛ s ʁ uː ɐ
 mess	m 'ɛ s
 messa	m 'ɛ s aː
-message	m 'ɛ s aː ʒ ə
+message	m 'ɛ s ɪ d ʒ
 messager	m 'ɛ s aː ʒ ɐ
-messages	m 'ɛ s aː ʒ ə s
+messages	m 'ɛ s ə d ʒ ɪ s
 messaging	m 'ɛ s a ʒ ɪ ɳ
 messala	m 'ɛ s 'aː l aː
 messalina	m 'ɛ s a l 'iː n aː
@@ -60430,7 +60442,10 @@ papeete	p a p 'eː t ə
 papeln	p 'aː p ə l n
 papen	p 'aː p ə n
 papens	p 'aː p ə n s
+paper	p 'ɛ ɪ p ɜ
 paperback	p 'aː p ɐ b a k
+papern	p 'ɛ ɪ p ɐ n
+papers	p 'ɛ ɪ p ɐ s
 paphos	p a f 'oː s
 papierarbeit	p a p 'iː ɐ ʔa ɐ b aɪ t
 papierartige	p a p 'iː ɐ ʔa ɐ t ɪ g ə
@@ -61052,6 +61067,7 @@ paß	p 'aː s
 paßt	p 'aː s t
 paßte	p 'aː s t ə
 paßten	p 'aː s t ə n
+pbi	p 'iː b iː ʔa ɪ
 pcr	p 'eː k r
 pea	p 'eː aː
 peabody	p 'iː b oː d iː
@@ -62280,6 +62296,7 @@ pionierpflanzen	p iː oː n 'iː ɐ p f l a n t s ə n
 pioniertat	p iː oː n 'iː ɐ t aː t
 pioniervorhaben	p iː oː n 'iː ɐ f oː ɐ h aː b ə n
 piotrowski	p iː oː t ʁ 'ɔ v s k iː
+pipe	p 'ɑ ɪ p
 pipeline	p 'iː p ə l 'ʔiː n ə
 piper	p 'iː p ɐ
 pipers	p 'iː p ɐ s
@@ -64653,6 +64670,7 @@ pyrrhussieg	p 'ʏ ʁ h ʊ s 'iː k
 pyruvat	p 'yː ʁ uː v 'aː t
 pythagoreischer	p yː t a g oː ʁ 'eː ɪ ʃ ɐ
 pythia	p 'ɑ ɪ θ i ə
+pytorch	p 'ɑ ɪ t ɔ r d ʒ
 pädagogikstudium	p ɛ d a g 'oː g ɪ k ʃ t uː d iː ʊ m
 pädagogium	p ɛ d a g 'oː g iː ʊ m
 pädiatrische	p 'ɛ d iː 'aː t ʁ ɪ ʃ ə
@@ -64938,6 +64956,7 @@ quetschbüdel	k v 'ɛ t ʃ b yː d ə l
 quetschkommode	k v 'ɛ t ʃ k ɔ m oː d ə
 quetschungen	k v 'ɛ t ʃ ʊ ɳ ə n
 quetzal	k v 'ɛ t s ʔaː l
+queue	k 'i ʊ
 queyras	k v 'aɪ ʁ aː s
 quezon	k v 'eː t s 'oː n
 quickly	k v 'ɪ k l i
@@ -67211,7 +67230,7 @@ request	ʁ 'eː k v eː s t
 reschef	ʁ 'ɛ ʃ ɛ f
 reschiza	ʁ ɛ ʃ 'iː t s aː
 reschke	ʁ 'ɛ ʃ k ə
-research	ʁ eː z ə 'ʔa ɐ ç
+research	ʁ 'i s øː r t ʒ
 resende	ʁ eː z 'ɛ n d ə
 reserva	ʁ eː z 'ɛ ɐ v aː
 reservebank	ʁ eː z 'ɛ ɐ v ə b a ɳ k
@@ -71604,6 +71623,7 @@ schou	ʃ 'u
 schoultz	ʃ 'aʊ l t s
 schouten	ʃ 'aʊ t ə n
 schozach	ʃ 'oː t s a x
+schoß	ʃ 'oː s
 schoßkind	ʃ 'oː s k ɪ n t
 schrader	ʃ ʁ 'aː d ɐ
 schraffierung	ʃ ʁ a f 'iː ʁ ʊ ɳ
@@ -73419,6 +73439,7 @@ setting	s 'ɛ t ɪ ɳ
 settings	s 'ɛ t ɪ ɳ s
 settlement	z 'ɛ t l ə m 'ɛ n t
 setukesen	z ɛ t uː k 'eː z ə n
+setup	z ɛ t 'a p
 setups	z ɛ t 'ʊ p s
 setzenden	z 'ɛ t s ə n d ə n
 setzeranlage	z 'ɛ t s ɐ ʔa n l aː g ə
@@ -74492,6 +74513,7 @@ siya	s 'ɪ j ə
 siyu	s 'ɪ j uː
 size	z 'iː t s ə
 sizemore	z iː t s ə m 'oː ʁ ə
+sizes	z 'ɑ ɪ z ə s
 siziliens	z i t s 'iː l iː ə n s
 sizwe	z 'ɪ t s v ə
 sió	z 'iː
@@ -74934,6 +74956,7 @@ solbakken	z 'ɔ l b a k ə n
 solberg	z 'ɔ l b ɛ ɐ k
 solbes	z 'ɔ l b ə s
 solbrig	z 'ɔ l b ʁ ɪ ç
+soldat	z ɔ l d 'aː t
 soldatenberuf	z ɔ l d 'aː t ə n b ə ʁ uː f
 soldatenmilieus	z ɔ l d 'aː t ə n m iː l iː j ʊ s
 soldatenrat	z ɔ l d 'aː t ə n ʁ 'aː t
@@ -75591,6 +75614,7 @@ spectors	ʃ p 'ɛ k t ɔ ɐ s
 speditionen	ʃ p eː d iː t s j 'oː n ə n
 speditionskaufmann	ʃ p eː d iː t s j 'oː n s k aʊ f m a n
 spee	s p 'i
+speech	s p 'i t ʃ
 speed	ʃ p 'eː t
 speedboot	ʃ p 'eː t b oː t
 speedskating	ʃ p 'eː t s k 'aː t ɪ ɳ
@@ -76827,6 +76851,7 @@ stand-up-coaster	ʃ t a n d 'u p ə k oː ʔa s t ɐ
 stand-up-comedian	ʃ t a n d 'u p ə k ɔ m e d i 'aː n
 stand-up-comedy	ʃ t a n d 'u p aː k ɔ m ɛ d i
 stand-up-comedy-shows	ʃ t a n d 'u p 'eː k ɔ m e d yː f s
+standalone	s t 'ɛ n d ɑ l ɔ ʊ n
 standardantwort	ʃ t a n d 'aː ɐ d a n t v ɔ ʁ t
 standardausrede	ʃ t a n d 'aː ɐ t aʊ s ʁ eː d ə
 standardausrüstung	ʃ t a n d 'aː ɐ t aʊ s ʁ ʏ s t ʊ ɳ
@@ -78426,7 +78451,8 @@ stuttgardia	ʃ t 'ʊ t g a ɐ d iː aː
 stuttgartulm	ʃ t 'ʊ t g a ɐ t ʊ l m
 stuvenborn	ʃ t 'uː v ə n b ɔ ɐ n
 stuyvesant	ʃ t 'uː iː v ɛ s a n t
-style	ʃ t 'yː l ə
+stx	'ʔɛ s t eː 'ʔɪ k s
+style	s t 'ɑ ɪ l
 styles	ʃ t 'yː l ə s
 stylestruktur	ʃ t 'yː l ə s t ʁ ʊ k t uː ɐ
 styling	ʃ t 'yː l ɪ ɳ
@@ -84829,6 +84855,7 @@ upanishaden	ʔu p 'aː n ɪ s h aː d ə n
 upazila	'ʔa p a t s 'iː l aː
 updates	'ʔa p d e ɪ t s
 upernavik	ʔu p ɐ n 'aː v ɪ k
+upgrade	'ʔa p g r ɛ ɪ d
 upgrades	'ʔa p g ʁ aː d ə s
 upland	'ʔa p l a n t
 upload	'ʔa p l oː d
@@ -89418,6 +89445,7 @@ weer	v 'eː ɐ
 weert	v 'eː ɐ t
 weesp	v 'eː ʔɛ s p
 weesplelystad	v 'eː ʃ p l eː l ʏ s t a t
+weg	v 'ɛ k
 wega	v 'eː g aː
 wegans	v 'ɛ k ʔa n s
 wegatmen	v 'ɛ k ʔaː t m ə n
@@ -90595,7 +90623,9 @@ widerstandswille	v 'iː d ɐ ʃ t a n t s v ɪ l ə
 widerstehenden	v 'iː d ɐ ʃ t eː ə n d ə n
 widerständler	v 'iː d ɐ ʃ t ɛ n d l ɐ
 widerständlern	v 'iː d ɐ ʃ t ɛ n d l ɐ n
-widgets	v 'ɪ t g ə t s
+widget	v 'ɪ d ʒ ə t
+widgets	v 'ɪ d ʒ ə t s
+widgetsets	v 'ɪ d ʒ ə t s e t s
 widmaier	v 'ɪ t m aɪ ɐ
 widmann	v 'ɪ t m a n
 widmer	v 'ɪ t m ɐ
@@ -90727,6 +90757,7 @@ wielka	v 'iː l k aː
 wielki	v 'iː l k iː
 wiemer	v 'iː m ɐ
 wiemers	v 'iː m ɐ s
+wien	v 'iː n
 wienand	v 'iː n a n t
 wienbibliothek	v 'iː n b i b l i o t 'eː k
 wiene	v 'iː n ə
