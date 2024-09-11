@@ -13,17 +13,20 @@ preprocessing:
     speaker: "de_thorsten"
     max_length: 512
   audio:
-    sampling_rate: 22050
+    sampling_rate: 24000
     # max_wav_value: 32768.0
-  stft:
-    filter_length: 1024
-    hop_length: 256
-    win_length: 1024
   mel:
-    n_mel_channels: 80
-    mel_fmin: 0
-    mel_fmax: 8000 # please set to 8000 for HiFi-GAN vocoder, set to null for MelGAN vocoder
+    fft_size: 2048
+    fmax: 7600
+    fmin: 80
+    win_length: 1200
+    window: hann
+    num_mels: 80
+    hop_size: 300
     max_len: 1490
+    filter_length: 1200
+    eps: 1e-10
+    log_base: 10.0
   pitch:
     normalization: True
   energy:
