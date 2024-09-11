@@ -30,7 +30,7 @@ from zerovox.tts.data import LJSpeechDataModule
 from zerovox.tts.model import ZeroVox
 from zerovox.g2p.data import G2PSymbols
 from zerovox.lexicon import Lexicon
-from zerovox.tts.model import DEFAULT_HIFIGAN_MODEL_NAME
+from zerovox.tts.model import DEFAULT_MELDEC_MODEL_NAME
 
 from pathlib import Path
 
@@ -65,10 +65,10 @@ def get_args():
                         type=str,
                         help="Output folder for checkpoints, modelcfg and validation data",)
 
-    parser.add_argument("--hifigan-model",
-                        default=DEFAULT_HIFIGAN_MODEL_NAME,
+    parser.add_argument("--meldec-model",
+                        default=DEFAULT_MELDEC_MODEL_NAME,
                         type=str,
-                        help="HiFiGAN model",)
+                        help="Multi-Band MELGAN model",)
 
     choices = ['cpu', 'cuda']
     parser.add_argument("--infer-device",
@@ -147,8 +147,8 @@ if __name__ == "__main__":
         'lang'          : None,
         'audio': {
             'sampling_rate' : None,
-            'hop_length'    : None,
-            'n_mel_channels': None,
+            'hop_size'      : None,
+            'num_mels'      : None,
             'filter_length' : None,
             'win_length'    : None,
             'mel_fmin'      : None,
@@ -199,40 +199,40 @@ if __name__ == "__main__":
             if modelcfg['audio']['sampling_rate'] != pc['preprocessing']['audio']['sampling_rate']:
                 raise Exception ('inconsistent rample rates detected')
 
-        if not modelcfg['audio']['hop_length']:
-            modelcfg['audio']['hop_length'] = pc['preprocessing']['stft']['hop_length']
+        if not modelcfg['audio']['hop_size']:
+            modelcfg['audio']['hop_size'] = pc['preprocessing']['mel']['hop_size']
         else:
-            if modelcfg['audio']['hop_length'] != pc['preprocessing']['stft']['hop_length']:
+            if modelcfg['audio']['hop_size'] != pc['preprocessing']['mel']['hop_size']:
                 raise Exception ('inconsistent hop lengths detected')
 
-        if not modelcfg['audio']['n_mel_channels']:
-            modelcfg['audio']['n_mel_channels'] = pc['preprocessing']['mel']['n_mel_channels']
+        if not modelcfg['audio']['num_mels']:
+            modelcfg['audio']['num_mels'] = pc['preprocessing']['mel']['num_mels']
         else:
-            if modelcfg['audio']['n_mel_channels'] != pc['preprocessing']['mel']['n_mel_channels']:
+            if modelcfg['audio']['num_mels'] != pc['preprocessing']['mel']['num_mels']:
                 raise Exception ('inconsistent number of mel channels detected')
 
         if not modelcfg['audio']['filter_length']:
-            modelcfg['audio']['filter_length'] = pc['preprocessing']['stft']['filter_length']
+            modelcfg['audio']['filter_length'] = pc['preprocessing']['mel']['filter_length']
         else:
-            if modelcfg['audio']['filter_length'] != pc['preprocessing']['stft']['filter_length']:
+            if modelcfg['audio']['filter_length'] != pc['preprocessing']['mel']['filter_length']:
                 raise Exception ('inconsistent filter length detected')
 
         if not modelcfg['audio']['win_length']:
-            modelcfg['audio']['win_length'] = pc['preprocessing']['stft']['win_length']
+            modelcfg['audio']['win_length'] = pc['preprocessing']['mel']['win_length']
         else:
-            if modelcfg['audio']['win_length'] != pc['preprocessing']['stft']['win_length']:
+            if modelcfg['audio']['win_length'] != pc['preprocessing']['mel']['win_length']:
                 raise Exception ('inconsistent win length detected')
 
         if not modelcfg['audio']['mel_fmin']:
-            modelcfg['audio']['mel_fmin'] = pc['preprocessing']['mel']['mel_fmin']
+            modelcfg['audio']['mel_fmin'] = pc['preprocessing']['mel']['fmin']
         else:
-            if modelcfg['audio']['mel_fmin'] != pc['preprocessing']['mel']['mel_fmin']:
+            if modelcfg['audio']['mel_fmin'] != pc['preprocessing']['mel']['fmin']:
                 raise Exception ('inconsistent mel fmin detected')
 
         if not modelcfg['audio']['mel_fmax']:
-            modelcfg['audio']['mel_fmax'] = pc['preprocessing']['mel']['mel_fmax']
+            modelcfg['audio']['mel_fmax'] = pc['preprocessing']['mel']['fmax']
         else:
-            if modelcfg['audio']['mel_fmax'] != pc['preprocessing']['mel']['mel_fmax']:
+            if modelcfg['audio']['mel_fmax'] != pc['preprocessing']['mel']['fmax']:
                 raise Exception ('inconsistent mel fmax detected')
 
         with open(os.path.join(pc['path']['preprocessed_path'], 'stats.json')) as statsf:
@@ -267,10 +267,10 @@ if __name__ == "__main__":
 
     model = ZeroVox ( symbols=symbols,
                       stats=(modelcfg['stats']['pitch_min'],modelcfg['stats']['pitch_max'],modelcfg['stats']['energy_min'],modelcfg['stats']['energy_max']),
-                      hifigan_model=args.hifigan_model,
+                      meldec_model=args.meldec_model,
                       sampling_rate=modelcfg['audio']['sampling_rate'],
-                      hop_length=modelcfg['audio']['hop_length'],
-                      n_mels=modelcfg['audio']['n_mel_channels'],
+                      hop_length=modelcfg['audio']['hop_size'],
+                      n_mels=modelcfg['audio']['num_mels'],
                       lr=cfg['training']['lr'],
                       weight_decay=cfg['training']['weight_decay'],
                       max_epochs=cfg['training']['max_epochs'],

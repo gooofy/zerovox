@@ -46,10 +46,20 @@ class Preprocessor:
         self._out_dir       = config["path"]["preprocessed_path"]
         self._val_size      = config["preprocessing"]["val_size"]
         self._sampling_rate = config["preprocessing"]["audio"]["sampling_rate"]
-        self._hop_length    = config["preprocessing"]["stft"]["hop_length"]
         self._language      = config['preprocessing']['text']['language']
         self._speaker       = config['preprocessing']['text']['speaker']
+
         self._max_seq_len   = config["preprocessing"]["mel"]["max_len"]
+        self._fft_size      = config["preprocessing"]["mel"]["fft_size"]
+        self._hop_size      = config["preprocessing"]["mel"]["hop_size"]
+        self._win_length    = config["preprocessing"]["mel"]["win_length"]
+        self._window        = config["preprocessing"]["mel"]["window"]
+        self._num_mels      = config["preprocessing"]["mel"]["num_mels"]
+        self._fmin          = config["preprocessing"]["mel"]["fmin"]
+        self._fmax          = config["preprocessing"]["mel"]["fmax"]
+        self._eps           = float(config["preprocessing"]["mel"]["eps"])
+        self._log_base      = float(config["preprocessing"]["mel"]["log_base"])
+        self._filter_length = config["preprocessing"]["mel"]["filter_length"]
 
         self._lexicon       = lexicon
         self._tokenizer     = tokenizer
@@ -58,16 +68,14 @@ class Preprocessor:
         self._pitch_normalization = config["preprocessing"]["pitch"]["normalization"]
         self._energy_normalization = config["preprocessing"]["energy"]["normalization"]
 
-        self._stft = TacotronSTFT(
-            config["preprocessing"]["stft"]["filter_length"],
-            config["preprocessing"]["stft"]["hop_length"],
-            config["preprocessing"]["stft"]["win_length"],
-            config["preprocessing"]["mel"]["n_mel_channels"],
-            config["preprocessing"]["audio"]["sampling_rate"],
-            config["preprocessing"]["mel"]["mel_fmin"],
-            config["preprocessing"]["mel"]["mel_fmax"],
-            use_cuda=use_cuda
-        )
+        self._stft = TacotronSTFT(filter_length=self._filter_length, 
+                                  hop_length=self._hop_size,
+                                  win_length=self._win_length,
+                                  n_mel_channels=self._num_mels,
+                                  sampling_rate=self._sampling_rate,
+                                  mel_fmin=self._fmin,
+                                  mel_fmax=self._fmax,
+                                  use_cuda=use_cuda)
 
     def build_from_path(self):
 
@@ -151,7 +159,7 @@ class Preprocessor:
 
         print(
             "Total time: {} hours".format(
-                n_frames * self._hop_length / self._sampling_rate / 3600
+                n_frames * self._hop_size / self._sampling_rate / 3600
             )
         )
 
@@ -204,7 +212,7 @@ class Preprocessor:
         pitch, t = pyworld.dio(
             wav.astype(np.float64),
             self._sampling_rate,
-            frame_period=self._hop_length / self._sampling_rate * 1000,
+            frame_period=self._hop_size / self._sampling_rate * 1000,
         )
         pitch = pyworld.stonemask(wav.astype(np.float64), pitch, t, self._sampling_rate)
 
@@ -213,10 +221,27 @@ class Preprocessor:
             return None
 
         # Compute mel-scale spectrogram and energy
-        mel_spectrogram, energy = get_mel_from_wav(wav, self._stft)
+
+        # wav.shape = [98343]
+        # mel_spectrogram.shape = [80, 385]
+        # energy.shape = [385]
+        mel_spectrogram, energy = get_mel_from_wav(audio=wav,
+                     sampling_rate=self._sampling_rate,
+                     fft_size=self._fft_size, # =1024,
+                     hop_size=self._hop_size, # =256,
+                     win_length=self._win_length, # =None,
+                     window=self._window, # ="hann",
+                     num_mels=self._num_mels, #=80,
+                     fmin=self._fmin, #=None,
+                     fmax=self._fmax, #=None,
+                     eps=self._eps, #=1e-10,
+                     log_base=self._log_base, #=10.0,
+                     stft=self._stft)
+
         if mel_spectrogram.shape[1] > self._max_seq_len:
             print (f"*** dropping sample because it exceeds mel max_len: {wav_path}")
             return None
+         
         # mel_spectrogram = mel_spectrogram[:, : sum(durations)]
         # energy = energy[: sum(durations)]
 
@@ -346,7 +371,7 @@ class Preprocessor:
                 # thereby adding any silences to the duration of the last phone
                 if phones:
                     duration = start - last_token_start
-                    durations.append(int(np.round(duration * self._sampling_rate / self._hop_length)))
+                    durations.append(int(np.round(duration * self._sampling_rate / self._hop_size)))
 
                 if stop > end_time:
                     end_time = stop
@@ -355,7 +380,7 @@ class Preprocessor:
                 puncts.append(punct)
                 punct = self._symbols.encode_punct('')
 
-                phone_positions.append(int(np.round((start-start_time) * self._sampling_rate / self._hop_length)))
+                phone_positions.append(int(np.round((start-start_time) * self._sampling_rate / self._hop_size)))
 
                 last_token_start = start
 
@@ -366,7 +391,7 @@ class Preprocessor:
         if not cur_align:
             return None
 
-        durations.append(int(np.round(cur_align['duration'] * self._sampling_rate / self._hop_length)))
+        durations.append(int(np.round(cur_align['duration'] * self._sampling_rate / self._hop_size)))
         #print (phones, puncts, durations)
 
         return phones, puncts, phone_positions, durations, start_time, end_time
@@ -437,7 +462,7 @@ if __name__ == "__main__":
 
         if not language:
             language = config['preprocessing']['text']['language']
-            lexicon = Lexicon.load(language)
+            lexicon = Lexicon.load(language, load_dicts=True)
             tokenizer = G2PTokenizer(language)
         else:
             if language != config['preprocessing']['text']['language']:

@@ -60,7 +60,7 @@ run training:
 Credits
 =======
 
-Based on Efficientspeech by Rowel Atienza
+Originally based on Efficientspeech by Rowel Atienza
 
 https://github.com/roatienza/efficientspeech
 
@@ -101,3 +101,6 @@ The decoder is borrowed (under MIT license) from Chung-Ming Chien's implementati
 
 https://github.com/ming024/FastSpeech2
 
+The MEL decoder implementation is borrowed (under MIT license) from Tomoki Hayashi's ParallelWaveGAN project:
+
+https://github.com/kan-bayashi/ParallelWaveGAN

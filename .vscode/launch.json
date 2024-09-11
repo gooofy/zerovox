@@ -119,22 +119,22 @@
                     ]
         },
         {
-            "name": "align",
+            "name": "align de_hui_Karlsson",
             "type": "debugpy",
             "request": "launch",
             "program": "utils/align.py",
             "console": "integratedTerminal",
-            "args": ["--kaldi-model=tts_de_kaldi_zamia_1",
-                     "priv/configs/corpora/de_dlf/de_dlf_agnes_pollner.yaml"
+            "args": ["--kaldi-model=tts_de_kaldi_zamia_2",
+                     "configs/corpora/de_hui/de_hui_Karlsson.yaml"
                     ]
         },       
         {
-            "name": "preprocess cvs 2371",
+            "name": "preprocess de_hui_Karlsson",
             "type": "debugpy",
             "request": "launch",
             "program": "utils/preprocess.py",
             "console": "integratedTerminal",
-            "args": ["configs/corpora/cv_de_s100/de_cvs_speaker_2371.yaml"]
+            "args": ["configs/corpora/de_hui/de_hui_Karlsson.yaml"]
         },
         {
             "name": "train karlsson base incr",

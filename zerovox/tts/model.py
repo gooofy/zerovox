@@ -13,6 +13,7 @@ is based on:
 '''
 
 import os
+import yaml
 import json
 import torch
 import torch.nn as nn
@@ -30,11 +31,12 @@ from torch.optim import AdamW
 from torch.optim.lr_scheduler import LambdaLR
 from scipy.io import wavfile
 
-import zerovox.hifigan
 from zerovox.g2p.data import G2PSymbols
 from zerovox.tts.networks import PhonemeEncoder
 from zerovox.tts.GST import GST
 from zerovox.tts.fs2 import FS2Decoder
+
+from zerovox.parallel_wavegan.utils import load_model as load_meldec_model
 
 # FIXME
 DEBUG_MALLOC = False
@@ -83,43 +85,42 @@ def download_model_file(model:str, relpath:str) -> Path:
 
     return target_path
 
-DEFAULT_HIFIGAN_MODEL_NAME = "zerovox-hifigan-vctk-v2-en-1"
+DEFAULT_MELDEC_MODEL_NAME = "meldec-libritts-multi-band-melgan-v2"
 
-def get_hifigan(model: str|os.PathLike, infer_device=None, verbose=False):
+def get_meldec(model: str|os.PathLike, infer_device=None, verbose=False):
 
     if os.path.isdir(model):
 
-        json_path = Path(Path(model) / 'config.json')
-        gen_path  = Path(Path(model) / 'generator.ckpt')
+        config_path = Path(Path(model) / 'config.yml')
+        gen_path  = Path(Path(model) / 'checkpoint.pkl')
+        stats_path  = Path(Path(model) / 'stats.h5')
 
     else:
 
-        json_path = download_model_file(model=model, relpath="config.json")
-        gen_path  = download_model_file(model=model, relpath="generator.ckpt")
+        config_path = download_model_file(model=model, relpath="config.yml")
+        gen_path  = download_model_file(model=model, relpath="checkpoint.pkl")
+        stats_path  = download_model_file(model=model, relpath="stats.h5")
 
     # get the main path
     if verbose:
-        print("Using config: ", json_path)
-        print("Using hifigan checkpoint: ", gen_path)
-    with open(json_path, "r") as f:
-        config = json.load(f)
+        print("meldec: using config    : ", config_path)
+        print("meldec: using checkpoint: ", gen_path)
+        print("meldec: using stats     : ", stats_path)
 
-    config = zerovox.hifigan.AttrDict(config)
-    torch.manual_seed(config.seed)
-    vocoder = zerovox.hifigan.Generator(config)
-    if infer_device is not None:
-        vocoder.to(infer_device)
-        ckpt = torch.load(gen_path, map_location=torch.device(infer_device))
-    else:
-        ckpt = torch.load(gen_path)
-        
-    vocoder.load_state_dict(ckpt["generator"])
-    vocoder.eval()
-    vocoder.remove_weight_norm()
-    for p in vocoder.parameters():
-        p.requires_grad = False
+    with open(config_path) as f:
+        config = yaml.load(f, Loader=yaml.Loader)
 
-    return vocoder
+    model = load_meldec_model(gen_path, config)
+    if verbose:
+        print(f"meldec: loaded model parameters from {args.checkpoint}.")
+
+    model.remove_weight_norm()
+
+    device = torch.device(infer_device)
+    model = model.eval().to(device)
+    model.to(device)
+
+    return model
 
 class LinearWarmUpCosineDecayLR(LRScheduler):
     
@@ -163,7 +164,7 @@ class ZeroVox(LightningModule):
     def __init__(self,
                  symbols: G2PSymbols,
                  stats, 
-                 hifigan_model,
+                 meldec_model,
                  sampling_rate,
                  hop_length,
                  n_mels,
@@ -197,7 +198,7 @@ class ZeroVox(LightningModule):
                  ):
         super(ZeroVox, self).__init__()
 
-        self.save_hyperparameters()
+        self.save_hyperparameters(ignore=['meldec_model', 'infer_device', 'verbose'])
 
         if DEBUG_MALLOC:
             self._last_snapshot = None
@@ -231,8 +232,7 @@ class ZeroVox(LightningModule):
         # FIXME
         # self._fake_mel_decoder = torch.nn.Linear(emb_size+3*dpe_embed_dim, n_mels)
 
-        self.hifigan = get_hifigan(model=hifigan_model,
-                                   infer_device=infer_device, verbose=verbose)
+        self._meldec = get_meldec(model=meldec_model, infer_device=infer_device, verbose=verbose)
 
         self.training_step_outputs = []
         self.validation_step_outputs = []
@@ -242,7 +242,7 @@ class ZeroVox(LightningModule):
         self._hop_length = hop_length
 
 
-    def forward(self, x, force_duration=False):
+    def forward(self, x, force_duration=False, normalize_before=True):
 
         # x["ref_mel"].shape torch.Size([8, 423, 80])
         # style_embed.shape torch.Size([8, 1, 144])
@@ -283,9 +283,14 @@ class ZeroVox(LightningModule):
         mel_len  = pred["mel_len"]
         duration = pred["duration"]
 
+        if normalize_before:
+            mel = (mel - self._meldec.mean) / self._meldec.scale
         mel = mel.transpose(1, 2)
-        wav = self.hifigan(mel).squeeze(1)
-        
+        wav = self._meldec(c=mel)
+        if self._meldec.pqmf is not None:
+            wav = self._meldec.pqmf.synthesis(wav)
+        wav = wav.squeeze(1)
+
         return wav, mel, mel_len, duration
 
     def inference(self, x, style_embed):
@@ -440,9 +445,15 @@ class ZeroVox(LightningModule):
                         wav_path=self.hparams.wav_path, filename=f"prediction-{batch_idx}")
 
                     mel_target = y["mel"]
-                    with torch.no_grad():
-                        wavs = self.hifigan(mel_target.transpose(1, 2)).squeeze(1)
-                        wavs = wavs.to(torch.float).cpu().numpy()
+                    #wavs = self._meldec(c=mel_target.transpose(1, 2), normalize_before=True).squeeze(1)
+
+                    mel_target_scaled = (mel_target - self._meldec.mean) / self._meldec.scale
+                    wavs = self._meldec(c=mel_target_scaled.transpose(1, 2))
+                    if self._meldec.pqmf is not None:
+                        wavs = self._meldec.pqmf.synthesis(wavs)
+                    wavs = wavs.squeeze(1)
+
+                    wavs = wavs.to(torch.float).cpu().numpy()
 
                     len_target = x["mel_len"]
                     write_to_file(wavs, self.hparams.sampling_rate, self.hparams.hop_length, lengths=len_target.cpu().numpy(), wav_path=self.hparams.wav_path, filename=f"reconstruction-{batch_idx}")
@@ -487,6 +498,19 @@ class ZeroVox(LightningModule):
         avg_mel_loss = torch.stack([mel_loss for mel_loss in self.validation_step_outputs]).mean()
         self.log("val_mel", avg_mel_loss, on_epoch=True, prog_bar=True, sync_dist=True)
         self.validation_step_outputs.clear()
+
+    def on_save_checkpoint(self, checkpoint):
+        # remove MELGAN
+        # print (checkpoint['state_dict'].keys())
+
+        for key in list(checkpoint['state_dict'].keys()):
+            if not key.startswith('_meldec.'):
+                continue
+            del checkpoint['state_dict'][key]
+
+        #print (checkpoint['state_dict'].keys())
+
+
 
     def configure_optimizers(self):
         optimizer = AdamW(self.parameters(), lr=self.hparams.lr, weight_decay=self.hparams.weight_decay)

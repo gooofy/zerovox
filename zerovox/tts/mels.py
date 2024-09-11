@@ -1,3 +1,5 @@
+
+from zerovox.parallel_wavegan.bin.preprocess import logmelfilterbank
 import librosa
 import torch
 import scipy
@@ -248,11 +250,42 @@ class TacotronSTFT(torch.nn.Module):
         return mel_output, energy
 
 
-def get_mel_from_wav(audio, _stft):
+def get_mel_from_wav(audio,
+                     sampling_rate,
+                     fft_size, # =1024,
+                     hop_size, # =256,
+                     win_length, # =None,
+                     window, # ="hann",
+                     num_mels, #=80,
+                     fmin, #=None,
+                     fmax, #=None,
+                     eps, #=1e-10,
+                     log_base, #=10.0,
+                     stft
+                     ):
+
+    mel = logmelfilterbank(
+        audio=audio,
+        sampling_rate=sampling_rate,
+        fft_size=fft_size,
+        hop_size=hop_size,
+        win_length=win_length,
+        window=window,
+        num_mels=num_mels,
+        fmin=fmin,
+        fmax=fmax,
+        eps=eps,
+        log_base=log_base
+    )
+
+    # energy computation
+
     audio = torch.clip(torch.FloatTensor(audio).unsqueeze(0), -1, 1)
     audio = torch.autograd.Variable(audio, requires_grad=False)
-    melspec, energy = _stft.mel_spectrogram(audio)
-    melspec = torch.squeeze(melspec, 0).numpy().astype(np.float32)
+
+    _, energy = stft.mel_spectrogram(audio)
+
     energy = torch.squeeze(energy, 0).numpy().astype(np.float32)
 
-    return melspec, energy
+    return mel.T, energy
+
