@@ -1,7 +1,7 @@
 dataset: "LJSpeech"
 
 path:
-  corpus_path: "/home/guenter/projects/hal9000/ennis/voices/src/de_thorsten/24kHz/de_thorsten"
+  corpus_path: "/home/guenter/projects/hal9000/ennis/datasets/speech/de_thorsten"
   lexicon_path: "lexicon/german_mfa.dict"
   raw_path: "./preprocessed_data/de_thorsten/wavs"
   preprocessed_path: "./preprocessed_data/de_thorsten"
