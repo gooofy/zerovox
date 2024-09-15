@@ -376,6 +376,15 @@
             "console": "integratedTerminal",
             "args": [],
             "justMyCode": false
+        },
+        {
+            "name": "import cv en",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "priv/utils/cv-en-import.py",
+            "console": "integratedTerminal",
+            "args": [],
+            "justMyCode": false
         }
     ]
 }
