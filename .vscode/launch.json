@@ -376,6 +376,42 @@
             "console": "integratedTerminal",
             "args": [],
             "justMyCode": false
+        },
+        {
+            "name": "cmu2zero",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "priv/utils/cmu2zero.py",
+            "console": "integratedTerminal",
+            "args": [],
+            "justMyCode": false
+        },
+        {
+            "name": "autosegment",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "priv/utils/autosegment.py",
+            "console": "integratedTerminal",
+            "args": [],
+            "justMyCode": false
+        },
+        {
+            "name": "autocluster",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "priv/utils/autocluster.py",
+            "console": "integratedTerminal",
+            "args": [],
+            "justMyCode": false
+        },
+        {
+            "name": "hf hub download",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "priv/utils/hf_hub_download.py",
+            "console": "integratedTerminal",
+            "args": [],
+            "justMyCode": false
         }
     ]
 }
