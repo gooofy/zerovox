@@ -412,6 +412,26 @@
             "console": "integratedTerminal",
             "args": [],
             "justMyCode": false
+        },
+        {
+            "name": "podcast downloader",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "priv/utils/podcast_downloader.py",
+            "console": "integratedTerminal",
+            "args": ["-d", "/home/guenter/projects/hal9000/ennis/datasets/_speech_raw/en_youtube_pi_1/incoming",
+                     "-c", "2",
+                     "https://feeds.npr.org/500005/podcast.xml"],
+            "justMyCode": false
+        },
+        {
+            "name": "youtube interview search",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "priv/utils/youtube-interview-search.py",
+            "console": "integratedTerminal",
+            "args": [],
+            "justMyCode": false
         }
     ]
 }
