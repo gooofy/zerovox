@@ -77,7 +77,7 @@ if __name__ == "__main__":
             else:
                 assert lang == language
 
-    print(f"gathered {len(jobs)} jobs.")
+    print(f"gathered {len(jobs)} jobs. language is {language}")
 
     g2p = G2P(language, model=args.g2p_model)
     
