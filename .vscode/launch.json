@@ -23,6 +23,24 @@
             "cwd": "${workspaceFolder}",
             "justMyCode": false
         },
+        {
+            "name": "train g2p en",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "utils/train_g2p.py",
+            "console": "integratedTerminal",
+            "args": ["--accelerator=gpu",
+                     "--max_epochs=100",
+                     "--warmup_epochs=10",
+                     "--val_epochs=1",
+                     "--lr=0.0001",
+                     "--batch-size=384",
+                     "--out-dir=models/g2p_en_autoreg_zamia_1",
+                     "--lang=en",
+                     "configs/g2p_en_autoreg_zamia.yaml"],
+            "cwd": "${workspaceFolder}",
+            "justMyCode": false
+        },
         // {
         //     "name": "train g2p de cont",
         //     "type": "debugpy",
@@ -68,9 +86,9 @@
             "program": "utils/oovtool.py",
             "console": "integratedTerminal",
             //"args": ["configs/corpora/cv_de_100/de_cv_speaker_80.yaml"],
-            "args": ["-m", "models/g2p_de_autoreg_zamia_1/checkpoints",
-                     "-a",
-                     "priv/configs/corpora/de_dlf/de_dlf_agnes_pollner.yaml"],
+            "args": ["-m", "models/g2p_en_autoreg_zamia_1/checkpoints",
+                     //"-a",
+                     "priv/configs/corpora/en_youtube_pi_1/en_youtube_speaker_00023.yaml"],
             "cwd": "${workspaceFolder}",
             "justMyCode": false
         },
@@ -382,6 +400,15 @@
             "type": "debugpy",
             "request": "launch",
             "program": "priv/utils/cv-en-import.py",
+            "console": "integratedTerminal",
+            "args": [],
+            "justMyCode": false
+        },
+        {
+            "name": "convert CMU dict",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "priv/utils/cmu2zero.py",
             "console": "integratedTerminal",
             "args": [],
             "justMyCode": false
