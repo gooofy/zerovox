@@ -103,11 +103,11 @@ if __name__ == "__main__":
     for cfgfn in cfgfns:
 
         print()
-        print ( "**********************************************************")
-        print ( "**                                                      **")
-        print (f"** {cfgfn:53}**")
-        print ( "**                                                      **")
-        print ( "**********************************************************")
+        print ( "****************************************************************************")
+        print ( "**                                                                        **")
+        print (f"** {cfgfn:53} lang={lang:2} sr={sr:5} **")
+        print ( "**                                                                        **")
+        print ( "****************************************************************************")
 
         sys.stdout.flush()
 
@@ -149,6 +149,8 @@ if __name__ == "__main__":
         lex = {}
         oovs = set()
 
+        cnt = 0
+
         with open(workdir / 'data' / 'alignme' / 'text', 'w') as textf:
             with open(workdir / 'data' / 'alignme' / 'wav.scp', 'w') as wavscpf:
                 with open(workdir / 'data' / 'alignme' / 'utt2spk', 'w') as utt2spkf:
@@ -181,6 +183,10 @@ if __name__ == "__main__":
 
                         wavscpf.write (f"{uttid} {str((rawpath / (uttid+'.wav')).resolve())}\n")
                         utt2spkf.write (f"{uttid} 42\n")
+
+                        cnt += 1
+
+        num_jobs = min(args.num_jobs, cnt)
 
         if oovs:
             print (f"*** ERROR: {len(oovs)} OOVs found - use oovtool to generate pronounciations first.")
@@ -215,7 +221,7 @@ if __name__ == "__main__":
 
         # do_cmd( ['utils/prepare_lang.sh', '--position-dependent-phones', 'false', 'data/local/lang', '<oov>', 'data/local/', 'data/lang'], workdir)
         do_cmd( ['utils/fix_data_dir.sh', 'data/alignme'], workdir )
-        do_cmd( ['steps/make_mfcc.sh', '--cmd', 'run.pl', '--nj', str(args.num_jobs), 'data/alignme', 'exp/make_mfcc/alignme', 'mfcc'], workdir)
+        do_cmd( ['steps/make_mfcc.sh', '--cmd', 'run.pl', '--nj', str(num_jobs), 'data/alignme', 'exp/make_mfcc/alignme', 'mfcc'], workdir)
         # do_cmd( ['utils/fix_data_dir.sh', 'data/alignme'], workdir)
         do_cmd( ['steps/compute_cmvn_stats.sh', 'data/alignme', 'exp/make_mfcc/data/alignme', 'mfcc'], workdir)
         # do_cmd( ['utils/fix_data_dir.sh', 'data/alignme'], workdir)
@@ -243,6 +249,8 @@ if __name__ == "__main__":
 
                 with open (aligndir / (uttid + '.tsv'), 'a') as alignf:
                     alignf.write(l + '\n')
+
+        print()
 
         sys.stdout.flush()
         
