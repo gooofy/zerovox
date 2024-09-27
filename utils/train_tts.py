@@ -144,7 +144,7 @@ if __name__ == "__main__":
     cfg = yaml.load(open(args.model_config, 'r'), Loader=yaml.FullLoader)
 
     modelcfg = {
-        'lang'          : None,
+        'lang'          : [],
         'audio': {
             'sampling_rate' : None,
             'hop_size'      : None,
@@ -187,11 +187,8 @@ if __name__ == "__main__":
     }
 
     for pc in preprocess_configs:
-        if not modelcfg['lang']:
-            modelcfg['lang'] = pc['preprocessing']['text']['language']
-        else:
-            if modelcfg['lang'] != pc['preprocessing']['text']['language']:
-                raise Exception ('Multiple languages detected')
+        if pc['preprocessing']['text']['language'] not in modelcfg['lang']:
+            modelcfg['lang'].append(pc['preprocessing']['text']['language'])
 
         if not modelcfg['audio']['sampling_rate']:
             modelcfg['audio']['sampling_rate'] = pc['preprocessing']['audio']['sampling_rate']
@@ -250,7 +247,7 @@ if __name__ == "__main__":
             if pitch_max > modelcfg['stats']['pitch_max']:
                 modelcfg['stats']['pitch_max'] = pitch_max
 
-    lexicon       = Lexicon.load(modelcfg['lang'], load_dicts=False)
+    lexicon       = Lexicon.load(modelcfg['lang'][0], load_dicts=False)
     symbols       = G2PSymbols (lexicon.graphemes, lexicon.phonemes)
 
     os.makedirs (args.out_folder, exist_ok=True)
