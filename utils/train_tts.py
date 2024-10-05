@@ -153,6 +153,10 @@ if __name__ == "__main__":
             'win_length'    : None,
             'mel_fmin'      : None,
             'mel_fmax'      : None,
+            'fft_size'      : None,
+            'eps'           : None,
+            'window'        : None,
+            'log_base'      : None
         },
         'model': {
             'emb_dim'       : cfg['model']['emb_dim'],
@@ -231,6 +235,30 @@ if __name__ == "__main__":
         else:
             if modelcfg['audio']['mel_fmax'] != pc['preprocessing']['mel']['fmax']:
                 raise Exception ('inconsistent mel fmax detected')
+
+        if not modelcfg['audio']['fft_size']:
+            modelcfg['audio']['fft_size'] = pc['preprocessing']['mel']['fft_size']
+        else:
+            if modelcfg['audio']['fft_size'] != pc['preprocessing']['mel']['fft_size']:
+                raise Exception ('inconsistent fft size detected')
+
+        if not modelcfg['audio']['eps']:
+            modelcfg['audio']['eps'] = pc['preprocessing']['mel']['eps']
+        else:
+            if modelcfg['audio']['eps'] != pc['preprocessing']['mel']['eps']:
+                raise Exception ('inconsistent eps detected')
+
+        if not modelcfg['audio']['window']:
+            modelcfg['audio']['window'] = pc['preprocessing']['mel']['window']
+        else:
+            if modelcfg['audio']['window'] != pc['preprocessing']['mel']['window']:
+                raise Exception ('inconsistent window detected')
+
+        if not modelcfg['audio']['log_base']:
+            modelcfg['audio']['log_base'] = pc['preprocessing']['mel']['log_base']
+        else:
+            if modelcfg['audio']['log_base'] != pc['preprocessing']['mel']['log_base']:
+                raise Exception ('inconsistent log_base detected')
 
         with open(os.path.join(pc['path']['preprocessed_path'], 'stats.json')) as statsf:
             stats = json.load(statsf)
