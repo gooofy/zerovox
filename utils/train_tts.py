@@ -36,6 +36,8 @@ from pathlib import Path
 
 from typing import Dict
 
+from tqdm import tqdm
+
 def get_args():
     parser = argparse.ArgumentParser()
 
@@ -139,7 +141,10 @@ if __name__ == "__main__":
     else:
         print (f"{len(cfgfns)} .yaml files found.")
 
-    preprocess_configs = [yaml.load(open(fn, "r"), Loader=yaml.FullLoader) for fn in cfgfns]
+    preprocess_configs = []
+
+    for fn in tqdm(cfgfns, desc="loading configs"):
+        preprocess_configs.append(yaml.load(open(fn, "r"), Loader=yaml.FullLoader))
 
     cfg = yaml.load(open(args.model_config, 'r'), Loader=yaml.FullLoader)
 
@@ -190,7 +195,7 @@ if __name__ == "__main__":
         },
     }
 
-    for pc in preprocess_configs:
+    for pc in tqdm(preprocess_configs, desc="check cfg consistency"):
         if pc['preprocessing']['text']['language'] not in modelcfg['lang']:
             modelcfg['lang'].append(pc['preprocessing']['text']['language'])
 
