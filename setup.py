@@ -30,6 +30,7 @@ setup(
     'lightning>=2.4.0',
     'einops>=0.8.0',
     'sounddevice>=0.4.7',
+    'setproctitle>=1.3.3',
   ],
   license='Apache Software License',
   include_package_data=True
