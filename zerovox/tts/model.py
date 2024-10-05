@@ -447,7 +447,7 @@ class ZeroVox(LightningModule):
             if self.current_epoch>=1 :
                 with torch.no_grad():
                     x, y = batch
-                    wavs, mel_pred, len_pred, _ = self.forward(x)
+                    wavs, mel_pred, len_pred, _ = self.forward(x, force_duration=True)
                     wavs = wavs.to(torch.float).cpu().numpy()
                     write_to_file(wavs, self.hparams.sampling_rate, self.hparams.hop_length, lengths=len_pred.cpu().numpy(), \
                         wav_path=self.hparams.wav_path, filename=f"prediction-{batch_idx}")
