@@ -26,7 +26,7 @@ from lightning import LightningDataModule
 from zerovox.lexicon  import Lexicon
 from zerovox.g2p.data import G2PSymbols
 
-MAX_REF_LEN = 500 # approx 6 seconds (22050/256*6)
+MAX_REF_LEN = 500 # approx 5.5 seconds (24000/256*6)
 
 def get_mask_from_lengths(lengths, max_len):
     batch_size = lengths.shape[0]
