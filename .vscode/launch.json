@@ -237,10 +237,11 @@
             "program": "utils/demo.py",
             "console": "integratedTerminal",
             "args": [
-                     "--model=models/tts_de_zerovox_fs2dec_base_1",
+                     "--model=models/tts_en_de_zerovox_base_1",
                      "--verbose",
+                     "--lang=de",
                      //"--hifigan-model=models/hifigan-lj-v1",
-                     "--hifigan-model=models/zerovox-hifigan-zamia-v2-de-1",
+                     //"--hifigan-model=models/zerovox-hifigan-zamia-v2-de-1",
                      //"--refaudio=/home/guenter/projects/hal9000/ennis/voices/6s/en_digitalsculler_03.wav",
                      //"--refaudio=/home/guenter/projects/hal9000/ennis/voices/6s/de_tobias_meister_03.wav",
                      //"--refaudio=/home/guenter/projects/hal9000/ennis/voices/6s/de_christoph_wittelsbürger_03.wav",

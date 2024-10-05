@@ -18,6 +18,7 @@ import os
 import yaml
 import glob
 import librosa
+import time
 
 from zerovox.tts.model import ZeroVox
 from zerovox.g2p.g2p import G2P
@@ -28,33 +29,49 @@ class ZeroVoxTTS:
     def __init__(self,
                  language: str,
                  checkpoint: str | os.PathLike,
-                 hifigan_model: str,
+                 meldec_model: str,
                  g2p: G2P,
                  hop_length: int,
                  sampling_rate : int,
                  n_mel_channels : int,
+                 fft_size : int,
                  filter_length : int,
                  win_length : int,
                  mel_fmin: int,
                  mel_fmax: int,
+                 eps: float,
+                 window: str,
+                 log_base: float,
                  infer_device: str = 'cpu',
                  num_threads: int = None,
-                 do_compile: bool = False):
+                 do_compile: bool = False,
+                 verbose: bool = False):
 
         self._hop_length = hop_length
         self._infer_device = infer_device
         self._sampling_rate = sampling_rate
 
+        self._fft_size = fft_size
+        self._win_length = win_length
+        self._num_mels = n_mel_channels
+        self._mel_fmin = mel_fmin
+        self._mel_fmax = mel_fmax
+        self._window = window
+        self._eps = eps
+        self._log_base = log_base
+        self._verbose = verbose
+
         self._g2p = g2p
 
         self._model = ZeroVox.load_from_checkpoint(lang=language,
-                                                   hifigan_model=hifigan_model,
+                                                   meldec_model=meldec_model,
                                                    sampling_rate=sampling_rate,
                                                    hop_length=hop_length,
                                                    checkpoint_path=checkpoint,
                                                    infer_device=infer_device,                                                              
                                                    map_location=torch.device('cpu'),
-                                                   strict=False)
+                                                   strict=False,
+                                                   verbose=verbose)
 
         self._model = self._model.to(infer_device)
         self._model.eval()
@@ -83,11 +100,18 @@ class ZeroVoxTTS:
         # Trim the beginning and ending silence
         wav, _ = librosa.effects.trim(wav, top_db=40)
 
-        mel_spectrogram, energy = get_mel_from_wav(wav, self._stft)
-
-        # m = mel_spectrogram.T
-        # for mm in m[:100]:
-        #     print (mm[:6])
+        mel_spectrogram, energy = get_mel_from_wav(wav, 
+                                                   sampling_rate=self._sampling_rate,
+                                                   fft_size=self._fft_size,
+                                                   hop_size=self._hop_length,
+                                                   win_length=self._win_length,
+                                                   window=self._window,
+                                                   num_mels=self._num_mels,
+                                                   fmin=self._mel_fmin,
+                                                   fmax=self._mel_fmax,
+                                                   eps=self._eps,
+                                                   log_base=self._log_base,
+                                                   stft=self._stft)
 
         x = np.array([mel_spectrogram.T], dtype=np.float32)
         with torch.no_grad():
@@ -140,13 +164,13 @@ class ZeroVoxTTS:
 
         return self._symbols.phones_to_ids(phones), self._symbols.puncts_to_ids(puncts)
 
-    def text2phonemeids(self, text:str, verbose:bool=False) -> list[int]:
+    def text2phonemeids(self, text:str) -> list[int]:
 
         ipa = self._g2p(text)
 
         phone_ids, punct_ids = self.ipa2phonemids(ipa)
 
-        if verbose:
+        if self._verbose:
             print(f"Raw Text Sequence: {text}")
             print(f"Phoneme Sequence : {ipa}")
             print(f"Phoneme IDs      : {phone_ids}")
@@ -154,21 +178,30 @@ class ZeroVoxTTS:
 
         return phone_ids, punct_ids
 
-    def tts (self, text:str, spkemb, verbose:bool=False):
+    def tts (self, text:str, spkemb):
         text = text.strip()
 
-        phone_ids, punct_ids = self.text2phonemeids(text, verbose=verbose)
+        tstart_g2p = time.time()
+        phone_ids, punct_ids = self.text2phonemeids(text)
 
         if not phone_ids:
             return np.array([[0.0]], dtype=np.float32), np.array([[0]], dtype=np.int32), 0
 
         phoneme = np.array([phone_ids], dtype=np.int32)
         puncts  = np.array([punct_ids], dtype=np.int32)
+        tend_g2p = time.time()
+
+
+        tstart_synth = time.time()
         with torch.no_grad():
             phoneme = torch.from_numpy(phoneme).int().to(self._infer_device)
             puncts = torch.from_numpy(puncts).int().to(self._infer_device)
             wav, length, _ = self._model.inference({"phoneme": phoneme, "puncts": puncts}, style_embed=spkemb)
             wav = wav.cpu().numpy()
+        tend_synth = time.time()
+
+        if self._verbose:
+            print (f"tts timing stats: g2p={tend_g2p-tstart_g2p}s, synth={tend_synth-tstart_synth}s")
 
         return wav, phoneme, length
 
@@ -197,35 +230,42 @@ class ZeroVoxTTS:
     @classmethod
     def load_model(cls, 
                    modelpath: str | os.PathLike,
-                   hifigan_model: str | os.PathLike,
+                   meldec_model: str | os.PathLike,
                    g2p: G2P | str,
+                   lang: str,
                    infer_device: str = 'cpu',
                    num_threads: int = None,
-                   do_compile: bool = False) -> tuple[dict[str, any], "ZeroVoxTTS"]:
+                   do_compile: bool = False,
+                   verbose: bool = False) -> tuple[dict[str, any], "ZeroVoxTTS"]:
         
         with open (os.path.join(modelpath, "modelcfg.yaml")) as modelcfgf:
             modelcfg = yaml.load(modelcfgf, Loader=yaml.FullLoader)
 
         if isinstance(g2p, str) :
-            g2p = G2P(modelcfg['lang'], model=g2p)
+            g2p = G2P(lang, model=g2p)
 
         list_of_files = glob.glob(os.path.join(modelpath, 'checkpoints/*.ckpt'))
         checkpoint = max(list_of_files, key=os.path.getctime)
 
         synth = ZeroVoxTTS ( language=modelcfg['lang'],
                              checkpoint=checkpoint,
-                             hifigan_model=hifigan_model,
+                             meldec_model=meldec_model,
                              g2p=g2p,
-                             hop_length=modelcfg['audio']['hop_length'],
+                             hop_length=modelcfg['audio']['hop_size'],
                              filter_length=modelcfg['audio']['filter_length'],
                              win_length=modelcfg['audio']['win_length'],
                              mel_fmin=modelcfg['audio']['mel_fmin'],
                              mel_fmax=modelcfg['audio']['mel_fmax'],
                              sampling_rate=modelcfg['audio']['sampling_rate'],
-                             n_mel_channels=modelcfg['audio']['n_mel_channels'],
+                             n_mel_channels=modelcfg['audio']['num_mels'],
+                             fft_size=modelcfg['audio']['fft_size'],
+                             eps=float(modelcfg['audio']['eps']),
+                             window=modelcfg['audio']['window'],
+                             log_base=modelcfg['audio']['log_base'],
                              infer_device=infer_device,
                              num_threads=num_threads,
-                             do_compile=do_compile)
+                             do_compile=do_compile,
+                             verbose=verbose)
         
         return modelcfg, synth
 

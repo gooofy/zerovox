@@ -112,7 +112,7 @@ def get_meldec(model: str|os.PathLike, infer_device=None, verbose=False):
 
     model = load_meldec_model(gen_path, config)
     if verbose:
-        print(f"meldec: loaded model parameters from {args.checkpoint}.")
+        print(f"meldec: loaded model parameters from {gen_path}.")
 
     model.remove_weight_norm()
 
@@ -237,9 +237,11 @@ class ZeroVox(LightningModule):
         self.training_step_outputs = []
         self.validation_step_outputs = []
 
-        # self._min_mel_len = 1500 # 1500 * 256 / 22050 -> 17.4s
-        self._min_mel_len = 689 # 689 * 256 / 22050 -> 8s
+        # self._min_mel_len = 1500 # 1500 * 256 / 24000 -> 17.4s
+        self._min_mel_len = 689 # 689 * 256 / 24000 -> 7s
         self._hop_length = hop_length
+
+        self._verbose = verbose
 
 
     def forward(self, x, force_duration=False, normalize_before=True):
@@ -293,39 +295,45 @@ class ZeroVox(LightningModule):
 
         return wav, mel, mel_len, duration
 
-    def inference(self, x, style_embed):
+    def inference(self, x, style_embed, normalize_before=True):
 
-        #start_time = time.time()
+        start_time = time.time()
 
         pred = self._phoneme_encoder(x, style_embed=style_embed, train=False)
 
-        #pe_time = time.time()
+        pe_time = time.time()
 
         max_len = pred["features"].shape[1] # pred["mel_len"].cpu().max().item()
         range_tensor = torch.arange(max_len).expand(len(pred["mel_len"]), max_len).to(device=pred['mel_len'].device)
         dec_mask = range_tensor < pred["mel_len"].unsqueeze(1)
         dec_mask = ~dec_mask
 
-        mel, dec_mask = self._mel_decoder(pred["features"], dec_mask) 
+        mel, dec_mask = self._mel_decoder(pred["features"], dec_mask, spk_emb=style_embed) 
         
-        #dec_time = time.time()
+        dec_time = time.time()
 
         mel_len  = int(pred["mel_len"].cpu().detach().numpy())
         duration = pred["duration"]
 
+        if normalize_before:
+            mel = (mel - self._meldec.mean) / self._meldec.scale
         mel = mel.transpose(1, 2)
 
-        # try to keep mel size constant to reduce hifigan latency (no torch/coda recompile on every utterance)
+        # try to keep mel size constant to reduce meldec latency (no torch/coda recompile on every utterance)
         if mel_len < self._min_mel_len:
             mel = torch.nn.functional.pad(mel, (0, self._min_mel_len - mel_len))
         elif mel_len > self._min_mel_len:
             self._min_mel_len = mel_len
 
-        wav = self.hifigan(mel).squeeze()
+        wav = self._meldec(c=mel)
+        if self._meldec.pqmf is not None:
+            wav = self._meldec.pqmf.synthesis(wav)
+        wav = wav.squeeze((0,1))
 
-        #hifigan_time = time.time()
+        meldec_time = time.time()
 
-        #print (f"phoneme_encoder: {pe_time-start_time}s, mel_decoder: {dec_time-pe_time}, hifigan: {hifigan_time-dec_time}")
+        if self._verbose:
+            print (f"synthesis timing stats: pe={pe_time-start_time}s, dec={dec_time-pe_time}s, meldec={meldec_time-dec_time}s")
 
         return wav[:mel_len * self._hop_length], mel_len, duration
 

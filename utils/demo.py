@@ -24,9 +24,9 @@ import multiprocessing
 from scipy.io import wavfile
 from zerovox.tts.synthesize import ZeroVoxTTS
 from zerovox.g2p.g2p import DEFAULT_G2P_MODEL_NAME
-from zerovox.tts.model import DEFAULT_HIFIGAN_MODEL_NAME
+from zerovox.tts.model import DEFAULT_MELDEC_MODEL_NAME
 
-def write_wav_to_file(wav, length, filename, sample_rate=22050, hop_length=256):
+def write_wav_to_file(wav, length, filename, sample_rate=24000, hop_length=256):
     wav = (wav * 32760).astype("int16")
     length *= hop_length
     wav = wav[: length]
@@ -45,6 +45,11 @@ if __name__ == "__main__":
                         choices=choices,
                         type=str,
                         help="Inference device",)
+    parser.add_argument("-l", "--lang",
+                        default='en',
+                        choices=['en', 'de'],
+                        type=str,
+                        help="language: en or de, default: en",)
     parser.add_argument('--compile',
                         action='store_true',
                         help='Infer using the compiled model')    
@@ -52,10 +57,11 @@ if __name__ == "__main__":
                         default=None,
                         required=True,
                         help="Path to model directory",)
-    parser.add_argument("--hifigan-model",
-                        default=DEFAULT_HIFIGAN_MODEL_NAME,
+    parser.add_argument("--meldec-model",
+                        default=DEFAULT_MELDEC_MODEL_NAME,
                         type=str,
-                        help="HiFiGAN modelm",)
+                        help="Multi-Band MELGAN model",)
+
     parser.add_argument("--g2p-model",
                         default=DEFAULT_G2P_MODEL_NAME,
                         type=str,
@@ -72,10 +78,12 @@ if __name__ == "__main__":
 
     modelcfg, synth = ZeroVoxTTS.load_model(args.model,
                                             g2p=args.g2p_model,
-                                            hifigan_model=args.hifigan_model,
+                                            lang=args.lang,
+                                            meldec_model=args.meldec_model,
                                             infer_device=args.infer_device,
                                             num_threads=args.threads,
-                                            do_compile=args.compile)
+                                            do_compile=args.compile,
+                                            verbose=args.verbose)
 
     if args.play or args.interactive:
         import sounddevice as sd
@@ -101,7 +109,7 @@ if __name__ == "__main__":
 
             start_time = time.time()
 
-            wav, phoneme, length = synth.tts(args.text, spkemb, args.verbose)
+            wav, phoneme, length = synth.tts(args.text, spkemb)
 
             elapsed_time = time.time() - start_time
 
@@ -110,15 +118,13 @@ if __name__ == "__main__":
             message += f", voice length: {wav_len:.2f} sec"
             real_time_factor = wav_len / elapsed_time
             message += f", rtf: {real_time_factor:.2f}"
-            #message += "\nNote:\tFor benchmarking, load the model 1st, do a warmup run for 100x, then run the benchmark for 1000 iterations."
-            #message += "\n\tGet the mean of 1000 runs. Use --iter N to run N iterations. eg N=100"
 
             print (message)
 
             if args.wav_filename:
                 write_wav_to_file(wav, length=length, filename=args.wav_filename,
                                   sample_rate=modelcfg['audio']['sampling_rate'],
-                                  hop_length=modelcfg['audio']['hop_length'])
+                                  hop_length=modelcfg['audio']['hop_size'])
 
             if i > warmup:
                 rtf.append(real_time_factor)
@@ -157,7 +163,7 @@ if __name__ == "__main__":
 
                     start_time = time.time()
 
-                    wav, phoneme, length = synth.tts(cmd, spkemb, args.verbose)
+                    wav, phoneme, length = synth.tts(cmd, spkemb)
 
                     elapsed_time = time.time() - start_time
 
