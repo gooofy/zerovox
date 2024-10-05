@@ -22,11 +22,12 @@ setup(
   classifiers = [],
   install_requires = [
     'torch>=2.1.0',
+    'torchinfo>=1.8.0',
     'nltk>=3.8.1',
     'num2words>=0.5.13',
     'readline>=6.2.4.1',
     'librosa>=0.10.2',
-    'lightning>=2.3.0',
+    'lightning>=2.4.0',
     'einops>=0.8.0',
     'sounddevice>=0.4.7',
   ],

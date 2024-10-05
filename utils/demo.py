@@ -20,6 +20,7 @@ import numpy as np
 import argparse
 import readline   # noqa: F401
 import multiprocessing
+from torchinfo import summary
 
 from scipy.io import wavfile
 from zerovox.tts.synthesize import ZeroVoxTTS
@@ -84,6 +85,9 @@ if __name__ == "__main__":
                                             num_threads=args.threads,
                                             do_compile=args.compile,
                                             verbose=args.verbose)
+
+    if args.verbose:
+        summary(synth._model, depth=1)
 
     if args.play or args.interactive:
         import sounddevice as sd
