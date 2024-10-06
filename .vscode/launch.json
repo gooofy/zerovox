@@ -361,13 +361,15 @@
             "justMyCode": false
         },       
         {
-            "name": "remove hifigan",
+            "name": "add meldec",
             "type": "debugpy",
             "request": "launch",
-            "program": "utils/remove_hifigan_from_checkpoint.py",
+            "program": "utils/edit_meldec_in_checkpoint.py",
             "console": "integratedTerminal",
             "args": [
-                     "--model=models/tts_de_zerovox_fs2dec_base_1"],
+                "--meldec=meldec-libritts-multi-band-melgan-v2",
+                "models/tts_en_de_zerovox_base_emb256_1/checkpoints/0006.ckpt"
+            ],
             "justMyCode": false
         },
         {

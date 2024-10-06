@@ -235,7 +235,10 @@ class ZeroVox(LightningModule):
         # FIXME
         # self._fake_mel_decoder = torch.nn.Linear(emb_size+3*dpe_embed_dim, n_mels)
 
-        self._meldec = get_meldec(model=meldec_model, infer_device=infer_device, verbose=verbose)
+        if meldec_model:
+            self._meldec = get_meldec(model=meldec_model, infer_device=infer_device, verbose=verbose)
+        else:
+            self._meldec = None
 
         self.training_step_outputs = []
         self.validation_step_outputs = []
@@ -510,16 +513,16 @@ class ZeroVox(LightningModule):
         self.log("val_mel", avg_mel_loss, on_epoch=True, prog_bar=True, sync_dist=True)
         self.validation_step_outputs.clear()
 
-    def on_save_checkpoint(self, checkpoint):
-        # remove MELGAN
-        # print (checkpoint['state_dict'].keys())
+    # def on_save_checkpoint(self, checkpoint):
+    #     # remove MELGAN
+    #     # print (checkpoint['state_dict'].keys())
 
-        for key in list(checkpoint['state_dict'].keys()):
-            if not key.startswith('_meldec.'):
-                continue
-            del checkpoint['state_dict'][key]
+    #     for key in list(checkpoint['state_dict'].keys()):
+    #         if not key.startswith('_meldec.'):
+    #             continue
+    #         del checkpoint['state_dict'][key]
 
-        #print (checkpoint['state_dict'].keys())
+    #     #print (checkpoint['state_dict'].keys())
 
 
 
