@@ -172,22 +172,6 @@
             "justMyCode": false
         },
         {
-            "name": "train karlsson medium",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "utils/train_tts.py",
-            "console": "integratedTerminal",
-            "args": ["-c", "configs/tts_medium.yaml",
-                     "--accelerator=gpu", "--threads=24",
-                     "--infer-device=cpu",                     
-                     //"--hifigan-model=VCTK_V2",
-                     "--out-folder=models/tts_de_zerovox_medium_karlsson",
-                     //"configs/corpora/cv_de_100/de_cv_speaker_1.yaml"
-                     "configs/corpora/de_hui/de_hui_Karlsson.yaml"
-                    ],
-            "justMyCode": false
-        },
-        {
             "name": "train karlsson base",
             "type": "debugpy",
             "request": "launch",
@@ -196,7 +180,7 @@
             "args": ["-c", "configs/tts_base.yaml",
                      "--accelerator=gpu", "--threads=24",
                      "--infer-device=cpu",                     
-                     //"--hifigan-model=VCTK_V2",
+                     "--name=exp2",
                      "--out-folder=models/tts_de_zerovox_base_karlsson",
                      //"configs/corpora/cv_de_100/de_cv_speaker_1.yaml"
                      "configs/corpora/de_hui/de_hui_Karlsson.yaml"

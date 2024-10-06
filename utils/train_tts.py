@@ -25,6 +25,7 @@ import random
 
 from lightning import Trainer
 from lightning.pytorch.callbacks import ModelCheckpoint
+from lightning.pytorch.loggers import TensorBoardLogger
 
 from zerovox.tts.data import LJSpeechDataModule
 from zerovox.tts.model import ZeroVox
@@ -71,6 +72,10 @@ def get_args():
                         default=DEFAULT_MELDEC_MODEL_NAME,
                         type=str,
                         help="Multi-Band MELGAN model",)
+
+    parser.add_argument("--name",
+                        type=str,
+                        help="run name (optional)")
 
     choices = ['cpu', 'cuda']
     parser.add_argument("--infer-device",
@@ -285,7 +290,16 @@ if __name__ == "__main__":
 
     os.makedirs (args.out_folder, exist_ok=True)
 
-    with open (os.path.join(args.out_folder, 'modelcfg.yaml'), 'w') as modelcfgf:
+    if args.name:
+        modelcfg_path = Path(args.out_folder) / f"modelcfg_{args.name}.yaml"
+        wav_path = Path(args.out_folder) / 'validation' / args.name
+        checkpoint_path = Path(args.out_folder) / 'checkpoints' / args.name
+    else:
+        modelcfg_path = Path(args.out_folder) / "modelcfg.yaml"
+        wav_path = Path(args.out_folder) / 'validation'
+        checkpoint_path = Path(args.out_folder) / 'checkpoints'
+
+    with open (modelcfg_path, 'w') as modelcfgf:
         yaml.dump(modelcfg, modelcfgf, default_flow_style=False)
 
     args.num_workers *= args.devices
@@ -326,13 +340,13 @@ if __name__ == "__main__":
                       decoder_conv_kernel_size=cfg['model']['decoder']['conv_kernel_size'],
                       decoder_dropout=cfg['model']['decoder']['dropout'],
 
-                      wav_path=os.path.join(args.out_folder, 'validation'),
+                      wav_path=str(wav_path),
                       infer_device=args.infer_device,
                       verbose=args.verbose)
 
     checkpoint_callback = ZVModelCheckpointCheckpoint(
         monitor='loss',
-        dirpath=os.path.join(args.out_folder, 'checkpoints'),
+        dirpath=str(checkpoint_path),
         # filename='epoch={epoch:02d}-loss={loss:.2f}',
         # filename='best',
         filename='{epoch:04d}',
@@ -343,6 +357,11 @@ if __name__ == "__main__":
         save_on_train_epoch_end=True,
     )
 
+    if args.name:
+        logger=TensorBoardLogger(Path(args.out_folder) / "lightning_logs", name=args.name)
+    else:
+        logger=None
+
     trainer = Trainer(accelerator=args.accelerator,
                       devices=args.devices,
                       precision=args.precision,
@@ -351,7 +370,8 @@ if __name__ == "__main__":
                       default_root_dir=args.out_folder,
                       callbacks=[checkpoint_callback],
                       gradient_clip_val=cfg['training']['grad_clip'],
-                      num_sanity_val_steps=0)
+                      num_sanity_val_steps=0,
+                      logger=logger)
 
     if args.compile:
         model = torch.compile(model)
