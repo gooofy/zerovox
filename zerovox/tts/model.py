@@ -120,6 +120,9 @@ def get_meldec(model: str|os.PathLike, infer_device=None, verbose=False):
     model = model.eval().to(device)
     model.to(device)
 
+    if config["generator_params"]["out_channels"] == 1:
+        model.pqmf = None
+
     return model
 
 class LinearWarmUpCosineDecayLR(LRScheduler):
