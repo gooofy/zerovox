@@ -1,0 +1,13 @@
+{
+    // "include": [
+    //   "src"
+    // ],
+  
+    "exclude": [
+      "attic",
+      "models",
+      "preprocessed_data",
+      "pretrained_models"
+    ]
+  
+  }
