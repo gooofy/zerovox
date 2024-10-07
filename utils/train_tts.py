@@ -191,6 +191,11 @@ if __name__ == "__main__":
                 'n_heads'        : cfg['model']['gst']['n_heads'],
                 'ref_enc_filters': cfg['model']['gst']['ref_enc_filters'],
             },
+            'postnet'       : {
+                'postnet_embedding_dim'  : cfg['model']['postnet']['postnet_embedding_dim'],
+                'postnet_kernel_size'    : cfg['model']['postnet']['postnet_kernel_size'],
+                'postnet_n_convolutions' : cfg['model']['postnet']['postnet_n_convolutions'],
+            },
         },
         'stats': {
             'energy_min'    : sys.float_info.max,
@@ -339,6 +344,10 @@ if __name__ == "__main__":
                       decoder_conv_filter_size=cfg['model']['decoder']['conv_filter_size'],
                       decoder_conv_kernel_size=cfg['model']['decoder']['conv_kernel_size'],
                       decoder_dropout=cfg['model']['decoder']['dropout'],
+
+                      postnet_embedding_dim=cfg['model']['postnet']['postnet_embedding_dim'],
+                      postnet_kernel_size=cfg['model']['postnet']['postnet_kernel_size'],
+                      postnet_n_convolutions=cfg['model']['postnet']['postnet_n_convolutions'],
 
                       wav_path=str(wav_path),
                       infer_device=args.infer_device,

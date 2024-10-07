@@ -25,6 +25,11 @@ model:
     n_heads         : 8
     ref_enc_filters : [32, 32, 64, 64, 128, 128]
 
+  postnet:
+    postnet_embedding_dim  : 0 # 0 -> disabled, 512 -> enabled
+    postnet_kernel_size    : 5
+    postnet_n_convolutions : 5
+
 training:
     max_epochs      : 100
     warmup_epochs   : 10

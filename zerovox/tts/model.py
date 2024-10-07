@@ -35,6 +35,7 @@ from zerovox.g2p.data import G2PSymbols
 from zerovox.tts.networks import PhonemeEncoder
 from zerovox.tts.GST import GST
 from zerovox.tts.fs2 import FS2Decoder
+from zerovox.tts.postnet import PostNet
 
 from zerovox.parallel_wavegan.utils import load_model as load_meldec_model
 
@@ -195,6 +196,10 @@ class ZeroVox(LightningModule):
                  decoder_conv_kernel_size=[9, 1],
                  decoder_dropout=0.2,
 
+                 postnet_embedding_dim=512, # 0 to disable
+                 postnet_kernel_size=5,
+                 postnet_n_convolutions=5,
+
                  wav_path="wavs", 
                  infer_device=None, 
                  verbose=False,
@@ -234,6 +239,16 @@ class ZeroVox(LightningModule):
 
         # FIXME
         # self._fake_mel_decoder = torch.nn.Linear(emb_size+3*dpe_embed_dim, n_mels)
+
+        if postnet_embedding_dim:
+            self._postnet = PostNet(
+                                 n_mel_channels=n_mels,
+                                 postnet_embedding_dim=postnet_embedding_dim,
+                                 postnet_kernel_size=postnet_kernel_size,
+                                 postnet_n_convolutions=postnet_n_convolutions,
+            )
+        else:
+            self._postnet = None
 
         if meldec_model:
             self._meldec = get_meldec(model=meldec_model, infer_device=infer_device, verbose=verbose)
@@ -282,6 +297,9 @@ class ZeroVox(LightningModule):
 
         # FIXME
         # mel = self._fake_mel_decoder(pred["features"])
+
+        if self._postnet:
+            mel = self._postnet(mel) + mel
 
         pred["mel"] = mel
 
