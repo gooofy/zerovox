@@ -87,6 +87,12 @@ if __name__ == "__main__":
                                             verbose=args.verbose)
 
     if args.verbose:
+        # fake_sample = {
+        #     'phoneme' : torch.randint(size=(1, 42), high=12, dtype=torch.int32),
+        #     'puncts' : torch.zeros(size=(1, 42), dtype=torch.int32),
+        #     'ref_mel' : torch.randn(1, 305, 80, dtype=torch.float32)
+        # }
+        # summary(synth._model, depth=2, input_data={'x':fake_sample})
         summary(synth._model, depth=1)
 
     if args.play or args.interactive:
