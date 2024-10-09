@@ -34,7 +34,7 @@ from scipy.io import wavfile
 from zerovox.g2p.data import G2PSymbols
 from zerovox.tts.networks import PhonemeEncoder
 from zerovox.tts.GST import GST
-from zerovox.tts.fs2 import FS2Decoder
+from zerovox.tts.fs2 import FS2Encoder, FS2Decoder
 from zerovox.tts.postnet import PostNet
 
 from zerovox.parallel_wavegan.utils import load_model as load_meldec_model
@@ -172,34 +172,47 @@ class ZeroVox(LightningModule):
                  sampling_rate,
                  hop_length,
                  n_mels,
-                 lr=1e-3,
-                 weight_decay=1e-6, 
-                 max_epochs=5000,
-                 warmup_epochs=50,
-                 encoder_depth=2,
-                 encoder_n_heads=1,
-                 embed_dim=128, 
-                 punct_embed_dim=16,
-                 dpe_embed_dim=64,
-                 emb_reduction=1,
-                 encoder_kernel_size=3, 
-                 encoder_expansion=1,
+                 lr, #=1e-3,
+                 weight_decay, #=1e-6, 
+                 max_epochs, #=5000,
+                 warmup_epochs, #=50,
 
-                 gst_n_style_tokens=10,
-                 gst_n_heads=8,
-                 gst_ref_enc_filters=[32, 32, 64, 64, 128, 128],
+                 embed_dim, #=128, 
+                 punct_embed_dim, #=16,
+                 dpe_embed_dim, #=64,
+                 emb_reduction, #=1,
+                 max_seq_len, #=1000,
 
-                 decoder_max_seq_len=1000,
-                 decoder_n_layers=6,
-                 decoder_n_head=2,
-                 decoder_conv_filter_size=1024,
-                 decoder_conv_kernel_size=[9, 1],
-                 decoder_dropout=0.2,
-                 decoder_scln=True,
+                 encoder_kind, #="efficientspeech",
+                 encoder_depth, #=2,
+                 encoder_n_heads, #=1,
+                 encoder_kernel_size, #=3, 
+                 encoder_expansion, #=1,
 
-                 postnet_embedding_dim=512, # 0 to disable
-                 postnet_kernel_size=5,
-                 postnet_n_convolutions=5,
+                 fs2enc_layer, # 4
+                 fs2enc_head, # 2
+                 fs2enc_dropout, # 0.2
+                 vp_filter_size, # 256
+                 vp_kernel_size, # 3
+                 vp_dropout, # 0.5
+                 ve_pitch_quantization, # 'linear'
+                 ve_energy_quantization, # 'linear'
+                 ve_n_bins, # 256
+
+                 gst_n_style_tokens, #=2000,
+                 gst_n_heads, #=8,
+                 gst_ref_enc_filters, #=[32, 32, 64, 64, 128, 128],
+
+                 decoder_n_layers, #=6,
+                 decoder_n_head, #=2,
+                 decoder_conv_filter_size, #=1024,
+                 decoder_conv_kernel_size, #=[9, 1],
+                 decoder_dropout, #=0.2,
+                 decoder_scln, #=True,
+
+                 postnet_embedding_dim, #=512, # 0 to disable
+                 postnet_kernel_size, #=5,
+                 postnet_n_convolutions, #=5,
 
                  wav_path="wavs", 
                  infer_device=None, 
@@ -213,23 +226,51 @@ class ZeroVox(LightningModule):
             self._last_snapshot = None
             tracemalloc.start()
 
-        self._phoneme_encoder = PhonemeEncoder(symbols=symbols,
-                                               stats=stats,
-                                               depth=encoder_depth,
-                                               reduction=emb_reduction,
-                                               head=encoder_n_heads,
-                                               embed_dim=embed_dim,
-                                               kernel_size=encoder_kernel_size,
-                                               expansion=encoder_expansion,
-                                               punct_embed_dim=punct_embed_dim,
-                                               dpe_embed_dim=dpe_embed_dim)
+        if encoder_kind == 'efficientspeech':
 
-        emb_size = (embed_dim+punct_embed_dim)//emb_reduction
+            self._phoneme_encoder = PhonemeEncoder(symbols=symbols,
+                                                   stats=stats,
+                                                   depth=encoder_depth,
+                                                   reduction=emb_reduction,
+                                                   head=encoder_n_heads,
+                                                   embed_dim=embed_dim,
+                                                   kernel_size=encoder_kernel_size,
+                                                   expansion=encoder_expansion,
+                                                   punct_embed_dim=punct_embed_dim,
+                                                   dpe_embed_dim=dpe_embed_dim)
+
+            emb_size = (embed_dim+punct_embed_dim)//emb_reduction
+            dec_hidden = emb_size+3*dpe_embed_dim
+
+        elif encoder_kind == 'fastspeech2':
+
+            self._phoneme_encoder = FS2Encoder(symbols=symbols,
+                                               max_seq_len=max_seq_len,
+                                               embed_dim=embed_dim,
+                                               encoder_layer=fs2enc_layer,
+                                               encoder_head=fs2enc_head,
+                                               conv_filter_size=decoder_conv_filter_size,
+                                               conv_kernel_size=decoder_conv_kernel_size,
+                                               encoder_dropout=fs2enc_dropout,
+                                               punct_embed_dim=punct_embed_dim,
+                                               vp_filter_size=vp_filter_size,
+                                               vp_kernel_size=vp_kernel_size,
+                                               vp_dropout=vp_dropout,
+                                               ve_pitch_quantization=ve_pitch_quantization,
+                                               ve_energy_quantization=ve_energy_quantization,
+                                               ve_n_bins=ve_n_bins,
+                                               stats=stats)
+
+            emb_size = embed_dim+punct_embed_dim
+            dec_hidden = emb_size
+
+        else:
+            raise Exception (f"unknown encoder kind: '{encoder_kind}'")
 
         self._gst = GST(emb_size, n_mels, gst_n_style_tokens, gst_n_heads, gst_ref_enc_filters)
 
-        self._mel_decoder = FS2Decoder(dec_max_seq_len=decoder_max_seq_len,
-                                       dec_hidden = emb_size+3*dpe_embed_dim,
+        self._mel_decoder = FS2Decoder(dec_max_seq_len=max_seq_len,
+                                       dec_hidden = dec_hidden,
                                        dec_n_layers = decoder_n_layers,
                                        dec_n_head = decoder_n_head,
                                        dec_conv_filter_size = decoder_conv_filter_size,
@@ -260,7 +301,6 @@ class ZeroVox(LightningModule):
         self.training_step_outputs = []
         self.validation_step_outputs = []
 
-        # self._min_mel_len = 1500 # 1500 * 256 / 24000 -> 17.4s
         self._min_mel_len = 689 # 689 * 256 / 24000 -> 7s
         self._hop_length = hop_length
 

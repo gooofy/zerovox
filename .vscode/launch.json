@@ -193,10 +193,10 @@
             "request": "launch",
             "program": "utils/train_tts.py",
             "console": "integratedTerminal",
-            "args": ["-c", "priv/configs/exp_base.yaml",
+            "args": ["-c", "priv/configs/exp_base_fs2.yaml",
                      "--accelerator=gpu", "--threads=24",
                      "--infer-device=cpu",                     
-                     "--name=exp_base",
+                     "--name=exp_base_fs2",
                      "--out-folder=models/tts_de_zerovox_exp_karlsson",
                      //"configs/corpora/cv_de_100/de_cv_speaker_1.yaml"
                      "configs/corpora/de_hui/de_hui_Karlsson.yaml"

@@ -377,7 +377,7 @@ class PhonemeEncoder(nn.Module):
              "duration": duration_pred,
              "mel_len": mel_len_pred,
              "features": features,
-             "masks": masks, }
+             "masks": masks, } # [16, 1453, 240]
 
         return y
 
