@@ -195,6 +195,7 @@ class ZeroVox(LightningModule):
                  decoder_conv_filter_size=1024,
                  decoder_conv_kernel_size=[9, 1],
                  decoder_dropout=0.2,
+                 decoder_scln=True,
 
                  postnet_embedding_dim=512, # 0 to disable
                  postnet_kernel_size=5,
@@ -234,6 +235,7 @@ class ZeroVox(LightningModule):
                                        dec_conv_filter_size = decoder_conv_filter_size,
                                        dec_conv_kernel_size = decoder_conv_kernel_size,
                                        dec_dropout = decoder_dropout,
+                                       dec_scln = decoder_scln,
                                        n_mel_channels=n_mels,
                                        spk_emb_size=emb_size)
 

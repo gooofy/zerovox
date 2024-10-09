@@ -105,7 +105,7 @@ class LinearNorm(nn.Module):
 class MultiHeadAttention(nn.Module):
     """ Multi-Head Attention module """
 
-    def __init__(self, n_head, d_model, d_k, d_v, spk_emb_size, dropout=0.1):
+    def __init__(self, n_head, d_model, d_k, d_v, spk_emb_size, scln, dropout=0.1):
         super().__init__()
 
         self.n_head = n_head
@@ -117,12 +117,15 @@ class MultiHeadAttention(nn.Module):
         self.w_vs = nn.Linear(d_model, n_head * d_v)
 
         self.attention = ScaledDotProductAttention(temperature=np.power(d_k, 0.5))
-        #self.layer_norm = nn.LayerNorm(d_model)
-        self.layer_norm = SCLN(s_size=spk_emb_size, hidden_size=d_model)
+        if scln:
+            self.layer_norm = SCLN(s_size=spk_emb_size, hidden_size=d_model)
+        else:
+            self.layer_norm = nn.LayerNorm(d_model)
 
         self.fc = nn.Linear(n_head * d_v, d_model)
 
         self.dropout = nn.Dropout(dropout)
+        self.scln = scln
 
     def forward(self, q, k, v, spk_emb, mask=None):
 
@@ -150,14 +153,17 @@ class MultiHeadAttention(nn.Module):
         )  # b x lq x (n*dv)
 
         output = self.dropout(self.fc(output))
-        output = self.layer_norm(output + residual, spk_emb)
+        if self.scln:
+            output = self.layer_norm(output + residual, spk_emb)
+        else:
+            output = self.layer_norm(output + residual)
 
         return output, attn
 
 class PositionwiseFeedForward(nn.Module):
     """ A two-feed-forward-layer module """
 
-    def __init__(self, d_in, d_hid, kernel_size, spk_emb_size, dropout=0.1):
+    def __init__(self, d_in, d_hid, kernel_size, spk_emb_size, scln, dropout=0.1):
         super().__init__()
 
         # Use Conv1D
@@ -176,8 +182,11 @@ class PositionwiseFeedForward(nn.Module):
             padding=(kernel_size[1] - 1) // 2,
         )
 
-        # self.layer_norm = nn.LayerNorm(d_in)
-        self.layer_norm = SCLN(s_size=spk_emb_size, hidden_size=d_in)
+        if scln:
+            self.layer_norm = SCLN(s_size=spk_emb_size, hidden_size=d_in)
+        else:
+            self.layer_norm = nn.LayerNorm(d_in)
+        self._scln = scln
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x, spk_emb):
@@ -186,18 +195,21 @@ class PositionwiseFeedForward(nn.Module):
         output = self.w_2(F.relu(self.w_1(output)))
         output = output.transpose(1, 2)
         output = self.dropout(output)
-        output = self.layer_norm(output + residual, s=spk_emb)
+        if self._scln:
+            output = self.layer_norm(output + residual, s=spk_emb)
+        else:
+            output = self.layer_norm(output + residual)
 
         return output
 
 class FFTBlock(torch.nn.Module):
     """FFT Block"""
 
-    def __init__(self, d_model, n_head, d_k, d_v, d_inner, kernel_size, spk_emb_size, dropout=0.1):
+    def __init__(self, d_model, n_head, d_k, d_v, d_inner, kernel_size, spk_emb_size, scln, dropout=0.1):
         super(FFTBlock, self).__init__()
-        self.slf_attn = MultiHeadAttention(n_head, d_model, d_k, d_v, spk_emb_size=spk_emb_size, dropout=dropout)
+        self.slf_attn = MultiHeadAttention(n_head, d_model, d_k, d_v, spk_emb_size=spk_emb_size, scln=scln, dropout=dropout)
         self.pos_ffn = PositionwiseFeedForward(
-            d_model, d_inner, kernel_size, spk_emb_size=spk_emb_size, dropout=dropout
+            d_model, d_inner, kernel_size, spk_emb_size=spk_emb_size, scln=scln, dropout=dropout
         )
 
     def forward(self, enc_input, spk_emb, mask=None, slf_attn_mask=None):
@@ -211,70 +223,6 @@ class FFTBlock(torch.nn.Module):
 
         return enc_output, enc_slf_attn
 
-
-# class MelDecoder(nn.Module):
-#     """ Mel Spectrogram Decoder """
-
-#     def __init__(self, dim, kernel_size=5, n_mel_channels=80,
-#                  n_blocks=2, block_depth=2, x2_fix=True):
-#         super().__init__()
-
-#         self.n_mel_channels = n_mel_channels
-#         if x2_fix:
-#             dim_x2 = 2*dim
-#         else:
-#             dim_x2 = min(4*dim, 256)
-#         dim_x4 = 4*dim              # dim_x4 = 1088
-#         padding = kernel_size // 2
-
-#         # self.proj = nn.Sequential(
-#         #     nn.Linear(dim_x4, dim_x2), nn.Tanh(), nn.LayerNorm(dim_x2),)
-
-#         self.proj = nn.Sequential(nn.Linear(dim_x4, dim_x2), nn.Tanh())
-
-#         self.proj_norm = SCLN(s_size=dim, hidden_size=dim_x2)
-
-#         self.blocks = nn.ModuleList([])
-#         for _ in range(n_blocks):
-#             conv = nn.ModuleList([])
-#             for _ in range(block_depth):
-#                 # conv.append(nn.ModuleList([nn.Sequential(\
-#                 #         nn.Conv1d(dim_x2, dim_x2, groups=dim_x2, kernel_size=kernel_size, padding=padding),\
-#                 #         nn.Conv1d(dim_x2, dim_x2, kernel_size=1), \
-#                 #         nn.Tanh(),),
-#                 #         nn.LayerNorm(dim_x2)]))
-#                 conv.append(nn.ModuleList([nn.Sequential(\
-#                         nn.Conv1d(dim_x2, dim_x2, groups=dim_x2, kernel_size=kernel_size, padding=padding),\
-#                         nn.Conv1d(dim_x2, dim_x2, kernel_size=1), \
-#                         nn.Tanh(),),
-#                         SCLN(s_size=dim, hidden_size=dim_x2)]))
-
-#             # self.blocks.append(nn.ModuleList([conv, nn.LayerNorm(dim_x2)]))
-#             self.blocks.append(nn.ModuleList([conv, SCLN(s_size=dim, hidden_size=dim_x2)]))
-
-#         self.mel_linear = nn.Linear(dim_x2, self.n_mel_channels)
-
-
-#     def forward(self, features, style_embed):
-#         skip = self.proj(features)
-#         skip = self.proj_norm (skip, style_embed)
-#         for convs, skip_norm in self.blocks:
-#             x = skip
-#             for conv, norm in convs:
-#                 x = conv(x.permute(0, 2, 1))
-#                 x = norm(x.permute(0, 2, 1), style_embed)
-
-#             skip = skip_norm(x + skip, style_embed)
-
-#         # resize channel to mel length (eg 80)
-#         mel = self.mel_linear(skip)
-
-#         return mel
-
-
-
-
-
 class FS2Decoder(nn.Module):
 
     def __init__(self,
@@ -285,6 +233,7 @@ class FS2Decoder(nn.Module):
                  dec_conv_filter_size : int, # 1024
                  dec_conv_kernel_size : list[int], # [9, 1]
                  dec_dropout          : float, # 0.2
+                 dec_scln             : bool, # true
                  n_mel_channels       : int, # 80
                  spk_emb_size         : int
                 ):
@@ -314,7 +263,7 @@ class FS2Decoder(nn.Module):
         self.layer_stack = nn.ModuleList(
             [
                 FFTBlock(
-                    d_model, n_head, d_k, d_v, d_inner, kernel_size, spk_emb_size=spk_emb_size, dropout=dropout
+                    d_model, n_head, d_k, d_v, d_inner, kernel_size, spk_emb_size=spk_emb_size, scln=dec_scln, dropout=dropout
                 )
                 for _ in range(n_layers)
             ]

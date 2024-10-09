@@ -185,6 +185,7 @@ if __name__ == "__main__":
                 'conv_filter_size' : cfg['model']['decoder']['conv_filter_size'],
                 'conv_kernel_size' : cfg['model']['decoder']['conv_kernel_size'],
                 'dropout'          : cfg['model']['decoder']['dropout'],
+                'scln'             : cfg['model']['decoder']['scln'],
             },
             'gst'           : {
                 'n_style_tokens' : cfg['model']['gst']['n_style_tokens'],
@@ -344,6 +345,7 @@ if __name__ == "__main__":
                       decoder_conv_filter_size=cfg['model']['decoder']['conv_filter_size'],
                       decoder_conv_kernel_size=cfg['model']['decoder']['conv_kernel_size'],
                       decoder_dropout=cfg['model']['decoder']['dropout'],
+                      decoder_scln=cfg['model']['decoder']['scln'],
 
                       postnet_embedding_dim=cfg['model']['postnet']['postnet_embedding_dim'],
                       postnet_kernel_size=cfg['model']['postnet']['postnet_kernel_size'],
