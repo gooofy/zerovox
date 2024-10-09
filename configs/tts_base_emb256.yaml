@@ -31,7 +31,7 @@ training:
     val_epochs      : 1
 
     weight_decay    : 0.00001
-    lr              : 0.0001
+    lr              : 0.00001
     grad_clip       : 1.0
 
     batch_size      : 20
