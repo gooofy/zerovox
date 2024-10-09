@@ -21,6 +21,7 @@ import os
 import random
 import sys
 import json
+import math
 import numpy as np
 
 from sklearn.preprocessing import StandardScaler
@@ -203,7 +204,7 @@ class Preprocessor:
             return None
 
         # Read and trim wav files
-        wav, _ = librosa.load(wav_path)
+        wav, _ = librosa.load(wav_path, sr=self._sampling_rate)
         wav = wav[
             int(self._sampling_rate * start) : int(self._sampling_rate * end)
         ].astype(np.float32)
@@ -281,6 +282,12 @@ class Preprocessor:
                 else:
                     phoneme_energy[i] = energy[-1]
 
+        # make sure sum(durations) matches mel_spectrogram precisely
+        diff =  mel_spectrogram.shape[1] - sum(durations)
+        # print(diff)
+        durations[-1] += diff
+        assert sum(durations) == mel_spectrogram.shape[1]
+
         # Save files
         dur_filename = f"duration-{basename}.npy"
         np.save(os.path.join(self._out_dir, "duration", dur_filename), durations)
@@ -315,14 +322,15 @@ class Preprocessor:
         token_pos = 0
         alignment_pos = 0
 
-        phones           = []
-        puncts           = []
-        phone_positions  = []
-        durations        = []
-        start_time       = -1
-        end_time         = -1
-        last_token_start = -1
-        cur_align        = None 
+        phones                = []
+        puncts                = []
+        phone_positions       = []
+        durations             = []
+        start_time            = -1
+        end_time              = -1
+        #last_token_start      = -1
+        last_token_start_hops = -1
+        cur_align             = None 
         while True:
 
             cur_token = None
@@ -361,6 +369,7 @@ class Preprocessor:
                     return None
 
                 start = cur_align['start']
+                start_hops = int(np.round((start-start_time) * self._sampling_rate / self._hop_size)) if start_time>=0 else 0
                 stop = start + cur_align['duration']
 
                 if start_time < 0:
@@ -370,8 +379,13 @@ class Preprocessor:
                 # the duration of the last phone
                 # thereby adding any silences to the duration of the last phone
                 if phones:
-                    duration = start - last_token_start
-                    durations.append(int(np.round(duration * self._sampling_rate / self._hop_size)))
+                    #duration = start - last_token_start
+                    #duration_hops = int(np.round(duration * self._sampling_rate / self._hop_size))
+                    #durations.append(int(np.round(duration * self._sampling_rate / self._hop_size)))
+                    durations.append(start_hops-last_token_start_hops)
+                    #print (f"duration_hops={duration_hops}, start={start}->start_hops={start_hops}, last_token_start_hops={last_token_start_hops} -> {start_hops-last_token_start_hops}")
+                #else:
+                #    print (f"start={start} -> start_hops={start_hops}")
 
                 if stop > end_time:
                     end_time = stop
@@ -382,7 +396,8 @@ class Preprocessor:
 
                 phone_positions.append(int(np.round((start-start_time) * self._sampling_rate / self._hop_size)))
 
-                last_token_start = start
+                #last_token_start = start
+                last_token_start_hops = start_hops
 
                 alignment_pos += 1
 
@@ -391,7 +406,18 @@ class Preprocessor:
         if not cur_align:
             return None
 
-        durations.append(int(np.round(cur_align['duration'] * self._sampling_rate / self._hop_size)))
+        # for the last phoneme, make sure it fills the gap between the end of the last phoneme and the audio end
+
+        #durations.append(int(np.round(cur_align['duration'] * self._sampling_rate / self._hop_size)))
+
+        total_hops = math.ceil((end_time-start_time) * self._sampling_rate / self._hop_size)
+        missing_hops = total_hops - sum(durations)
+
+        # duration_hops = int(np.round(cur_align['duration'] * self._sampling_rate / self._hop_size))
+        # diff = missing_hops - duration_hops
+        # print(f"missing_hops={missing_hops}, duration_hops={duration_hops}, diff={diff}")
+
+        durations.append(missing_hops)
         #print (phones, puncts, durations)
 
         return phones, puncts, phone_positions, durations, start_time, end_time
