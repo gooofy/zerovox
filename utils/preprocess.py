@@ -369,11 +369,10 @@ class Preprocessor:
                     return None
 
                 start = cur_align['start']
-                start_hops = int(np.round((start-start_time) * self._sampling_rate / self._hop_size)) if start_time>=0 else 0
-                stop = start + cur_align['duration']
-
                 if start_time < 0:
                     start_time = start
+                start_hops = int(np.round((start-start_time) * self._sampling_rate / self._hop_size))
+                stop = start + cur_align['duration']
 
                 # now that we know when in time this token starts we can compute
                 # the duration of the last phone
@@ -394,10 +393,12 @@ class Preprocessor:
                 puncts.append(punct)
                 punct = self._symbols.encode_punct('')
 
-                phone_positions.append(int(np.round((start-start_time) * self._sampling_rate / self._hop_size)))
+                #phone_positions.append(int(np.round((start-start_time) * self._sampling_rate / self._hop_size)))
+                phone_positions.append(start_hops)
 
                 #last_token_start = start
                 last_token_start_hops = start_hops
+                assert last_token_start_hops == sum(durations)
 
                 alignment_pos += 1
 
@@ -416,6 +417,11 @@ class Preprocessor:
         # duration_hops = int(np.round(cur_align['duration'] * self._sampling_rate / self._hop_size))
         # diff = missing_hops - duration_hops
         # print(f"missing_hops={missing_hops}, duration_hops={duration_hops}, diff={diff}")
+
+        # print(phone_positions)
+        # for idx, pos in enumerate(phone_positions):
+        #     if idx<len(phone_positions)-1:
+        #         assert phone_positions[idx] + durations[idx] == phone_positions[idx+1]
 
         durations.append(missing_hops)
         #print (phones, puncts, durations)
