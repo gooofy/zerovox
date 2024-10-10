@@ -349,7 +349,7 @@ class ZeroVox(LightningModule):
             return pred
 
         mel_len  = pred["mel_len"]
-        duration = pred["duration"]
+        log_duration = pred["log_duration"]
 
         if normalize_before:
             mel = (mel - self._meldec.mean) / self._meldec.scale
@@ -359,7 +359,7 @@ class ZeroVox(LightningModule):
             wav = self._meldec.pqmf.synthesis(wav)
         wav = wav.squeeze(1)
 
-        return wav, mel, mel_len, duration
+        return wav, mel, mel_len, log_duration
 
     def inference(self, x, style_embed, normalize_before=True):
 
@@ -379,7 +379,7 @@ class ZeroVox(LightningModule):
         dec_time = time.time()
 
         mel_len  = int(pred["mel_len"].cpu().detach().numpy())
-        duration = pred["duration"]
+        log_duration = pred["log_duration"]
 
         if normalize_before:
             mel = (mel - self._meldec.mean) / self._meldec.scale
@@ -401,13 +401,13 @@ class ZeroVox(LightningModule):
         if self._verbose:
             print (f"synthesis timing stats: pe={pe_time-start_time}s, dec={dec_time-pe_time}s, meldec={meldec_time-dec_time}s")
 
-        return wav[:mel_len * self._hop_length], mel_len, duration
+        return wav[:mel_len * self._hop_length], mel_len, log_duration
 
 
     def loss(self, y_hat, y, x):
-        pitch_pred = y_hat["pitch"]
-        energy_pred = y_hat["energy"]
-        duration_pred = y_hat["duration"]
+        pitch_pred = y_hat["pitch"] # [16, 180, 1]
+        energy_pred = y_hat["energy"] # [16, 180, 1]
+        log_duration_pred = y_hat["log_duration"] # [16, 180]
         mel_pred = y_hat["mel"]
 
         phoneme_mask = x["phoneme_mask"]
@@ -415,7 +415,8 @@ class ZeroVox(LightningModule):
 
         pitch = x["pitch"]
         energy = x["energy"]
-        duration = x["duration"]
+        duration_targets = x["duration"]
+        log_duration_targets = torch.log(duration_targets.float() + 1)
         mel = y["mel"]
 
         mel_mask = ~mel_mask
@@ -438,13 +439,17 @@ class ZeroVox(LightningModule):
         energy_pred = energy_pred.masked_select(phoneme_mask)
         energy_loss = nn.MSELoss()(energy_pred, energy)
 
-        duration_pred = duration_pred[:,:duration.shape[-1]]
-        duration_pred = torch.squeeze(duration_pred)
-        duration      = duration.masked_select(phoneme_mask)
-        duration_pred = duration_pred.masked_select(phoneme_mask)
-        duration      = torch.log(duration.float() + 1)
-        duration_pred = torch.log(duration_pred.float() + 1)
-        duration_loss = nn.MSELoss()(duration_pred, duration)
+        # duration_pred = duration_pred[:,:duration.shape[-1]]
+        # duration_pred = torch.squeeze(duration_pred)
+        # duration      = duration.masked_select(phoneme_mask)
+        # duration_pred = duration_pred.masked_select(phoneme_mask)
+        # duration      = torch.log(duration.float() + 1)
+        # duration_pred = torch.log(duration_pred.float() + 1)
+        # duration_loss = nn.MSELoss()(duration_pred, duration)
+
+        log_duration_pred    = log_duration_pred.masked_select(phoneme_mask)
+        log_duration_targets = log_duration_targets.masked_select(phoneme_mask)
+        duration_loss = nn.MSELoss()(log_duration_pred, log_duration_targets)
 
         return mel_loss, pitch_loss, energy_loss, duration_loss
  

@@ -816,9 +816,9 @@ class FS2Encoder(nn.Module):
             d_control=d_control,
         )
 
-        y = {"pitch": p_predictions,
-             "energy": e_predictions,
-             "duration": d_rounded,
+        y = {"pitch": p_predictions.unsqueeze(-1),
+             "energy": e_predictions.unsqueeze(-1),
+             "log_duration": log_d_predictions,
              "mel_len": mel_len_pred,
              "features": features,
              "masks": mel_masks.unsqueeze(2).expand(-1,-1,features.shape[2])  # [16, 1477, 272]

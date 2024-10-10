@@ -344,10 +344,11 @@ class PhonemeEncoder(nn.Module):
         # elif energy_features.dim() != 3:
         #    energy_features = energy_features.unsqueeze(0)
 
-        duration_pred, duration_features = self.duration_decoder(fused_features)
+        log_duration_pred, duration_features = self.duration_decoder(fused_features)
         if mask is not None:
             duration_features = duration_features.masked_fill(mask[:,:,:self._dpe_embed_dim], 0)
-       
+        log_duration_pred = log_duration_pred.squeeze(-1)
+        
         fused_features = torch.cat([fused_features, pitch_features, \
                                     energy_features, duration_features], dim=-1)
 
@@ -358,7 +359,11 @@ class PhonemeEncoder(nn.Module):
             fused_masks = torch.cat([mask, mask[:,:,:self._dpe_embed_dim], mask[:,:,:self._dpe_embed_dim], mask[:,:,:self._dpe_embed_dim]], dim=-1)
         
         if duration_target is None:
-            duration_target = torch.round(duration_pred).squeeze()
+            #duration_target = torch.round(duration_pred).squeeze()
+            duration_target = torch.clamp(
+                (torch.round(torch.exp(log_duration_pred) - 1)),
+                min=0,
+            )
         if phoneme_mask is not None:
             duration_target = duration_target.masked_fill(phoneme_mask, 0).clamp(min=0)
         else:
@@ -374,7 +379,7 @@ class PhonemeEncoder(nn.Module):
 
         y = {"pitch": pitch_pred,
              "energy": energy_pred,
-             "duration": duration_pred,
+             "log_duration": log_duration_pred,
              "mel_len": mel_len_pred,
              "features": features,
              "masks": masks, } # [16, 1453, 240]
