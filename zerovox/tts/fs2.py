@@ -780,7 +780,7 @@ class FS2Encoder(nn.Module):
     def forward(self, x, style_embed, train=False, force_duration=False, p_control=1.0, e_control=1.0, d_control=1.0):
         phoneme = x["phoneme"]
         puncts = x["puncts"]
-        phoneme_mask = x["phoneme_mask"] #if train else None # if phoneme.shape[0] > 1 else None
+        phoneme_mask = x["phoneme_mask"] if 'phoneme_mask' in x else torch.zeros_like(phoneme, dtype=torch.bool) # if phoneme.shape[0] > 1 else None
 
         features = self._encoder(src_seq=phoneme, puncts=puncts, mask=phoneme_mask, return_attns=False)
 
@@ -794,7 +794,7 @@ class FS2Encoder(nn.Module):
         duration_target = x["duration"] if train or force_duration else None
         mel_len = x["mel_len"] if train  else None
         max_mel_len = max(mel_len) if train else None
-        mel_masks = x['mel_mask']
+        mel_masks = x['mel_mask'] if 'mel_mask' in x else None
         (
             features,
             p_predictions,

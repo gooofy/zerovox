@@ -239,7 +239,7 @@
             "program": "utils/demo.py",
             "console": "integratedTerminal",
             "args": [
-                     "--model=models/tts_en_de_zerovox_base_1",
+                     "--model=models/tts_en_de_zerovox_base_2",
                      "--verbose",
                      "--lang=de",
                      "--meldec-model=meldec-libritts-hifigan-v1",
