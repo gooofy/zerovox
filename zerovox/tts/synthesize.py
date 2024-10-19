@@ -24,6 +24,8 @@ from zerovox.tts.model import ZeroVox
 from zerovox.g2p.g2p import G2P
 from zerovox.tts.mels import get_mel_from_wav, TacotronSTFT
 
+DEFAULT_TTS_MODEL_NAME='tts_en_de_zerovox_base_2'
+
 class ZeroVoxTTS:
 
     def __init__(self,

@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 from codecs import open
 from os import path
 
@@ -10,15 +10,34 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 
 setup(
   name = 'zerovox',
-  packages = ['zerovox'], # this must be the same as the name above
-  version = '0.0.1',
-  description = 'zero-shot TTS system for realtime/embedded use',
+  packages=find_packages(
+        where='.',
+        #include=['zerovox', 'zerovox/g2p'],  # ['*'] by default
+        #exclude=['mypackage.tests'],  # empty by default
+  ),
+  version = '0.0.2',
+  description = 'zero-shot realtime TTS system, fully offline, free and open source',
   long_description=long_description,
   author = 'Günter Bartsch',
   author_email = 'guenter@zamia.org',
   url = 'https://github.com/gooofy/zerovox',
   download_url = 'https://github.com/gooofy/zerovox/archive/0.0.1.tar.gz',
-  keywords = ['g2p','tts','artificial-intelligence','deeplearning'],
+  keywords = [
+    "text-to-speech",
+    "deep-learning",
+    "speech",
+    "pytorch",
+    "tts",
+    "speech-synthesis",
+    "voice-synthesis",
+    "voice-cloning",
+    "speaker-encodings",
+    "melgan",
+    "speaker-encoder",
+    "multi-speaker-tts",
+    "hifigan",
+    "tts-model"
+  ],
   classifiers = [],
   install_requires = [
     'torch>=2.1.0',
@@ -31,8 +50,14 @@ setup(
     'einops>=0.8.0',
     'sounddevice>=0.4.7',
     'setproctitle>=1.3.3',
+    "psutil>=6.0.0",
+    "h5py>=3.11.0"
   ],
   license='Apache Software License',
-  include_package_data=True
+  include_package_data=True,
+  entry_points={
+    'console_scripts': [
+      'zerovox-demo=zerovox.demo:main',
+    ],
+  },
 )
-

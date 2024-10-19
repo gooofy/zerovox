@@ -1,0 +1,68 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "zerovox"
+version = "0.0.6"
+authors = [
+  {name = "Günter Bartsch", email = "guenter@zamia.org"}
+]
+description = "zero-shot realtime TTS system, fully offline, free and open source"
+readme = "README.md"
+requires-python = ">=3.11"
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: Apache Software License",
+  "Natural Language :: English",
+  "Natural Language :: German",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python",
+  "Topic :: Multimedia :: Sound/Audio :: Speech",
+  "Topic :: Multimedia :: Sound/Audio :: Sound Synthesis",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence"
+]
+dependencies = [
+    "torch>=2.1.0",
+    "torchinfo>=1.8.0",
+    "nltk>=3.8.1",
+    "num2words>=0.5.13",
+    "readline>=6.2.4.1",
+    "librosa>=0.10.2",
+    "lightning>=2.4.0",
+    "einops>=0.8.0",
+    "sounddevice>=0.4.7",
+    "setproctitle>=1.3.3",
+    "psutil>=6.0.0",
+    "h5py>=3.11.0"
+]
+maintainers = [
+  {name = "Günter Bartsch", email = "guenter@zamia.org"}
+]
+license = {file = "LICENSE"}
+keywords = [
+    "text-to-speech",
+    "deep-learning",
+    "speech",
+    "pytorch",
+    "tts",
+    "speech-synthesis",
+    "voice-synthesis",
+    "voice-cloning",
+    "speaker-encodings",
+    "melgan",
+    "speaker-encoder",
+    "multi-speaker-tts",
+    "hifigan",
+    "tts-model"
+]
+
+[project.urls]
+Homepage = "https://github.com/gooofy/zerovox"
+Repository = "https://github.com/gooofy/zerovox.git"
+"Bug Tracker" = "https://github.com/gooofy/zerovox/issues"
+
+[project.scripts]
+zerovox-demo = "zerovox.demo:main"

@@ -86,7 +86,8 @@ def download_model_file(model:str, relpath:str) -> Path:
 
     return target_path
 
-DEFAULT_MELDEC_MODEL_NAME = "meldec-libritts-multi-band-melgan-v2"
+#DEFAULT_MELDEC_MODEL_NAME = "meldec-libritts-multi-band-melgan-v2"
+DEFAULT_MELDEC_MODEL_NAME = "meldec-libritts-hifigan-v1"
 
 def get_meldec(model: str|os.PathLike, infer_device=None, verbose=False):
 
