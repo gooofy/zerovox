@@ -80,9 +80,9 @@ if __name__ == "__main__":
                 raise Exception ('inconsistent rample rates detected')
 
         if not hop_length:
-            hop_length = pc['preprocessing']['stft']['hop_length']
+            hop_length = pc['preprocessing']['mel']['hop_size']
         else:
-            if hop_length != pc['preprocessing']['stft']['hop_length']:
+            if hop_length != pc['preprocessing']['mel']['hop_size']:
                 raise Exception ('inconsistent hop lengths detected')
 
         mel_dir = os.path.join(pc['path']['preprocessed_path'], 'mel')
@@ -101,4 +101,4 @@ if __name__ == "__main__":
 
             #break
 
-    print (f"sampling rate: {sampling_rate}, hop_length: {hop_length}, # speakers: {num_speakers}, audio length: {total_length}")
+    print (f"sampling rate: {sampling_rate}, hop_length: {hop_length}, # speakers: {num_speakers}, audio length: {total_length}s={total_length/3600.0}h")
