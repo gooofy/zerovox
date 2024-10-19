@@ -3,7 +3,7 @@ ZeroVOX: A zero-shot TTS system for realtime/embedded use
 
 ZeroVOX is an open source text-to-speech (TTS) system built for real-time and embedded use.
 
-Modeled after FastSpeech2, ZeroVox goes a step further with zero-shot speaker cloning, utilizing Global Style Tokens (GST) and Speaker Conditional Layer Normalization (SCLN) for effective speaker embedding. The system supports both English and German speech generation from a single model, trained on an extensive dataset. ZeroVox is phoneme-based, leveraging pronunciation dictionaries to ensure accurate word articulation, utilizing the CMU dictionary for English and a custom dictionary for German from the ZamiaSpeech project where also the phoneme set used originates from.
+Modeled after FastSpeech2, ZeroVOX goes a step further with zero-shot speaker cloning, utilizing Global Style Tokens (GST) and Speaker Conditional Layer Normalization (SCLN) for effective speaker embedding. The system supports both English and German speech generation from a single model, trained on an extensive dataset. ZeroVOX is phoneme-based, leveraging pronunciation dictionaries to ensure accurate word articulation, utilizing the CMU dictionary for English and a custom dictionary for German from the ZamiaSpeech project where also the phoneme set used originates from.
 
 ZeroVOX can serve as a TTS backend for LLMs, enabling real-time interactions, and as an easy-to-install TTS system for home automation systems like Home Assistant. Since it is non-autoregressive like FastSpeech2 its output is generally easy to control and predictable.
 
