@@ -20,7 +20,8 @@ from zerovox.g2p.data import G2PSymbols
 from zerovox.g2p.model import ModelType, LightningTransformer
 from zerovox.g2p.tokenizer import G2PTokenizer
 
-DEFAULT_G2P_MODEL_NAME = "zerovox-g2p-autoreg-zamia-de"
+DEFAULT_G2P_MODEL_NAME_DE = "zerovox-g2p-autoreg-zamia-de"
+DEFAULT_G2P_MODEL_NAME_EN = "zerovox-g2p-autoreg-zamia-en"
 
 def _download_model_file(model:str, relpath:str) -> Path:
 
@@ -41,7 +42,7 @@ def _download_model_file(model:str, relpath:str) -> Path:
 
 class G2P(object):
 
-    def __init__(self, lang: str, infer_device: str='cpu', model: str|os.PathLike=DEFAULT_G2P_MODEL_NAME):
+    def __init__(self, lang: str, infer_device: str='cpu', model: str|os.PathLike=DEFAULT_G2P_MODEL_NAME_DE):
 
         super().__init__()
 

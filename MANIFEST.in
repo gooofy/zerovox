@@ -1,8 +1,8 @@
-include zerovox/lexicon/de/german_mfa.dict
-include zerovox/lexicon/de/german_mfa_add.dict
+include zerovox/lexicon/de/german_zamia.dict
+include zerovox/lexicon/de/german_zamia_add.dict
 include zerovox/lexicon/de/cfg.yaml
-include zerovox/lexicon/en/german_mfa.dict
-include zerovox/lexicon/en/german_mfa_add.dict
+include zerovox/lexicon/en/german_zamia.dict
+include zerovox/lexicon/en/german_zamia_add.dict
 include zerovox/lexicon/en/cfg.yaml
 
 include zerovox/tts/refaudio/*.wav

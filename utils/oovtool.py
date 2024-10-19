@@ -8,7 +8,7 @@ import re
 from tqdm import tqdm
 
 from zerovox.g2p.g2p import G2P
-from zerovox.g2p.g2p import DEFAULT_G2P_MODEL_NAME
+from zerovox.g2p.g2p import DEFAULT_G2P_MODEL_NAME_DE
 
 def gather_jobs_from_config(configfn: os.PathLike):
 
@@ -37,9 +37,9 @@ if __name__ == "__main__":
     parser.add_argument("configs", type=str, nargs='+', help="path[s] to .yaml config file[s] or directorie[s]")
     parser.add_argument("-o", "--oovs", type=str, default="oovs.dict", help="name of oovs.dict file to store pronounciation predictions, default: oovs.dict")
     parser.add_argument("-m", "--g2p-model",
-                        default=DEFAULT_G2P_MODEL_NAME,
+                        default=DEFAULT_G2P_MODEL_NAME_DE,
                         type=str,
-                        help=f"G2P model, default={DEFAULT_G2P_MODEL_NAME}",)                     
+                        help=f"G2P model, default={DEFAULT_G2P_MODEL_NAME_DE}",)                     
     parser.add_argument('-a', '--add', action='store_true',  help="auto-add generated entries to lexicon")
     args = parser.parse_args()
 

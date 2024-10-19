@@ -24,7 +24,7 @@ from torchinfo import summary
 
 from scipy.io import wavfile
 from zerovox.tts.synthesize import ZeroVoxTTS, DEFAULT_TTS_MODEL_NAME, DEFAULT_REFAUDIO
-from zerovox.g2p.g2p import DEFAULT_G2P_MODEL_NAME
+from zerovox.g2p.g2p import DEFAULT_G2P_MODEL_NAME_DE, DEFAULT_G2P_MODEL_NAME_EN
 from zerovox.tts.model import DEFAULT_MELDEC_MODEL_NAME
 
 def write_wav_to_file(wav, length, filename, sample_rate=24000, hop_length=256):
@@ -62,9 +62,9 @@ def main():
                         type=str,
                         help=f"MELGAN model to use (meldec-libritts-multi-band-melgan-v2 or meldec-libritts-hifigan-v1, default: {DEFAULT_MELDEC_MODEL_NAME})",)
     parser.add_argument("--g2p-model",
-                        default=DEFAULT_G2P_MODEL_NAME,
+                        #default=DEFAULT_G2P_MODEL_NAME,
                         type=str,
-                        help=f"G2P model, default={DEFAULT_G2P_MODEL_NAME}",)                     
+                        help="G2P model, default=auto select according to language setting",)                     
     parser.add_argument('--play', action='store_true')
     parser.add_argument('--verbose', action='store_true')
     parser.add_argument('-i', '--interactive', action='store_true')
@@ -77,8 +77,16 @@ def main():
 
     args = parser.parse_args()
 
+    if args.g2p_model:
+        g2p_model = args.g2p_model
+    else:
+        g2p_model = DEFAULT_G2P_MODEL_NAME_DE if args.lang=='de' else DEFAULT_G2P_MODEL_NAME_EN
+
+    if args.verbose:
+        print (f"using g2p_model: {g2p_model}")
+
     modelcfg, synth = ZeroVoxTTS.load_model(args.model,
-                                            g2p=args.g2p_model,
+                                            g2p=g2p_model,
                                             lang=args.lang,
                                             meldec_model=args.meldec_model,
                                             infer_device=args.infer_device,
@@ -95,7 +103,7 @@ def main():
         # summary(synth._model, depth=2, input_data={'x':fake_sample})
         summary(synth._model, depth=1)
 
-    if args.play or args.interactive:
+    if args.play or not args.wav_filename or args.interactive:
         import sounddevice as sd
         sd.default.reset()
         sd.default.samplerate = modelcfg['audio']['sampling_rate']

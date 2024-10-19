@@ -10,7 +10,7 @@ import sounddevice
 
 from zerovox.g2p.g2p import G2P
 from zerovox.tts.synthesize import ZeroVoxTTS
-from zerovox.g2p.g2p import DEFAULT_G2P_MODEL_NAME
+# from zerovox.g2p.g2p import DEFAULT_G2P_MODEL_NAME_DE
 
 phonehelp = {'a': 'a', 'aɪ': 'aI', 'aʊ': 'aU', 'e': 'e', 'i': 'i', 'o': 'o', 'u': 'u', 'y': 'y', 'æ': '{', 'ø': '2', 'œ': '9', 'ɐ': '6', 'ɑ': 'A', 'ɔ': 'O', 'ɔɪ': 'OI', 'ɔʏ': 'OY', 'ə': '@', 'ɛ': 'E', 'ɜ': '3', 'ɪ': 'I', 'ʊ': 'U', 'ʌ': 'V', 'ʏ': 'Y', 'b': 'b', 'd': 'd', 'f': 'f', 'g': 'g', 'h': 'h', 'j': 'j', 'k': 'k', 'l': 'l', 'm': 'm', 'n': 'n', 'p': 'p', 'r': 'r', 's': 's', 't': 't', 'v': 'v', 'w': 'w', 'x': 'x', 'z': 'z', 'ç': 'C', 'ð': 'D', 'ɥ': 'H', 'ɳ': 'N', 'ʁ': 'R', 'ʃ': 'S', 'ʒ': 'Z', 'θ': 'T'}
 

@@ -257,6 +257,30 @@
             "justMyCode": false
         },       
         {
+            "name": "demo english",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "utils/demo.py",
+            "console": "integratedTerminal",
+            "args": [
+                     "--model=models/tts_en_de_zerovox_base_2",
+                     "--verbose",
+                     "--lang=en",
+                     //"--meldec-model=meldec-libritts-hifigan-v1",
+                     //"--refaudio=/home/guenter/projects/hal9000/ennis/voices/6s/en_digitalsculler_03.wav",
+                     //"--refaudio=/home/guenter/projects/hal9000/ennis/voices/6s/de_tobias_meister_03.wav",
+                     //"--refaudio=/home/guenter/projects/hal9000/ennis/voices/6s/de_christoph_wittelsbürger_03.wav",
+                     //"--refaudio=../voices/12s_norm/de_christoph_wittelsbürger.wav"
+                     //"--refaudio=de_christoph.wav",
+                     //"--refaudio=preprocessed_data/de_hui_Karlsson/wavs/dschinnistan_dschinnistan_01_f000093.wav",
+                     "--play",
+                     //"--iter=100",
+                     "--wav-filename=base.wav",
+                     "A rainbow is an optical phenomenon caused by refraction, internal reflection and dispersion of light in water droplets resulting in a continuous spectrum of light appearing in the sky.",
+                    ],
+            "justMyCode": false
+        },       
+        {
             "name": "benchmark german",
             "type": "debugpy",
             "request": "launch",

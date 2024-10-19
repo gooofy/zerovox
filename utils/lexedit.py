@@ -11,7 +11,7 @@ import sounddevice
 
 from zerovox.g2p.g2p import G2P
 from zerovox.tts.synthesize import ZeroVoxTTS
-from zerovox.g2p.g2p import DEFAULT_G2P_MODEL_NAME
+from zerovox.g2p.g2p import DEFAULT_G2P_MODEL_NAME_DE
 from zerovox.lexicon.lexedit import LexEdit
 from zerovox.tts.model import DEFAULT_HIFIGAN_MODEL_NAME
 
@@ -44,9 +44,9 @@ if __name__ == "__main__":
                         help="HiFiGAN model",)
     parser.add_argument('--refaudio', type=str, help="reference audio wav file for synthesis")
     parser.add_argument("--g2p-model",
-                        default=DEFAULT_G2P_MODEL_NAME,
+                        default=DEFAULT_G2P_MODEL_NAME_DE,
                         type=str,
-                        help=f"G2P model, default={DEFAULT_G2P_MODEL_NAME}",)                     
+                        help=f"G2P model, default={DEFAULT_G2P_MODEL_NAME_DE}",)
 
 
     args = parser.parse_args()
