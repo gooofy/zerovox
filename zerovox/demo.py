@@ -23,7 +23,7 @@ import multiprocessing
 from torchinfo import summary
 
 from scipy.io import wavfile
-from zerovox.tts.synthesize import ZeroVoxTTS, DEFAULT_TTS_MODEL_NAME
+from zerovox.tts.synthesize import ZeroVoxTTS, DEFAULT_TTS_MODEL_NAME, DEFAULT_REFAUDIO
 from zerovox.g2p.g2p import DEFAULT_G2P_MODEL_NAME
 from zerovox.tts.model import DEFAULT_MELDEC_MODEL_NAME
 
@@ -61,7 +61,6 @@ def main():
                         default=DEFAULT_MELDEC_MODEL_NAME,
                         type=str,
                         help=f"MELGAN model to use (meldec-libritts-multi-band-melgan-v2 or meldec-libritts-hifigan-v1, default: {DEFAULT_MELDEC_MODEL_NAME})",)
-
     parser.add_argument("--g2p-model",
                         default=DEFAULT_G2P_MODEL_NAME,
                         type=str,
@@ -69,10 +68,12 @@ def main():
     parser.add_argument('--play', action='store_true')
     parser.add_argument('--verbose', action='store_true')
     parser.add_argument('-i', '--interactive', action='store_true')
-    parser.add_argument("--text", help="Utterance to synthesize")
-    parser.add_argument("--refaudio", type=str, required=True, help="reference audio wav file")
+    # parser.add_argument("--text", help="Utterance to synthesize")
+    parser.add_argument("--refaudio", type=str, default=DEFAULT_REFAUDIO, help=f"reference audio wav file, default: {DEFAULT_REFAUDIO}")
     parser.add_argument("--wav-filename", help=".wav file to produce")
     parser.add_argument('--iter', type=int, default=1,  help='iterations (for benchmarking), default: 1')
+
+    parser.add_argument("text", nargs='?')
 
     args = parser.parse_args()
 

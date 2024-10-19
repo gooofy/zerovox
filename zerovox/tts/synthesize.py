@@ -19,12 +19,17 @@ import yaml
 import glob
 import librosa
 import time
+import importlib.resources
 
-from zerovox.tts.model import ZeroVox
+from pathlib import Path
+
+from zerovox.tts import refaudio
+from zerovox.tts.model import ZeroVox, download_model_file
 from zerovox.g2p.g2p import G2P
 from zerovox.tts.mels import get_mel_from_wav, TacotronSTFT
 
 DEFAULT_TTS_MODEL_NAME='tts_en_de_zerovox_base_2'
+DEFAULT_REFAUDIO='de_tobias.wav'
 
 class ZeroVoxTTS:
 
@@ -45,7 +50,7 @@ class ZeroVoxTTS:
                  window: str,
                  log_base: float,
                  infer_device: str = 'cpu',
-                 num_threads: int = None,
+                 num_threads: int = -1,
                  do_compile: bool = False,
                  verbose: bool = False):
 
@@ -69,7 +74,7 @@ class ZeroVoxTTS:
                                                    meldec_model=meldec_model,
                                                    sampling_rate=sampling_rate,
                                                    hop_length=hop_length,
-                                                   checkpoint_path=checkpoint,
+                                                   checkpoint_path=str(checkpoint),
                                                    infer_device=infer_device,                                                              
                                                    map_location=torch.device('cpu'),
                                                    strict=False,
@@ -78,7 +83,7 @@ class ZeroVoxTTS:
         self._model = self._model.to(infer_device)
         self._model.eval()
 
-        if num_threads is not None:
+        if num_threads > 0:
             torch.set_num_threads(num_threads)
         if do_compile:
             self._model = torch.compile(self._model, mode="reduce-overhead", backend="inductor")
@@ -97,7 +102,11 @@ class ZeroVoxTTS:
 
     def speaker_embed (self, wav_path: str | os.PathLike):
 
-        wav, _ = librosa.load(wav_path, sr=self._sampling_rate)
+        if os.path.isfile(wav_path):
+            wav, _ = librosa.load(wav_path, sr=self._sampling_rate)
+        else:
+            # my_module = __import__(__name__)
+            wav, _ = librosa.load(importlib.resources.open_binary(refaudio, str(wav_path)), sr=self._sampling_rate)
 
         # Trim the beginning and ending silence
         wav, _ = librosa.effects.trim(wav, top_db=40)
@@ -236,18 +245,32 @@ class ZeroVoxTTS:
                    g2p: G2P | str,
                    lang: str,
                    infer_device: str = 'cpu',
-                   num_threads: int = None,
+                   num_threads: int = -1,
                    do_compile: bool = False,
                    verbose: bool = False) -> tuple[dict[str, any], "ZeroVoxTTS"]:
-        
-        with open (os.path.join(modelpath, "modelcfg.yaml")) as modelcfgf:
+
+        # download model from huggingface if necessary
+
+        if os.path.isdir(modelpath):
+
+            config_path = Path(Path(modelpath) / 'modelcfg.yaml')
+            list_of_files = glob.glob(os.path.join(modelpath, 'checkpoints/*.ckpt'))
+            checkpoint = max(list_of_files, key=os.path.getctime)
+
+        else:
+
+            config_path = download_model_file(model=str(modelpath), relpath="modelcfg.yaml")
+            checkpoint  = download_model_file(model=str(modelpath), relpath="checkpoint.pkl")
+
+        if verbose:
+            print("synthesize: using config    : ", config_path)
+            print("synthesize: using checkpoint: ", checkpoint)
+
+        with open (config_path) as modelcfgf:
             modelcfg = yaml.load(modelcfgf, Loader=yaml.FullLoader)
 
         if isinstance(g2p, str) :
             g2p = G2P(lang, model=g2p)
-
-        list_of_files = glob.glob(os.path.join(modelpath, 'checkpoints/*.ckpt'))
-        checkpoint = max(list_of_files, key=os.path.getctime)
 
         synth = ZeroVoxTTS ( language=modelcfg['lang'],
                              checkpoint=checkpoint,

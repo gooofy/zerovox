@@ -4,3 +4,5 @@ include zerovox/lexicon/de/cfg.yaml
 include zerovox/lexicon/en/german_mfa.dict
 include zerovox/lexicon/en/german_mfa_add.dict
 include zerovox/lexicon/en/cfg.yaml
+
+include zerovox/tts/refaudio/*.wav
