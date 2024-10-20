@@ -33,6 +33,11 @@ DEFAULT_REFAUDIO='en_speaker_00070.wav'
 
 class ZeroVoxTTS:
 
+    @staticmethod
+    def get_default_model():
+        model = os.getenv("ZEROVOX_TTS_MODEL", DEFAULT_TTS_MODEL_NAME)
+        return model
+
     def __init__(self,
                  language: str,
                  checkpoint: str | os.PathLike,
@@ -105,11 +110,11 @@ class ZeroVoxTTS:
 
     @staticmethod
     def available_speakerrefs():
-        for reffn in importlib.resources.files(refaudio).iterdir():
+        for reffn in importlib.resources.files(refaudio_local).iterdir():
             speakerref = reffn.parts[-1]
             if speakerref.endswith('.wav'):
                 yield speakerref
-        for reffn in importlib.resources.files(refaudio_local).iterdir():
+        for reffn in importlib.resources.files(refaudio).iterdir():
             speakerref = reffn.parts[-1]
             if speakerref.endswith('.wav'):
                 yield speakerref
@@ -260,6 +265,11 @@ class ZeroVoxTTS:
     @property
     def language (self):
         return self._g2p._lang
+
+    @language.setter
+    def language(self, value):
+        if value != self._g2p._lang:
+            self._g2p = G2P(value, model=self._g2p.model_name)
 
     @property
     def meldec_model (self):

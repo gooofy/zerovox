@@ -53,6 +53,8 @@ class G2P(object):
             self._cfg_path  = _download_model_file(model=model, relpath='config.yaml')
             self._ckpt_path = _download_model_file(model=model, relpath='best.ckpt')
 
+        self._model_name = model
+
         config = yaml.load( open(self._cfg_path, "r"), Loader=yaml.FullLoader)
         self._graphemes = sorted(list(config['preprocessing']['graphemes']))
         self._phonemes = sorted(config['preprocessing']['phonemes'])
@@ -82,6 +84,10 @@ class G2P(object):
     @property
     def symbols(self):
         return self._symbols
+
+    @property
+    def model_name(self):
+        return self._model_name
 
     def predict(self, word:str) -> tuple [list[str], float]:
 

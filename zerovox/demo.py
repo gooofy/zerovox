@@ -23,7 +23,7 @@ import multiprocessing
 from torchinfo import summary
 
 from scipy.io import wavfile
-from zerovox.tts.synthesize import ZeroVoxTTS, DEFAULT_TTS_MODEL_NAME, DEFAULT_REFAUDIO
+from zerovox.tts.synthesize import ZeroVoxTTS, DEFAULT_REFAUDIO
 from zerovox.g2p.g2p import DEFAULT_G2P_MODEL_NAME_DE, DEFAULT_G2P_MODEL_NAME_EN
 from zerovox.tts.model import DEFAULT_MELDEC_MODEL_NAME
 
@@ -55,8 +55,8 @@ def main():
                         action='store_true',
                         help='Infer using the compiled model')    
     parser.add_argument("--model",
-                        default=DEFAULT_TTS_MODEL_NAME,
-                        help=f"TTS model to use: Path to model directory or model name, default: {DEFAULT_TTS_MODEL_NAME}")
+                        default=ZeroVoxTTS.get_default_model(),
+                        help=f"TTS model to use: Path to model directory or model name, default: {ZeroVoxTTS.get_default_model()}")
     parser.add_argument("--meldec-model",
                         default=DEFAULT_MELDEC_MODEL_NAME,
                         type=str,
