@@ -28,8 +28,8 @@ from zerovox.tts.model import ZeroVox, download_model_file
 from zerovox.g2p.g2p import G2P
 from zerovox.tts.mels import get_mel_from_wav, TacotronSTFT
 
-DEFAULT_TTS_MODEL_NAME='tts_en_de_zerovox_base_2'
-DEFAULT_REFAUDIO='de_tobias.wav'
+DEFAULT_TTS_MODEL_NAME='tts_en_de_zerovox_alpha1'
+DEFAULT_REFAUDIO='en_speaker_00070.wav'
 
 class ZeroVoxTTS:
 

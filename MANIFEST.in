@@ -1,8 +1,8 @@
 include zerovox/lexicon/de/german_zamia.dict
 include zerovox/lexicon/de/german_zamia_add.dict
 include zerovox/lexicon/de/cfg.yaml
-include zerovox/lexicon/en/german_zamia.dict
-include zerovox/lexicon/en/german_zamia_add.dict
+include zerovox/lexicon/en/english_zamia.dict
+include zerovox/lexicon/en/english_zamia_add.dict
 include zerovox/lexicon/en/cfg.yaml
 
 include zerovox/tts/refaudio/*.wav

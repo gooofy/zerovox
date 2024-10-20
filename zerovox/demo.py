@@ -103,7 +103,9 @@ def main():
         # summary(synth._model, depth=2, input_data={'x':fake_sample})
         summary(synth._model, depth=1)
 
-    if args.play or not args.wav_filename or args.interactive:
+    do_play = True if args.play or args.interactive else not args.wav_filename
+
+    if do_play:
         import sounddevice as sd
         sd.default.reset()
         sd.default.samplerate = modelcfg['audio']['sampling_rate']
@@ -149,7 +151,7 @@ def main():
             if args.infer_device == "cuda":
                 torch.cuda.synchronize()
             
-        if args.play:
+        if do_play:
             sd.play(wav)
             sd.wait()
 
