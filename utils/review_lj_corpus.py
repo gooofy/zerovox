@@ -248,7 +248,7 @@ if __name__ == "__main__":
     if args.verbose:
         print ("computing speaker embedding...")
 
-    spkemb = synth.speaker_embed(args.refaudio)
+    spkemb = synth.speaker_embed(ZeroVoxTTS.get_speakerref(args.refaudio, modelcfg['audio']['sampling_rate']))
 
     corpus_path = Path(args.path)
 

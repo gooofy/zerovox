@@ -115,7 +115,7 @@ def main():
     if args.verbose:
         print ("computing speaker embedding...")
 
-    spkemb = synth.speaker_embed(args.refaudio)
+    spkemb = synth.speaker_embed(ZeroVoxTTS.get_speakerref(args.refaudio, modelcfg['audio']['sampling_rate']))
 
     if args.text is not None:
         rtf = []

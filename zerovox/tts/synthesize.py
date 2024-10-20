@@ -23,7 +23,7 @@ import importlib.resources
 
 from pathlib import Path
 
-from zerovox.tts import refaudio
+from zerovox.tts import refaudio, refaudio_local
 from zerovox.tts.model import ZeroVox, download_model_file
 from zerovox.g2p.g2p import G2P
 from zerovox.tts.mels import get_mel_from_wav, TacotronSTFT
@@ -57,6 +57,9 @@ class ZeroVoxTTS:
         self._hop_length = hop_length
         self._infer_device = infer_device
         self._sampling_rate = sampling_rate
+
+        self._language = language
+        self._meldec_model = meldec_model
 
         self._fft_size = fft_size
         self._win_length = win_length
@@ -100,13 +103,29 @@ class ZeroVoxTTS:
                         mel_fmax=mel_fmax,
                         use_cuda=infer_device != 'cpu')
 
-    def speaker_embed (self, wav_path: str | os.PathLike):
+    @staticmethod
+    def available_speakerrefs():
+        for reffn in importlib.resources.files(refaudio).iterdir():
+            speakerref = reffn.parts[-1]
+            if speakerref.endswith('.wav'):
+                yield speakerref
+        for reffn in importlib.resources.files(refaudio_local).iterdir():
+            speakerref = reffn.parts[-1]
+            if speakerref.endswith('.wav'):
+                yield speakerref
 
-        if os.path.isfile(wav_path):
-            wav, _ = librosa.load(wav_path, sr=self._sampling_rate)
+    @staticmethod
+    def get_speakerref(speakerref, sampling_rate):
+        if os.path.isfile(speakerref):
+            wav, _ = librosa.load(speakerref, sr=sampling_rate)
         else:
-            # my_module = __import__(__name__)
-            wav, _ = librosa.load(importlib.resources.open_binary(refaudio, str(wav_path)), sr=self._sampling_rate)
+            if importlib.resources.is_resource(refaudio_local, str(speakerref)):
+                wav, _ = librosa.load(importlib.resources.open_binary(refaudio_local, str(speakerref)), sr=sampling_rate)
+            else:
+                wav, _ = librosa.load(importlib.resources.open_binary(refaudio, str(speakerref)), sr=sampling_rate)
+        return wav
+
+    def speaker_embed (self, wav: np.ndarray):
 
         # Trim the beginning and ending silence
         wav, _ = librosa.effects.trim(wav, top_db=40)
@@ -237,6 +256,14 @@ class ZeroVoxTTS:
     @property
     def g2p (self):
         return self._g2p
+
+    @property
+    def language (self):
+        return self._g2p._lang
+
+    @property
+    def meldec_model (self):
+        return self._meldec_model
 
     @classmethod
     def load_model(cls, 
