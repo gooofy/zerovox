@@ -182,3 +182,4 @@ attic
 zerovox-demo
 zerovox/tts/refaudio_local/*.wav
 
+checkpoint.pkl
