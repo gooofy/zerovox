@@ -57,7 +57,7 @@ class G2PTokenizer:
                     except:
                         pass
 
-                res.append(st)
+                res.extend(st.split(' '))
 
         return res
 
