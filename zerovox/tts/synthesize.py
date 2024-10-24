@@ -110,14 +110,16 @@ class ZeroVoxTTS:
 
     @staticmethod
     def available_speakerrefs():
+        speakers = []
         for reffn in importlib.resources.files(refaudio_local).iterdir():
             speakerref = reffn.parts[-1]
             if speakerref.endswith('.wav'):
-                yield speakerref
+                speakers.append(speakerref)
         for reffn in importlib.resources.files(refaudio).iterdir():
             speakerref = reffn.parts[-1]
             if speakerref.endswith('.wav'):
-                yield speakerref
+                speakers.append(speakerref)
+        return sorted(speakers, key=str.casefold)
 
     @staticmethod
     def get_speakerref(speakerref, sampling_rate):
