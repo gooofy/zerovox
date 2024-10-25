@@ -320,16 +320,16 @@
                     ]
         },
         {
-            "name": "lexedit",
+            "name": "lexedit german",
             "type": "debugpy",
             "request": "launch",
             "program": "utils/lexedit.py",
             "console": "integratedTerminal",
             "args": [
-                     "--model=models/tts_de_zerovox_medium_1",
                      "--verbose",
+                     "-l", "de",
                      "--refaudio=preprocessed_data/de_hui_Karlsson/wavs/dschinnistan_dschinnistan_02_f000023.wav",
-                     "-e", "hallo"
+                     "-e", "losreissen,3d,drucker"
                    ]
         },
         {
