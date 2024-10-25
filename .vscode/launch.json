@@ -433,6 +433,15 @@
             "justMyCode": false
         },
         {
+            "name": "import vctk",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "priv/utils/vctk-import.py",
+            "console": "integratedTerminal",
+            "args": [],
+            "justMyCode": false
+        },
+        {
             "name": "convert CMU dict",
             "type": "debugpy",
             "request": "launch",
