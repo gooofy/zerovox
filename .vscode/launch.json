@@ -458,6 +458,15 @@
             "console": "integratedTerminal",
             "args": [],
             "justMyCode": false
+        },
+        {
+            "name": "transcribe wavs",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "priv/utils/transcribe_wavs.py",
+            "console": "integratedTerminal",
+            "args": ["-l", "de", "tmp/whisper-bench"],
+            "justMyCode": false
         }
     ]
 }
