@@ -37,7 +37,7 @@ Data Preparation
 
 (3/5) OOVs:
 
-    utils/oovtool.py -a configs/corpora/cv_de_100
+    utils/oovtool.py -a -m zerovox-g2p-autoreg-zamia-de configs/corpora/cv_de_100
 
 (4/5) align:
 
