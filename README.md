@@ -1,7 +1,7 @@
 ZeroVOX: A zero-shot realtime TTS system, fully offline, free and open source
 =============================================================================
 
-ZeroVOX is a text-to-speech (TTS) system built for real-time and embedded use. 
+ZeroVOX is a text-to-speech (TTS) system built for real-time and embedded use.
 
 ZeroVox runs entirely offline, ensuring privacy and independence from cloud services. It's completely free and open source, inviting community contributions and suggestions.
 
@@ -16,8 +16,8 @@ Audio Corpus Stats
 
 Current ZeroVOX training corpus stats:
 
-    german  audio corpus: 15981 speakers, 289.88 hours audio
-    english audio corpus: 19332 speakers, 305.73 hours audio
+    german  audio corpus: 16679 speakers, 475.3 hours audio
+    english audio corpus: 19332 speakers, 305.7 hours audio
 
 ZeroVOX Model Training
 ======================
