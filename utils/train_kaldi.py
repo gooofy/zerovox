@@ -123,7 +123,7 @@ export PYTHONUNBUFFERED=1\n
     os.makedirs(workdir / 'data' / 'local' / 'lang', mode=0o755)
 
     lex = {}
-    oovs = set()
+    oovs = {}
 
     uttcnt = 0
     speaker = 0
@@ -165,7 +165,7 @@ export PYTHONUNBUFFERED=1\n
                                 if pron:
                                     lex[token] = pron
                                 else:
-                                    oovs.add(token)
+                                    oovs[token] = cfgfn
 
                         uttid = f"{speaker:06}_{uttcnt:09}"
                         uttcnt += 1
@@ -179,8 +179,8 @@ export PYTHONUNBUFFERED=1\n
 
     if oovs:
         print (f"*** ERROR: {len(oovs)} OOV()s found")
-        for oov in oovs:
-            print(oov)
+        for oov, cfgfn in oovs.items():
+            print(oov, cfgfn)
         print ("HINT: use oovtool to generate pronounciations first.")
         sys.exit(1)
 

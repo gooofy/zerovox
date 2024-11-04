@@ -41,7 +41,7 @@ Data Preparation
 
 (4/5) align:
 
-    utils/align.py --kaldi-model=tts_de_kaldi_zamia_1 configs/corpora/cv_de_100
+    utils/align.py --kaldi-model=tts_de_kaldi_zamia_4 configs/corpora/cv_de_100
 
 (5/5) preprocess:
 
@@ -64,7 +64,7 @@ TTS Model Training
 Kaldi Accoustic Model Training
 ==============================
 
-    utils/train_kaldi.py --model-name=tts_de_kaldi_zamia_1 --num-jobs=12 configs/corpora/cv_de_100
+    utils/train_kaldi.py --model-name=tts_de_kaldi_zamia_4 --num-jobs=12 configs/corpora/cv_de_100
 
 G2P Model Training
 ==================

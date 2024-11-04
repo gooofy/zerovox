@@ -467,6 +467,15 @@
             "console": "integratedTerminal",
             "args": ["-l", "de", "tmp/whisper-bench"],
             "justMyCode": false
+        },
+        {
+            "name": "fix number words",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "priv/utils/fix_number_words.py",
+            "console": "integratedTerminal",
+            "args": [],
+            "justMyCode": false
         }
     ]
 }
