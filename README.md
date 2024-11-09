@@ -17,7 +17,7 @@ Audio Corpus Stats
 Current ZeroVOX training corpus stats:
 
     german  audio corpus: 16679 speakers, 475.3 hours audio
-    english audio corpus: 19332 speakers, 305.7 hours audio
+    english audio corpus: 19899 speakers, 358.7 hours audio
 
 ZeroVOX Model Training
 ======================
