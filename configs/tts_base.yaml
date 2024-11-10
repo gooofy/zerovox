@@ -1,8 +1,8 @@
 
 model:
-  emb_dim           : 384  # phoneme embedding size     medium: 256, base: 128, small: 128, tiny: 128
-  emb_reduction     : 1    #                            medium:   1, base:   1, small:   2, tiny:   4
-  punct_emb_dim     : 16   # punctuation embedding size medium:  16, base:  16, small:  16, tiny:  16
+  emb_dim           : 384  # phoneme embedding size     medium: 512, base: 384
+  emb_reduction     : 1    #                            medium:   1, base:   1
+  punct_emb_dim     : 16   # punctuation embedding size medium:  16, base:  16
   dpe_emb_dim       : 32   # embedding size for _d_uration, _p_itch and _e_nergy
   max_seq_len       : 1500 # 1500*256/24000 = 16s
 
@@ -10,10 +10,10 @@ model:
     kind                   : "fastspeech2" # choices: efficientspeech, fastspeech2
 
     # efficientspeech:
-    depth                  : 2    #         medium: 2, base: 2, small: 2, tiny: 2
-    n_heads                : 2    #         medium: 2, base: 2, small: 1, tiny: 1
-    kernel_size            : 5    #         medium: 5, base: 5, small: 3, tiny: 3
-    expansion              : 2    # MixFFN, medium: 2, base: 2, small: 1, tiny: 1
+    depth                  : 2    #         medium: 2, base: 2
+    n_heads                : 2    #         medium: 2, base: 2
+    kernel_size            : 5    #         medium: 5, base: 5
+    expansion              : 2    # MixFFN, medium: 2, base: 2
 
     # fastspeech2:
     fs2_layer              : 4
@@ -34,10 +34,19 @@ model:
     dropout          : 0.2
     scln             : true
 
+  spkemb:
+    #kind             : "ResNetSE34V2" # "GST" or "ResNetSE34V2"
+    kind             : "GST" # "GST" or "ResNetSE34V2"
+
   gst:
     n_style_tokens  : 2000 # medium: 2000, base: 2000, small: 2000, tiny: 500
     n_heads         : 8
     ref_enc_filters : [32, 32, 64, 64, 128, 128]
+
+  resnet:
+    layers          : [3, 4, 6, 3]
+    num_filters     : [32, 64, 128, 256]
+    encoder_type    : "ASP" # "ASP" or "SAP"
 
   postnet:
     postnet_embedding_dim  : 0 # 0 -> disabled, 512 -> enabled

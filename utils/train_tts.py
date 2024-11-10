@@ -199,10 +199,18 @@ if __name__ == "__main__":
                 'dropout'          : cfg['model']['decoder']['dropout'],
                 'scln'             : cfg['model']['decoder']['scln'],
             },
+            'spkemb' : {
+                'kind'             : cfg['model']['spkemb']['kind'],
+            },
             'gst'           : {
                 'n_style_tokens' : cfg['model']['gst']['n_style_tokens'],
                 'n_heads'        : cfg['model']['gst']['n_heads'],
                 'ref_enc_filters': cfg['model']['gst']['ref_enc_filters'],
+            },
+            'resnet' : {
+                'layers'         : cfg['model']['resnet']['layers'],
+                'num_filters'    : cfg['model']['resnet']['num_filters'],
+                'encoder_type'   : cfg['model']['resnet']['encoder_type'],
             },
             'postnet'       : {
                 'postnet_embedding_dim'  : cfg['model']['postnet']['postnet_embedding_dim'],
@@ -360,9 +368,13 @@ if __name__ == "__main__":
                       ve_energy_quantization=cfg['model']['encoder']['ve_energy_quantization'],
                       ve_n_bins=cfg['model']['encoder']['ve_n_bins'],
 
+                      spkemb_kind=cfg['model']['spkemb']['kind'],
                       gst_n_style_tokens=cfg['model']['gst']['n_style_tokens'],
                       gst_n_heads=cfg['model']['gst']['n_heads'],
                       gst_ref_enc_filters=cfg['model']['gst']['ref_enc_filters'],
+                      resnet_layers=cfg['model']['resnet']['layers'],
+                      resnet_num_filters=cfg['model']['resnet']['num_filters'],
+                      resnet_encoder_type=cfg['model']['resnet']['encoder_type'],
 
                       decoder_n_layers=cfg['model']['decoder']['n_layers'],
                       decoder_n_head=cfg['model']['decoder']['n_head'],

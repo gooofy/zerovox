@@ -89,6 +89,24 @@ https://github.com/roatienza/efficientspeech
       organization={IEEE}
     }
 
+The FastSpeech2 encoder and decoder is borrowed (under MIT license) from Chung-Ming Chien's implementation of FastSpeech2
+
+https://github.com/ming024/FastSpeech2
+
+
+    @misc{ren2022fastspeech2fasthighquality,
+        title={FastSpeech 2: Fast and High-Quality End-to-End Text to Speech}, 
+        author={Yi Ren and Chenxu Hu and Xu Tan and Tao Qin and Sheng Zhao and Zhou Zhao and Tie-Yan Liu},
+        year={2022},
+        eprint={2006.04558},
+        archivePrefix={arXiv},
+        primaryClass={eess.AS},
+        url={https://arxiv.org/abs/2006.04558}, 
+    }
+
+The MEL decoder implementation is borrowed (under MIT license) from Tomoki Hayashi's ParallelWaveGAN project:
+
+https://github.com/kan-bayashi/ParallelWaveGAN
 The G2P transformer models are based on DeepPhonemizer by Axel Springer News Media & Tech GmbH & Co. KG - Ideas Engineering (MIT license)
 
 https://github.com/as-ideas/DeepPhonemizer
@@ -104,7 +122,26 @@ https://github.com/as-ideas/DeepPhonemizer
     month=sep, pages={2095–2099},
     collection={interspeech_2019} }
 
-The ZeroShot voice cloning is based on GST-Tacotron by Chengqi Deng (MIT license)
+The ZeroShot ResNet based speaker encoding is borrowed (under MIT license) from voxceleb_trainer by Clova AI Research
+
+https://github.com/clovaai/voxceleb_trainer
+
+    @inproceedings{chung2020in,
+    title={In defence of metric learning for speaker recognition},
+    author={Chung, Joon Son and Huh, Jaesung and Mun, Seongkyu and Lee, Minjae and Heo, Hee Soo and Choe, Soyeon and Ham, Chiheon and Jung, Sunghwan and Lee, Bong-Jin and Han, Icksang},
+    booktitle={Proc. Interspeech},
+    year={2020}
+    }
+
+    @inproceedings{he2016deep,
+    title={Deep residual learning for image recognition},
+    author={He, Kaiming and Zhang, Xiangyu and Ren, Shaoqing and Sun, Jian},
+    booktitle={IEEE Conference on Computer Vision and Pattern Recognition},
+    pages={770--778},
+    year={2016}
+    }
+
+The ZeroShot Global Style Tokens based speaker embedding is based on GST-Tacotron by Chengqi Deng (MIT license)
 
 https://github.com/KinglittleQ/GST-Tacotron
 
@@ -134,21 +171,3 @@ by Keon Lee
         url={https://arxiv.org/abs/2110.04153}, 
     }
 
-The fs2 encoder and decoder is borrowed (under MIT license) from Chung-Ming Chien's implementation of FastSpeech2
-
-https://github.com/ming024/FastSpeech2
-
-
-    @misc{ren2022fastspeech2fasthighquality,
-        title={FastSpeech 2: Fast and High-Quality End-to-End Text to Speech}, 
-        author={Yi Ren and Chenxu Hu and Xu Tan and Tao Qin and Sheng Zhao and Zhou Zhao and Tie-Yan Liu},
-        year={2022},
-        eprint={2006.04558},
-        archivePrefix={arXiv},
-        primaryClass={eess.AS},
-        url={https://arxiv.org/abs/2006.04558}, 
-    }
-
-The MEL decoder implementation is borrowed (under MIT license) from Tomoki Hayashi's ParallelWaveGAN project:
-
-https://github.com/kan-bayashi/ParallelWaveGAN

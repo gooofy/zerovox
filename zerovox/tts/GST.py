@@ -33,18 +33,9 @@ class GST(nn.Module):
         self.encoder = ReferenceEncoder(emb_size, n_mels, ref_enc_filters)
         self.stl = STL(emb_size, n_style_tokens, n_heads)
 
-        # FIXME
-        #self.fake_stl = nn.Linear(in_features=emb_size//2, out_features=emb_size)
-
-
     def forward(self, inputs):
         enc_out = self.encoder(inputs)   # inputs [8, 487, 80] enc_out [8, 72]
         style_embed = self.stl(enc_out)  # style_embed [8, 1, 144]
-
-        # FIXME
-        #style_embed = self.fake_stl(enc_out)
-        #style_embed = torch.unsqueeze(style_embed, 1)
-
         return style_embed
 
 

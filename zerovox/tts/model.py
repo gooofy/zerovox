@@ -34,17 +34,11 @@ from scipy.io import wavfile
 from zerovox.g2p.data import G2PSymbols
 from zerovox.tts.networks import PhonemeEncoder
 from zerovox.tts.GST import GST
+from zerovox.tts.ResNetSE34V2 import ResNetSE34V2
 from zerovox.tts.fs2 import FS2Encoder, FS2Decoder
 from zerovox.tts.postnet import PostNet
 
 from zerovox.parallel_wavegan.utils import load_model as load_meldec_model
-
-# FIXME
-DEBUG_MALLOC = False
-
-if DEBUG_MALLOC:
-    import tracemalloc
-
 
 def write_to_file(wavs, sampling_rate, hop_length, lengths=None, wav_path="outputs", filename="tts"):
     wavs = (wavs * 32760).astype("int16")
@@ -200,9 +194,13 @@ class ZeroVox(LightningModule):
                  ve_energy_quantization, # 'linear'
                  ve_n_bins, # 256
 
+                 spkemb_kind, # 'GST' or 'ResNetSE34V2'
                  gst_n_style_tokens, #=2000,
                  gst_n_heads, #=8,
                  gst_ref_enc_filters, #=[32, 32, 64, 64, 128, 128],
+                 resnet_layers, #=[3, 4, 6, 3]
+                 resnet_num_filters, #=[32, 64, 128, 256]
+                 resnet_encoder_type, #='ASP' or 'SAP'
 
                  decoder_n_layers, #=6,
                  decoder_n_head, #=2,
@@ -222,10 +220,6 @@ class ZeroVox(LightningModule):
         super(ZeroVox, self).__init__()
 
         self.save_hyperparameters(ignore=['meldec_model', 'infer_device', 'verbose'])
-
-        if DEBUG_MALLOC:
-            self._last_snapshot = None
-            tracemalloc.start()
 
         if encoder_kind == 'efficientspeech':
 
@@ -268,7 +262,12 @@ class ZeroVox(LightningModule):
         else:
             raise Exception (f"unknown encoder kind: '{encoder_kind}'")
 
-        self._gst = GST(emb_size, n_mels, gst_n_style_tokens, gst_n_heads, gst_ref_enc_filters)
+        if spkemb_kind == 'GST':
+            self._spkemb = GST(emb_size, n_mels, gst_n_style_tokens, gst_n_heads, gst_ref_enc_filters)
+        elif spkemb_kind == 'ResNetSE34V2':
+            self._spkemb = ResNetSE34V2(layers=resnet_layers, num_filters=resnet_num_filters, nOut=emb_size, encoder_type=resnet_encoder_type, n_mels=n_mels, log_input=False)
+        else:
+            raise Exception (f"unknown speaker embedding kind: '{spkemb_kind}'")
 
         self._mel_decoder = FS2Decoder(dec_max_seq_len=max_seq_len,
                                        dec_hidden = dec_hidden,
@@ -310,11 +309,8 @@ class ZeroVox(LightningModule):
 
     def forward(self, x, force_duration=False, normalize_before=True):
 
-        # x["ref_mel"].shape torch.Size([8, 423, 80])
-        # style_embed.shape torch.Size([8, 1, 144])
-        # FIXME
-        # style_embed = None
-        style_embed = self._gst(x["ref_mel"])
+        # [bs, 1, 528]             [bs, 440, 80]
+        style_embed = self._spkemb(x["ref_mel"])
 
         pred = self._phoneme_encoder(x, style_embed=style_embed, train=self.training, force_duration=force_duration)
 
@@ -478,21 +474,6 @@ class ZeroVox(LightningModule):
         process = psutil.Process(os.getpid())
         resident_size = process.memory_info().rss / (1024 * 1024)  # Convert bytes to MB
         print(f"on_train_epoch_end: resident size = {resident_size} MB")
-
-        if DEBUG_MALLOC:
-
-            snapshot = tracemalloc.take_snapshot()
-
-            if self._last_snapshot:
-
-                top_stats = snapshot.compare_to(self._last_snapshot, 'traceback')
-
-                print("[ Top 10 differences ]")
-                for stat in top_stats[:10]:
-                    print(stat)
-                print()
-
-            self._last_snapshot = snapshot
 
         if not self.training_step_outputs:
             return
