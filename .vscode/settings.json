@@ -1,0 +1,10 @@
+{
+    "files.watcherExclude": {
+        "**/attic/**": true,
+        "**/configs/corpora/**.yaml": true,
+        "**/dist/**": true,
+        "**/models/**": true,
+        "**/preprocessed_data/**": true,
+        "**/tmp/**": true
+    }
+}
