@@ -25,7 +25,7 @@ from pathlib import Path
 
 from zerovox.tts import refaudio, refaudio_local
 from zerovox.tts.model import ZeroVox, download_model_file
-from zerovox.g2p.g2p import G2P
+from zerovox.g2p.g2p import G2P, DEFAULT_G2P_MODEL_NAME_DE, DEFAULT_G2P_MODEL_NAME_EN
 from zerovox.tts.mels import get_mel_from_wav, TacotronSTFT
 
 DEFAULT_TTS_MODEL_NAME='tts_en_de_zerovox_alpha1'
@@ -153,7 +153,7 @@ class ZeroVoxTTS:
         x = np.array([mel_spectrogram.T], dtype=np.float32)
         with torch.no_grad():
             x = torch.from_numpy(x).to(self._infer_device)
-            style_embed = self._model._gst(x)
+            style_embed = self._model._spkemb(x)
 
         return style_embed
 
@@ -271,7 +271,15 @@ class ZeroVoxTTS:
     @language.setter
     def language(self, value):
         if value != self._g2p._lang:
-            self._g2p = G2P(value, model=self._g2p.model_name)
+
+            if value == 'de':
+                g2p_model_name = DEFAULT_G2P_MODEL_NAME_DE
+            elif value == 'en':
+                g2p_model_name = DEFAULT_G2P_MODEL_NAME_EN
+            else:
+                raise Exception (f"unsupported language: {value}")
+
+            self._g2p = G2P(value, model=g2p_model_name)
 
     @property
     def meldec_model (self):
