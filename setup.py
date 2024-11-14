@@ -15,13 +15,13 @@ setup(
         #include=['zerovox', 'zerovox/g2p'],  # ['*'] by default
         #exclude=['mypackage.tests'],  # empty by default
   ),
-  version = '0.1.0',
+  version = '0.1.1',
   description = 'zero-shot realtime TTS system, fully offline, free and open source',
   long_description=long_description,
   author = 'Günter Bartsch',
   author_email = 'guenter@zamia.org',
   url = 'https://github.com/gooofy/zerovox',
-  download_url = 'https://github.com/gooofy/zerovox/archive/0.1.0.tar.gz',
+  download_url = 'https://github.com/gooofy/zerovox/archive/0.1.1.tar.gz',
   keywords = [
     "text-to-speech",
     "deep-learning",
@@ -42,6 +42,7 @@ setup(
   install_requires = [
     'torch>=2.1.0',
     'torchinfo>=1.8.0',
+    'torchaudio>=2.5.1',
     'nltk>=3.8.1',
     'num2words>=0.5.13',
     'readline>=6.2.4.1',
