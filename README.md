@@ -11,6 +11,13 @@ ZeroVOX can serve as a TTS backend for LLMs, enabling real-time interactions, an
 
 License: ZeroVOX is Apache 2 licensed with many parts leveraged from other projects (see credits section below) under MIT license.
 
+Demo
+====
+
+Please Note: model is still in alpha stage and still training.
+
+https://huggingface.co/spaces/goooofy/zerovox-demo
+
 Audio Corpus Stats
 ==================
 
