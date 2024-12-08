@@ -83,19 +83,19 @@ def download_model_file(model:str, relpath:str) -> Path:
 DEFAULT_MELDEC_MODEL_NAME = "meldec-libritts-multi-band-melgan-v2"
 #DEFAULT_MELDEC_MODEL_NAME = "meldec-libritts-hifigan-v1"
 
-def get_meldec(model: str|os.PathLike, infer_device=None, verbose=False):
+def get_meldec(modelspec: str|os.PathLike, infer_device=None, verbose=False):
 
-    if os.path.isdir(model):
+    if os.path.isdir(modelspec):
 
-        config_path = Path(Path(model) / 'config.yml')
-        gen_path  = Path(Path(model) / 'checkpoint.pkl')
-        stats_path  = Path(Path(model) / 'stats.h5')
+        config_path = Path(Path(modelspec) / 'config.yml')
+        gen_path  = Path(Path(modelspec) / 'checkpoint.pkl')
+        stats_path  = Path(Path(modelspec) / 'stats.h5')
 
     else:
 
-        config_path = download_model_file(model=model, relpath="config.yml")
-        gen_path  = download_model_file(model=model, relpath="checkpoint.pkl")
-        stats_path  = download_model_file(model=model, relpath="stats.h5")
+        config_path = download_model_file(model=str(modelspec), relpath="config.yml")
+        gen_path  = download_model_file(model=str(modelspec), relpath="checkpoint.pkl")
+        stats_path  = download_model_file(model=str(modelspec), relpath="stats.h5")
 
     # get the main path
     if verbose:
@@ -294,7 +294,7 @@ class ZeroVox(LightningModule):
             self._postnet = None
 
         if meldec_model:
-            self._meldec = get_meldec(model=meldec_model, infer_device=infer_device, verbose=verbose)
+            self._meldec = get_meldec(modelspec=meldec_model, infer_device=infer_device, verbose=verbose)
         else:
             self._meldec = None
 
@@ -358,11 +358,11 @@ class ZeroVox(LightningModule):
 
         return wav, mel, mel_len, log_duration
 
-    def inference(self, x, style_embed, normalize_before=True):
+    def inference_ex(self, x, style_embed, normalize_before=True, force_duration=False):
 
         start_time = time.time()
 
-        pred = self._phoneme_encoder(x, style_embed=style_embed, train=False)
+        pred = self._phoneme_encoder(x, style_embed=style_embed, train=False, force_duration=force_duration)
 
         pe_time = time.time()
 
@@ -392,14 +392,18 @@ class ZeroVox(LightningModule):
         if self._meldec.pqmf is not None:
             wav = self._meldec.pqmf.synthesis(wav)
         wav = wav.squeeze((0,1))
+        mel = mel.squeeze((0,1))
 
         meldec_time = time.time()
 
         if self._verbose:
             print (f"synthesis timing stats: pe={pe_time-start_time}s, dec={dec_time-pe_time}s, meldec={meldec_time-dec_time}s")
 
-        return wav[:mel_len * self._hop_length], mel_len, log_duration
+        return wav[:mel_len * self._hop_length], mel_len, log_duration, mel[:,:mel_len]
 
+    def inference(self, x, style_embed, normalize_before=True):
+        wav, mel_len, log_duration, _ = self.inference_ex(x=x, style_embed=style_embed, normalize_before=normalize_before)
+        return wav, mel_len, log_duration
 
     def loss(self, y_hat, y, x):
         pitch_pred = y_hat["pitch"] # [16, 180, 1]

@@ -201,7 +201,7 @@ class ZeroVoxTTS:
 
         return self._symbols.phones_to_ids(phones), self._symbols.puncts_to_ids(puncts)
 
-    def text2phonemeids(self, text:str) -> list[int]:
+    def text2phonemeids(self, text:str) -> tuple[list[int],list[int]]:
 
         ipa = self._g2p(text)
 
@@ -215,31 +215,36 @@ class ZeroVoxTTS:
 
         return phone_ids, punct_ids
 
-    def tts (self, text:str, spkemb):
+    def tts_ex (self, text:str, spkemb, duration=None):
         text = text.strip()
 
         tstart_g2p = time.time()
         phone_ids, punct_ids = self.text2phonemeids(text)
 
         if not phone_ids:
-            return np.array([[0.0]], dtype=np.float32), np.array([[0]], dtype=np.int32), 0
+            return np.array([[0.0]], dtype=np.float32), np.array([[0]], dtype=np.int32), 0, np.array([[0.0]], dtype=np.float32)
 
-        phoneme = np.array([phone_ids], dtype=np.int32)
-        puncts  = np.array([punct_ids], dtype=np.int32)
+        phoneme   = np.array([phone_ids], dtype=np.int32)
+        puncts    = np.array([punct_ids], dtype=np.int32)
+        duration  = np.array([duration], dtype=np.int32) if duration else None
         tend_g2p = time.time()
-
 
         tstart_synth = time.time()
         with torch.no_grad():
             phoneme = torch.from_numpy(phoneme).int().to(self._infer_device)
             puncts = torch.from_numpy(puncts).int().to(self._infer_device)
-            wav, length, _ = self._model.inference({"phoneme": phoneme, "puncts": puncts}, style_embed=spkemb)
+            duration = torch.from_numpy(duration).int().to(self._infer_device) if duration is not None else None
+            wav, length, _, mel = self._model.inference_ex({"phoneme": phoneme, "puncts": puncts, "duration": duration}, style_embed=spkemb, force_duration = duration is not None)
             wav = wav.cpu().numpy()
         tend_synth = time.time()
 
         if self._verbose:
             print (f"tts timing stats: g2p={tend_g2p-tstart_g2p}s, synth={tend_synth-tstart_synth}s")
 
+        return wav, phoneme, length, mel.cpu().detach().numpy()
+
+    def tts (self, text:str, spkemb):
+        wav, phoneme, length, _ = self.tts_ex(text=text, spkemb=spkemb)
         return wav, phoneme, length
 
     def ipa (self, ipa:list[str], spkemb):
@@ -321,7 +326,7 @@ class ZeroVoxTTS:
 
         synth = ZeroVoxTTS ( language=modelcfg['lang'],
                              checkpoint=checkpoint,
-                             meldec_model=meldec_model,
+                             meldec_model=str(meldec_model),
                              g2p=g2p,
                              hop_length=modelcfg['audio']['hop_size'],
                              filter_length=modelcfg['audio']['filter_length'],

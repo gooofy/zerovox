@@ -821,7 +821,7 @@ class FS2Encoder(nn.Module):
              "log_duration": log_d_predictions,
              "mel_len": mel_len_pred,
              "features": features,
-             "masks": mel_masks.unsqueeze(2).expand(-1,-1,features.shape[2])  # [16, 1477, 272]
+             "masks": mel_masks.unsqueeze(2).expand(-1,-1,features.shape[2]) if mel_masks is not None else None  # [16, 1477, 272]
             }
         
         return y
