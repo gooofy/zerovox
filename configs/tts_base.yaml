@@ -31,12 +31,12 @@ model:
     n_head           : 2
     conv_filter_size : 1024
     conv_kernel_size : [9, 1]
-    dropout          : 0.2
-    scln             : true
+    dropout          : 0.1
+    scln             : false
 
   spkemb:
-    #kind             : "ResNetSE34V2" # "GST" or "ResNetSE34V2"
-    kind             : "GST" # "GST" or "ResNetSE34V2"
+    kind             : "ResNetSE34V2" # "GST" or "ResNetSE34V2"
+    #kind             : "GST" # "GST" or "ResNetSE34V2"
 
   gst:
     n_style_tokens  : 2000 # medium: 2000, base: 2000, small: 2000, tiny: 500

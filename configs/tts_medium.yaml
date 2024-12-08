@@ -1,4 +1,4 @@
-
+# Epoch 62: 100%|█| 61827/61827 [10:39:43<00:00,  1.61it/s, v_num=0, mel=0.294, pitch=0.610, energy=0.212, dur=0.107, loson_train_epoch_end: resident size = 1829.0 MB
 model:
   emb_dim           : 512  # phoneme embedding size     medium: 512, base: 384
   emb_reduction     : 1    #                            medium:   1, base:   1
