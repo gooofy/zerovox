@@ -14,6 +14,7 @@ is based on:
 
 import numpy as np
 import torch
+from torchinfo import summary
 import os
 import yaml
 import glob
@@ -226,7 +227,7 @@ class ZeroVoxTTS:
 
         phoneme   = np.array([phone_ids], dtype=np.int32)
         puncts    = np.array([punct_ids], dtype=np.int32)
-        duration  = np.array([duration], dtype=np.int32) if duration else None
+        duration  = np.array([duration], dtype=np.int32) if duration is not None else None
         tend_g2p = time.time()
 
         tstart_synth = time.time()
@@ -246,6 +247,29 @@ class ZeroVoxTTS:
     def tts (self, text:str, spkemb):
         wav, phoneme, length, _ = self.tts_ex(text=text, spkemb=spkemb)
         return wav, phoneme, length
+
+    def summary (self, depth, ref_mel):
+
+        text = "This is a test."
+
+        phone_ids, punct_ids = self.text2phonemeids(text)
+
+        batch_size = 16
+
+        phoneme   = np.array([phone_ids for b in range(batch_size)], dtype=np.int32)
+        puncts    = np.array([punct_ids for b in range(batch_size)], dtype=np.int32)
+        #ref_mels  = np.array([ref_mel.T for b in range(batch_size)])
+
+        with torch.no_grad():
+            # torch.Size([1, 1, 528])
+            #spkemb = torch.rand(batch_size, 1, 528)
+            phoneme = torch.from_numpy(phoneme).int().to(self._infer_device)
+            puncts = torch.from_numpy(puncts).int().to(self._infer_device)
+            #ref_mels = torch.from_numpy(ref_mels).to(self._infer_device)
+            ref_mels = torch.rand(batch_size, 602, 80).to(self._infer_device)
+            x = {"phoneme": phoneme, "puncts": puncts, "ref_mel": ref_mels}
+
+            summary(self._model, input_data = {'x':x, 'force_duration':False, 'normalize_before':True}, depth=depth)
 
     def ipa (self, ipa:list[str], spkemb):
 
