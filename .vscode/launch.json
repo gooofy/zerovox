@@ -476,6 +476,15 @@
             "console": "integratedTerminal",
             "args": [],
             "justMyCode": false
+        },
+        {
+            "name": "meldebug",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "priv/utils/meldebug.py",
+            "console": "integratedTerminal",
+            "args": [],
+            "justMyCode": false
         }
     ]
 }
