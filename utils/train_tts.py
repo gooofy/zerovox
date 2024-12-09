@@ -97,6 +97,9 @@ def get_args():
                         action='store_true',
                         help='Train using the compiled model')
 
+    parser.add_argument('--train-decoder-only',
+                        action='store_true',
+                        help='Train only the decoder part of the model (useful in incremental mode only, keeps all other module weights fixed)')
 
     args = parser.parse_args()
 
@@ -391,6 +394,40 @@ if __name__ == "__main__":
                       infer_device=args.infer_device,
                       verbose=args.verbose)
 
+    # we restore the checkpoint manually to support partial training
+    # https://github.com/Lightning-AI/pytorch-lightning/issues/2656
+
+    if args.checkpoint:
+        ckpt_path = Path(args.checkpoint)
+        #torch.serialization.add_safe_globals([G2PSymbols])
+        checkpoint = torch.load(ckpt_path, weights_only=False)
+
+        state_dict = checkpoint['state_dict']
+
+        if args.train_decoder_only:
+
+            keys = list(state_dict.keys())
+
+            for key in keys:
+                if key.startswith('_mel_decoder'):
+                    print (f"decoder only training mode: removing key {key} from state dict")
+                    del state_dict[key]
+
+            random_state_dict = model.state_dict()
+            for key in random_state_dict.keys():
+                if key.startswith('_mel_decoder'):
+                    print (f"decoder only training mode: adding weigths for {key} from default state")
+                    state_dict[key] = random_state_dict[key]
+
+            for name, p in model.named_parameters():
+                if not name.startswith('_mel_decoder'):
+                    print (f"decoder only training mode: freezing weights for {name}")
+                    p.requires_grad = False
+            model._phoneme_encoder.eval()
+            model._spkemb.eval()
+            
+        model.load_state_dict(state_dict)
+
     checkpoint_callback = ZVModelCheckpointCheckpoint(
         monitor='loss',
         dirpath=str(checkpoint_path),
@@ -407,7 +444,7 @@ if __name__ == "__main__":
     if args.name:
         logger=TensorBoardLogger(Path(args.out_folder) / "lightning_logs", name=args.name)
     else:
-        logger=None
+        logger=TensorBoardLogger(Path(args.out_folder))
 
     trainer = Trainer(accelerator=args.accelerator,
                       devices=args.devices,
@@ -424,7 +461,8 @@ if __name__ == "__main__":
         model = torch.compile(model)
 
     start_time = datetime.datetime.now()
-    ckpt_path = Path(args.checkpoint) if args.checkpoint else None
-    trainer.fit(model, datamodule=datamodule, ckpt_path = ckpt_path)
+    #FIXME: remove ckpt_path = Path(args.checkpoint) if args.checkpoint else None
+    #FIXME: remove trainer.fit(model, datamodule=datamodule, ckpt_path = ckpt_path)
+    trainer.fit(model, datamodule=datamodule)
     elapsed_time = datetime.datetime.now() - start_time
     print(f"Training time: {elapsed_time}")

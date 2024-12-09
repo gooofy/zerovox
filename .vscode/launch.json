@@ -155,18 +155,18 @@
             "args": ["configs/corpora/de_hui/de_hui_Karlsson.yaml"]
         },
         {
-            "name": "train karlsson base incr",
+            "name": "train karlsson medium incr deconly",
             "type": "debugpy",
             "request": "launch",
             "program": "utils/train_tts.py",
             "console": "integratedTerminal",
-            "args": ["-c", "configs/tts_base.yaml",
+            "args": ["-c", "configs/tts_medium_ldec.yaml",
                      "--accelerator=gpu", "--threads=24",
-                     "--infer-device=cpu",                     
-                     //"--hifigan-model=VCTK_V2",
-                     "--out-folder=models/tts_de_zerovox_base_karlsson",
-                     "--checkpoint=models/tts_de_zerovox_base_karlsson/checkpoints/0002.ckpt",
-                     //"configs/corpora/cv_de_100/de_cv_speaker_1.yaml"
+                     "--infer-device=cpu",
+                     //"--name=ldec",
+                     "--train-decoder-only",
+                     "--out-folder=models/tts_en_de_zerovox_medium_karlsson",
+                     "--checkpoint=models/tts_en_de_zerovox_medium_1/checkpoints/0062.ckpt",
                      "configs/corpora/de_hui/de_hui_Karlsson.yaml"
                     ],
             "justMyCode": false
