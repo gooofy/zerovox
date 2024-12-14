@@ -54,12 +54,12 @@ model:
     postnet_n_convolutions : 5
 
 training:
-    max_epochs      : 100
-    warmup_epochs   : 10
+    max_epochs      : 10
+    warmup_epochs   : 2
     val_epochs      : 1
 
     weight_decay    : 0.00001
     lr              : 0.00001
     grad_clip       : 1.0
 
-    batch_size      : 20
+    batch_size      : 16
