@@ -4,7 +4,7 @@ model:
   emb_reduction     : 1    #                            medium:   1, base:   1
   punct_emb_dim     : 16   # punctuation embedding size medium:  16, base:  16
   dpe_emb_dim       : 32   # embedding size for _d_uration, _p_itch and _e_nergy
-  max_seq_len       : 1500 # 1500*256/24000 = 16s
+  max_seq_len       : 1500 # 1500*300/24000 = 18.75s
 
   encoder:
     kind                   : "fastspeech2" # choices: efficientspeech, fastspeech2
