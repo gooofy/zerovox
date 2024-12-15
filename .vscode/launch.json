@@ -160,7 +160,7 @@
             "request": "launch",
             "program": "utils/train_tts.py",
             "console": "integratedTerminal",
-            "args": ["-c", "configs/tts_medium_ldec.yaml",
+            "args": ["-c", "configs/tts_medium_styledec.yaml",
                      "--accelerator=gpu", "--threads=24",
                      "--infer-device=cpu",
                      //"--name=ldec",

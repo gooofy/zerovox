@@ -36,6 +36,7 @@ from zerovox.tts.networks import PhonemeEncoder
 from zerovox.tts.GST import GST
 from zerovox.tts.ResNetSE34V2 import ResNetSE34V2
 from zerovox.tts.fs2 import FS2Encoder, FS2Decoder
+from zerovox.tts.styletts import StyleTTSDecoder
 from zerovox.tts.postnet import PostNet
 
 from zerovox.parallel_wavegan.utils import load_model as load_meldec_model
@@ -202,6 +203,7 @@ class ZeroVox(LightningModule):
                  resnet_num_filters, #=[32, 64, 128, 256]
                  resnet_encoder_type, #='ASP' or 'SAP'
 
+                 decoder_kind, # fastspeech2 or styletts
                  decoder_n_layers, #=6,
                  decoder_n_head, #=2,
                  decoder_conv_filter_size, #=1024,
@@ -269,19 +271,26 @@ class ZeroVox(LightningModule):
         else:
             raise Exception (f"unknown speaker embedding kind: '{spkemb_kind}'")
 
-        self._mel_decoder = FS2Decoder(dec_max_seq_len=max_seq_len,
-                                       dec_hidden = dec_hidden,
-                                       dec_n_layers = decoder_n_layers,
-                                       dec_n_head = decoder_n_head,
-                                       dec_conv_filter_size = decoder_conv_filter_size,
-                                       dec_conv_kernel_size = decoder_conv_kernel_size,
-                                       dec_dropout = decoder_dropout,
-                                       dec_scln = decoder_scln,
-                                       n_mel_channels=n_mels,
-                                       spk_emb_size=emb_size)
+        if decoder_kind == 'fastspeech2':
+            self._mel_decoder = FS2Decoder(dec_max_seq_len=max_seq_len,
+                                           dec_hidden = dec_hidden,
+                                           dec_n_layers = decoder_n_layers,
+                                           dec_n_head = decoder_n_head,
+                                           dec_conv_filter_size = decoder_conv_filter_size,
+                                           dec_conv_kernel_size = decoder_conv_kernel_size,
+                                           dec_dropout = decoder_dropout,
+                                           dec_scln = decoder_scln,
+                                           n_mel_channels=n_mels,
+                                           spk_emb_size=emb_size)
 
-        # FIXME
-        # self._fake_mel_decoder = torch.nn.Linear(emb_size+3*dpe_embed_dim, n_mels)
+        elif decoder_kind == 'styletts':
+             self._mel_decoder = StyleTTSDecoder(dim_in=dec_hidden,
+                                                 style_dim=emb_size,
+                                                 residual_dim=64,
+                                                 dim_out=n_mels)
+
+        else:
+            raise Exception (f"unknown decoder kind: '{decoder_kind}'")
 
         if postnet_embedding_dim:
             self._postnet = PostNet(
@@ -328,7 +337,7 @@ class ZeroVox(LightningModule):
         # pred["features"].shape torch.Size([8, 1221, 240])
         # mel.shape torch.Size([8, 1221, 80])
 
-        mel, dec_mask = self._mel_decoder(pred["features"], dec_mask, spk_emb=style_embed) 
+        mel, _ = self._mel_decoder(pred["features"], dec_mask, spk_emb=style_embed) 
         
         if mask is not None and mel.size(0) > 1:
             mask = mask[:, :, :mel.shape[-1]]

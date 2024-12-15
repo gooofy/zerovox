@@ -1,0 +1,70 @@
+# Epoch 62: 100%|█| 61827/61827 [10:39:43<00:00,  1.61it/s, v_num=0, mel=0.294, pitch=0.610, energy=0.212, dur=0.107, loson_train_epoch_end: resident size = 1829.0 MB
+model:
+  emb_dim           : 512  # phoneme embedding size     medium: 512, base: 384
+  emb_reduction     : 1    #                            medium:   1, base:   1
+  punct_emb_dim     : 16   # punctuation embedding size medium:  16, base:  16
+  dpe_emb_dim       : 32   # embedding size for _d_uration, _p_itch and _e_nergy
+  max_seq_len       : 1500 # 1500*300/24000 = 18.75s
+
+  encoder:
+    kind                   : "fastspeech2" # choices: efficientspeech, fastspeech2
+
+    # efficientspeech:
+    depth                  : 2    #         medium: 2, base: 2
+    n_heads                : 2    #         medium: 2, base: 2
+    kernel_size            : 5    #         medium: 5, base: 5
+    expansion              : 2    # MixFFN, medium: 2, base: 2
+
+    # fastspeech2:
+    fs2_layer              : 4
+    fs2_head               : 2
+    fs2_dropout            : 0.2
+    vp_filter_size         : 256
+    vp_kernel_size         : 3
+    vp_dropout             : 0.5
+    ve_pitch_quantization  : "linear" # support 'linear' or 'log', 'log' is allowed only if the pitch values are not normalized during preprocessing
+    ve_energy_quantization : "linear" # support 'linear' or 'log', 'log' is allowed only if the energy values are not normalized during preprocessing
+    ve_n_bins              : 256
+
+  decoder:
+    kind                   : "styletts" # choices: fastspeech2, styletts
+
+    # fastspeech2:
+    n_layers               : 6
+    n_head                 : 2
+    conv_filter_size       : 1024
+    conv_kernel_size       : [9, 1]
+    dropout                : 0.2
+    scln                   : true
+
+    # styletts:
+
+  spkemb:
+    kind             : "ResNetSE34V2" # "GST" or "ResNetSE34V2"
+    #kind             : "GST" # "GST" or "ResNetSE34V2"
+
+  gst:
+    n_style_tokens  : 2000 # medium: 2000, base: 2000, small: 2000, tiny: 500
+    n_heads         : 8
+    ref_enc_filters : [32, 32, 64, 64, 128, 128]
+
+  resnet:
+    layers          : [3, 4, 6, 3]
+    num_filters     : [32, 64, 128, 256]
+    encoder_type    : "ASP" # "ASP" or "SAP"
+
+  postnet:
+    postnet_embedding_dim  : 0 # 0 -> disabled, 512 -> enabled
+    postnet_kernel_size    : 5
+    postnet_n_convolutions : 5
+
+training:
+    max_epochs      : 10
+    warmup_epochs   : 2
+    val_epochs      : 1
+
+    weight_decay    : 0.00001
+    lr              : 0.00001
+    grad_clip       : 1.0
+
+    batch_size      : 32

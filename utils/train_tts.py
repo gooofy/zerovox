@@ -195,12 +195,14 @@ if __name__ == "__main__":
                 've_n_bins'              : cfg['model']['encoder']['ve_n_bins'],
             },
             'decoder'       : {
-                'n_layers'         : cfg['model']['decoder']['n_layers'],
-                'n_head'           : cfg['model']['decoder']['n_head'],
-                'conv_filter_size' : cfg['model']['decoder']['conv_filter_size'],
-                'conv_kernel_size' : cfg['model']['decoder']['conv_kernel_size'],
-                'dropout'          : cfg['model']['decoder']['dropout'],
-                'scln'             : cfg['model']['decoder']['scln'],
+                'kind'                   : cfg['model']['encoder']['kind'],
+
+                'n_layers'               : cfg['model']['decoder']['n_layers'],
+                'n_head'                 : cfg['model']['decoder']['n_head'],
+                'conv_filter_size'       : cfg['model']['decoder']['conv_filter_size'],
+                'conv_kernel_size'       : cfg['model']['decoder']['conv_kernel_size'],
+                'dropout'                : cfg['model']['decoder']['dropout'],
+                'scln'                   : cfg['model']['decoder']['scln'],
             },
             'spkemb' : {
                 'kind'             : cfg['model']['spkemb']['kind'],
@@ -379,6 +381,7 @@ if __name__ == "__main__":
                       resnet_num_filters=cfg['model']['resnet']['num_filters'],
                       resnet_encoder_type=cfg['model']['resnet']['encoder_type'],
 
+                      decoder_kind=cfg['model']['decoder']['kind'],
                       decoder_n_layers=cfg['model']['decoder']['n_layers'],
                       decoder_n_head=cfg['model']['decoder']['n_head'],
                       decoder_conv_filter_size=cfg['model']['decoder']['conv_filter_size'],
