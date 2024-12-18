@@ -172,6 +172,8 @@ class ZeroVox(LightningModule):
                  weight_decay, #=1e-6, 
                  max_epochs, #=5000,
                  warmup_epochs, #=50,
+                 betas,
+                 eps,
 
                  embed_dim, #=128, 
                  punct_embed_dim, #=16,
@@ -587,7 +589,45 @@ class ZeroVox(LightningModule):
 
 
     def configure_optimizers(self):
-        optimizer = AdamW(self.parameters(), lr=self.hparams.lr, weight_decay=self.hparams.weight_decay)
+
+        # Learning Rate (lr)
+        # The learning rate controls the step size during the optimization process.
+        # A higher learning rate can lead to faster convergence but might overshoot
+        # the optimal weights, causing instability. Conversely, a lower learning 
+        # rate ensures more precise updates but can slow down the training process.
+        # It's often a balancing act to find the right value.
+
+        # Weight Decay
+        # Weight decay is a form of regularization that penalizes large weights,
+        # helping to prevent overfitting. By applying weight decay separately from
+        # the gradient updates, AdamW ensures more effective regularization. A
+        # higher weight decay value strengthens regularization but might lead to
+        # underfitting, while a lower value might not sufficiently prevent overfitting.
+
+        # Betas (β1, β2)
+        # The betas are coefficients used for computing running averages of the 
+        # gradient and its square. Typically, β1 is set to 0.9 and β2 to 0.9994.
+        # These values control the decay rates of these moving averages,
+        # influencing how quickly the optimizer adapts to new gradients.
+
+        # Epsilon (eps)
+        # Epsilon is a small constant added to the denominator to improve numerical
+        # stability. It prevents division by zero and ensures the updates are 
+        # smooth and stable.
+
+        #                   ZV             StyleTTS        FastSpeech
+        # optimizer       : AdamW          AdamW           Adam
+        # lr              : 1e-5             1e-4
+        # weight_decay    : 1e-5             0.0
+        # [default] betas : (0.9, 0.999)     (0.0, 0.99)   [0.9, 0.98]
+        # [default] eps   : 1e-8             1e-9          1e-9
+        # grad_clip       : 1.0                            1
+
+        optimizer = AdamW(self.parameters(),
+                          lr=self.hparams.lr,
+                          weight_decay=self.hparams.weight_decay,
+                          betas=self.hparams.betas,
+                          eps=self.hparams.eps)
 
         self.scheduler = LinearWarmUpCosineDecayLR (optimizer,
                                                     base_lr=self.hparams.lr,

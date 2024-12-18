@@ -348,6 +348,8 @@ if __name__ == "__main__":
                       n_mels=modelcfg['audio']['num_mels'],
                       lr=cfg['training']['lr'],
                       weight_decay=cfg['training']['weight_decay'],
+                      betas=cfg['training']['betas'],
+                      eps=cfg['training']['eps'],
                       max_epochs=cfg['training']['max_epochs'],
                       warmup_epochs=cfg['training']['warmup_epochs'],
 

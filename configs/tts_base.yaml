@@ -58,8 +58,10 @@ training:
     warmup_epochs   : 10
     val_epochs      : 1
 
-    weight_decay    : 0.00001
-    lr              : 0.00001
+    lr              : 0.0001      # was: 0.00001
+    weight_decay    : 0.0         # was: 0.00001
+    betas           : [0.0, 0.99] # was: [0.0, 0.999]
+    eps             : 0.000000001 # 1e-9, default: 1e-8
     grad_clip       : 1.0
 
     batch_size      : 20
