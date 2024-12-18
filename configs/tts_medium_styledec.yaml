@@ -59,7 +59,7 @@ model:
     postnet_n_convolutions : 5
 
 training:
-    max_epochs      : 10
+    max_epochs      : 40
     warmup_epochs   : 2
     val_epochs      : 1
 
