@@ -52,8 +52,8 @@ class ZeroVoxTTS:
                  win_length : int,
                  mel_fmin: int,
                  mel_fmax: int,
-                 eps: float,
-                 window: str,
+                 mel_eps: float,
+                 mel_window: str,
                  log_base: float,
                  infer_device: str = 'cpu',
                  num_threads: int = -1,
@@ -72,8 +72,8 @@ class ZeroVoxTTS:
         self._num_mels = n_mel_channels
         self._mel_fmin = mel_fmin
         self._mel_fmax = mel_fmax
-        self._window = window
-        self._eps = eps
+        self._mel_window = mel_window
+        self._mel_eps = mel_eps
         self._log_base = log_base
         self._verbose = verbose
 
@@ -87,7 +87,9 @@ class ZeroVoxTTS:
                                                    infer_device=infer_device,                                                              
                                                    map_location=torch.device('cpu'),
                                                    strict=False,
-                                                   verbose=verbose)
+                                                   verbose=verbose,
+                                                   betas=[0.9,0.99], # FIXME : remove
+                                                   eps=1e-9) # FIXME: remove
 
         self._model = self._model.to(infer_device)
         self._model.eval()
@@ -143,11 +145,11 @@ class ZeroVoxTTS:
                                                    fft_size=self._fft_size,
                                                    hop_size=self._hop_length,
                                                    win_length=self._win_length,
-                                                   window=self._window,
+                                                   window=self._mel_window,
                                                    num_mels=self._num_mels,
                                                    fmin=self._mel_fmin,
                                                    fmax=self._mel_fmax,
-                                                   eps=self._eps,
+                                                   eps=self._mel_eps,
                                                    log_base=self._log_base,
                                                    stft=self._stft)
 
@@ -360,8 +362,8 @@ class ZeroVoxTTS:
                              sampling_rate=modelcfg['audio']['sampling_rate'],
                              n_mel_channels=modelcfg['audio']['num_mels'],
                              fft_size=modelcfg['audio']['fft_size'],
-                             eps=float(modelcfg['audio']['eps']),
-                             window=modelcfg['audio']['window'],
+                             mel_eps=float(modelcfg['audio']['eps']),
+                             mel_window=modelcfg['audio']['window'],
                              log_base=modelcfg['audio']['log_base'],
                              infer_device=infer_device,
                              num_threads=num_threads,
