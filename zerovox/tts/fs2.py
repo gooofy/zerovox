@@ -171,9 +171,10 @@ class PositionwiseFeedForward(nn.Module):
 
         # Use Conv1D
         # position-wise
+
         self.w_1 = nn.Conv1d(
-            d_in,
-            d_hid,
+            in_channels=d_in,
+            out_channels=d_hid,
             kernel_size=kernel_size[0],
             padding=(kernel_size[0] - 1) // 2,
         )
@@ -195,7 +196,9 @@ class PositionwiseFeedForward(nn.Module):
     def forward(self, x, spk_emb):
         residual = x
         output = x.transpose(1, 2)
-        output = self.w_2(F.relu(self.w_1(output)))
+        output = self.w_1(output)
+        output = F.relu(output)
+        output = self.w_2(output)
         output = output.transpose(1, 2)
         output = self.dropout(output)
         if self._scln:
