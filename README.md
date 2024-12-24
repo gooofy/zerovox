@@ -5,7 +5,7 @@ ZeroVOX is a text-to-speech (TTS) system built for real-time and embedded use.
 
 ZeroVox runs entirely offline, ensuring privacy and independence from cloud services. It's completely free and open source, inviting community contributions and suggestions.
 
-Modeled after FastSpeech2, ZeroVOX goes a step further with zero-shot speaker cloning, utilizing Global Style Tokens (GST) and Speaker Conditional Layer Normalization (SCLN) for effective speaker embedding. The system supports both English and German speech generation from a single model, trained on an extensive dataset. ZeroVOX is phoneme-based, leveraging pronunciation dictionaries to ensure accurate word articulation, utilizing the CMU dictionary for English and a custom dictionary for German from the ZamiaSpeech project where also the phoneme set used originates from.
+Modeled after FastSpeech2, ZeroVOX goes a step further with zero-shot speaker cloning, utilizing effective speaker embedding. The system supports both English and German speech generation from a single model, trained on an extensive dataset. ZeroVOX is phoneme-based, leveraging pronunciation dictionaries to ensure accurate word articulation, utilizing the CMU dictionary for English and a custom dictionary for German from the ZamiaSpeech project where also the phoneme set used originates from.
 
 ZeroVOX can serve as a TTS backend for LLMs, enabling real-time interactions, and as an easy-to-install TTS system for home automation systems like Home Assistant. Since it is non-autoregressive like FastSpeech2 its output is generally easy to control and predictable.
 
@@ -83,7 +83,7 @@ run training:
 Credits
 =======
 
-Originally based on Efficientspeech by Rowel Atienza
+The training setup is originally based on Efficientspeech by Rowel Atienza
 
 https://github.com/roatienza/efficientspeech
 
@@ -111,9 +111,24 @@ https://github.com/ming024/FastSpeech2
         url={https://arxiv.org/abs/2006.04558}, 
     }
 
+The StyleTTS encoder is borrowd (under MIT license) from Aaron (Yinghao) Li's implementation of StyleTTS:
+
+https://github.com/yl4579/StyleTTS
+
+    @misc{li2023stylettsstylebasedgenerativemodel,
+        title={StyleTTS: A Style-Based Generative Model for Natural and Diverse Text-to-Speech Synthesis}, 
+        author={Yinghao Aaron Li and Cong Han and Nima Mesgarani},
+        year={2023},
+        eprint={2205.15439},
+        archivePrefix={arXiv},
+        primaryClass={eess.AS},
+        url={https://arxiv.org/abs/2205.15439}, 
+    }
+
 The MEL decoder implementation is borrowed (under MIT license) from Tomoki Hayashi's ParallelWaveGAN project:
 
 https://github.com/kan-bayashi/ParallelWaveGAN
+
 The G2P transformer models are based on DeepPhonemizer by Axel Springer News Media & Tech GmbH & Co. KG - Ideas Engineering (MIT license)
 
 https://github.com/as-ideas/DeepPhonemizer
@@ -147,21 +162,6 @@ https://github.com/clovaai/voxceleb_trainer
     pages={770--778},
     year={2016}
     }
-
-The ZeroShot Global Style Tokens based speaker embedding is based on GST-Tacotron by Chengqi Deng (MIT license)
-
-https://github.com/KinglittleQ/GST-Tacotron
-
-which is an implementation of
-
-	@misc{wang2018style,
-		  title={Style Tokens: Unsupervised Style Modeling, Control and Transfer in End-to-End Speech Synthesis},
-		  author={Yuxuan Wang and Daisy Stanton and Yu Zhang and RJ Skerry-Ryan and Eric Battenberg and Joel Shor and Ying Xiao and Fei Ren and Ye Jia and Rif A. Saurous},
-		  year={2018},
-		  eprint={1803.09017},
-		  archivePrefix={arXiv},
-		  primaryClass={cs.CL}
-	}
 
 Speaker Conditional Layer Normalization (SCLN) which is borrowed (under MIT license) from
 

@@ -787,10 +787,9 @@ class FS2Encoder(nn.Module):
 
         features = self._encoder(src_seq=phoneme, puncts=puncts, mask=phoneme_mask, return_attns=False)
 
-        if style_embed is not None:
-            # add GST Tokens (style/speaker) embedding to features
-            style_embed = style_embed.expand_as(features)
-            features = features + style_embed
+        # add speaker embedding to features
+        style_embed = style_embed.expand_as(features)
+        features = features + style_embed
 
         pitch_target = x["pitch"] if train else None
         energy_target = x["energy"] if train  else None

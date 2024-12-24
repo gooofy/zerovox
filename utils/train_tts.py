@@ -177,13 +177,6 @@ if __name__ == "__main__":
             'punct_emb_dim' : cfg['model']['punct_emb_dim'],
             'max_seq_len'   : cfg['model']['max_seq_len'],
             'encoder'       : {
-                'kind'                   : cfg['model']['encoder']['kind'],
-
-                'depth'                  : cfg['model']['encoder']['depth'],
-                'n_heads'                : cfg['model']['encoder']['n_heads'],
-                'kernel_size'            : cfg['model']['encoder']['kernel_size'],
-                'expansion'              : cfg['model']['encoder']['expansion'],
-
                 'fs2_layer'              : cfg['model']['encoder']['fs2_layer'],
                 'fs2_head'               : cfg['model']['encoder']['fs2_head'],
                 'fs2_dropout'            : cfg['model']['encoder']['fs2_dropout'],
@@ -204,23 +197,10 @@ if __name__ == "__main__":
                 'dropout'                : cfg['model']['decoder']['dropout'],
                 'scln'                   : cfg['model']['decoder']['scln'],
             },
-            'spkemb' : {
-                'kind'             : cfg['model']['spkemb']['kind'],
-            },
-            'gst'           : {
-                'n_style_tokens' : cfg['model']['gst']['n_style_tokens'],
-                'n_heads'        : cfg['model']['gst']['n_heads'],
-                'ref_enc_filters': cfg['model']['gst']['ref_enc_filters'],
-            },
             'resnet' : {
                 'layers'         : cfg['model']['resnet']['layers'],
                 'num_filters'    : cfg['model']['resnet']['num_filters'],
                 'encoder_type'   : cfg['model']['resnet']['encoder_type'],
-            },
-            'postnet'       : {
-                'postnet_embedding_dim'  : cfg['model']['postnet']['postnet_embedding_dim'],
-                'postnet_kernel_size'    : cfg['model']['postnet']['postnet_kernel_size'],
-                'postnet_n_convolutions' : cfg['model']['postnet']['postnet_n_convolutions'],
             },
         },
         'stats': {
@@ -359,12 +339,6 @@ if __name__ == "__main__":
                       emb_reduction=cfg['model']['emb_reduction'],
                       max_seq_len=cfg['model']['max_seq_len'],
 
-                      encoder_kind=cfg['model']['encoder']['kind'],
-                      encoder_depth=cfg['model']['encoder']['depth'],
-                      encoder_n_heads=cfg['model']['encoder']['n_heads'],
-                      encoder_expansion=cfg['model']['encoder']['expansion'],
-                      encoder_kernel_size=cfg['model']['encoder']['kernel_size'],
-
                       fs2enc_layer=cfg['model']['encoder']['fs2_layer'],
                       fs2enc_head=cfg['model']['encoder']['fs2_head'],
                       fs2enc_dropout=cfg['model']['encoder']['fs2_dropout'],
@@ -375,10 +349,6 @@ if __name__ == "__main__":
                       ve_energy_quantization=cfg['model']['encoder']['ve_energy_quantization'],
                       ve_n_bins=cfg['model']['encoder']['ve_n_bins'],
 
-                      spkemb_kind=cfg['model']['spkemb']['kind'],
-                      gst_n_style_tokens=cfg['model']['gst']['n_style_tokens'],
-                      gst_n_heads=cfg['model']['gst']['n_heads'],
-                      gst_ref_enc_filters=cfg['model']['gst']['ref_enc_filters'],
                       resnet_layers=cfg['model']['resnet']['layers'],
                       resnet_num_filters=cfg['model']['resnet']['num_filters'],
                       resnet_encoder_type=cfg['model']['resnet']['encoder_type'],
@@ -390,10 +360,6 @@ if __name__ == "__main__":
                       decoder_conv_kernel_size=cfg['model']['decoder']['conv_kernel_size'],
                       decoder_dropout=cfg['model']['decoder']['dropout'],
                       decoder_scln=cfg['model']['decoder']['scln'],
-
-                      postnet_embedding_dim=cfg['model']['postnet']['postnet_embedding_dim'],
-                      postnet_kernel_size=cfg['model']['postnet']['postnet_kernel_size'],
-                      postnet_n_convolutions=cfg['model']['postnet']['postnet_n_convolutions'],
 
                       wav_path=str(wav_path),
                       infer_device=args.infer_device,

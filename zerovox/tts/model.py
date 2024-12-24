@@ -32,12 +32,9 @@ from torch.optim.lr_scheduler import LambdaLR
 from scipy.io import wavfile
 
 from zerovox.g2p.data import G2PSymbols
-from zerovox.tts.networks import PhonemeEncoder
-from zerovox.tts.GST import GST
 from zerovox.tts.ResNetSE34V2 import ResNetSE34V2
 from zerovox.tts.fs2 import FS2Encoder, FS2Decoder
 from zerovox.tts.styletts import StyleTTSDecoder
-from zerovox.tts.postnet import PostNet
 
 from zerovox.parallel_wavegan.utils import load_model as load_meldec_model
 
@@ -181,12 +178,6 @@ class ZeroVox(LightningModule):
                  emb_reduction, #=1,
                  max_seq_len, #=1000,
 
-                 encoder_kind, #="efficientspeech",
-                 encoder_depth, #=2,
-                 encoder_n_heads, #=1,
-                 encoder_kernel_size, #=3, 
-                 encoder_expansion, #=1,
-
                  fs2enc_layer, # 4
                  fs2enc_head, # 2
                  fs2enc_dropout, # 0.2
@@ -197,10 +188,6 @@ class ZeroVox(LightningModule):
                  ve_energy_quantization, # 'linear'
                  ve_n_bins, # 256
 
-                 spkemb_kind, # 'GST' or 'ResNetSE34V2'
-                 gst_n_style_tokens, #=2000,
-                 gst_n_heads, #=8,
-                 gst_ref_enc_filters, #=[32, 32, 64, 64, 128, 128],
                  resnet_layers, #=[3, 4, 6, 3]
                  resnet_num_filters, #=[32, 64, 128, 256]
                  resnet_encoder_type, #='ASP' or 'SAP'
@@ -213,10 +200,6 @@ class ZeroVox(LightningModule):
                  decoder_dropout, #=0.2,
                  decoder_scln, #=True,
 
-                 postnet_embedding_dim, #=512, # 0 to disable
-                 postnet_kernel_size, #=5,
-                 postnet_n_convolutions, #=5,
-
                  wav_path="wavs", 
                  infer_device=None, 
                  verbose=False,
@@ -225,53 +208,27 @@ class ZeroVox(LightningModule):
 
         self.save_hyperparameters(ignore=['meldec_model', 'infer_device', 'verbose'])
 
-        if encoder_kind == 'efficientspeech':
+        self._phoneme_encoder = FS2Encoder(symbols=symbols,
+                                            max_seq_len=max_seq_len,
+                                            embed_dim=embed_dim,
+                                            encoder_layer=fs2enc_layer,
+                                            encoder_head=fs2enc_head,
+                                            conv_filter_size=decoder_conv_filter_size,
+                                            conv_kernel_size=decoder_conv_kernel_size,
+                                            encoder_dropout=fs2enc_dropout,
+                                            punct_embed_dim=punct_embed_dim,
+                                            vp_filter_size=vp_filter_size,
+                                            vp_kernel_size=vp_kernel_size,
+                                            vp_dropout=vp_dropout,
+                                            ve_pitch_quantization=ve_pitch_quantization,
+                                            ve_energy_quantization=ve_energy_quantization,
+                                            ve_n_bins=ve_n_bins,
+                                            stats=stats)
 
-            self._phoneme_encoder = PhonemeEncoder(symbols=symbols,
-                                                   stats=stats,
-                                                   depth=encoder_depth,
-                                                   reduction=emb_reduction,
-                                                   head=encoder_n_heads,
-                                                   embed_dim=embed_dim,
-                                                   kernel_size=encoder_kernel_size,
-                                                   expansion=encoder_expansion,
-                                                   punct_embed_dim=punct_embed_dim,
-                                                   dpe_embed_dim=dpe_embed_dim)
+        emb_size = embed_dim+punct_embed_dim
+        dec_hidden = emb_size
 
-            emb_size = (embed_dim+punct_embed_dim)//emb_reduction
-            dec_hidden = emb_size+3*dpe_embed_dim
-
-        elif encoder_kind == 'fastspeech2':
-
-            self._phoneme_encoder = FS2Encoder(symbols=symbols,
-                                               max_seq_len=max_seq_len,
-                                               embed_dim=embed_dim,
-                                               encoder_layer=fs2enc_layer,
-                                               encoder_head=fs2enc_head,
-                                               conv_filter_size=decoder_conv_filter_size,
-                                               conv_kernel_size=decoder_conv_kernel_size,
-                                               encoder_dropout=fs2enc_dropout,
-                                               punct_embed_dim=punct_embed_dim,
-                                               vp_filter_size=vp_filter_size,
-                                               vp_kernel_size=vp_kernel_size,
-                                               vp_dropout=vp_dropout,
-                                               ve_pitch_quantization=ve_pitch_quantization,
-                                               ve_energy_quantization=ve_energy_quantization,
-                                               ve_n_bins=ve_n_bins,
-                                               stats=stats)
-
-            emb_size = embed_dim+punct_embed_dim
-            dec_hidden = emb_size
-
-        else:
-            raise Exception (f"unknown encoder kind: '{encoder_kind}'")
-
-        if spkemb_kind == 'GST':
-            self._spkemb = GST(emb_size, n_mels, gst_n_style_tokens, gst_n_heads, gst_ref_enc_filters)
-        elif spkemb_kind == 'ResNetSE34V2':
-            self._spkemb = ResNetSE34V2(layers=resnet_layers, num_filters=resnet_num_filters, nOut=emb_size, encoder_type=resnet_encoder_type, n_mels=n_mels, log_input=False)
-        else:
-            raise Exception (f"unknown speaker embedding kind: '{spkemb_kind}'")
+        self._spkemb = ResNetSE34V2(layers=resnet_layers, num_filters=resnet_num_filters, nOut=emb_size, encoder_type=resnet_encoder_type, n_mels=n_mels, log_input=False)
 
         if decoder_kind == 'fastspeech2':
             self._mel_decoder = FS2Decoder(dec_max_seq_len=max_seq_len,
@@ -293,16 +250,6 @@ class ZeroVox(LightningModule):
 
         else:
             raise Exception (f"unknown decoder kind: '{decoder_kind}'")
-
-        if postnet_embedding_dim:
-            self._postnet = PostNet(
-                                 n_mel_channels=n_mels,
-                                 postnet_embedding_dim=postnet_embedding_dim,
-                                 postnet_kernel_size=postnet_kernel_size,
-                                 postnet_n_convolutions=postnet_n_convolutions,
-            )
-        else:
-            self._postnet = None
 
         if meldec_model:
             self._meldec = get_meldec(modelspec=meldec_model, infer_device=infer_device, verbose=verbose)
@@ -347,9 +294,6 @@ class ZeroVox(LightningModule):
 
         # FIXME
         # mel = self._fake_mel_decoder(pred["features"])
-
-        if self._postnet:
-            mel = self._postnet(mel) + mel
 
         pred["mel"] = mel
 

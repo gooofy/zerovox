@@ -39,24 +39,10 @@ model:
 
     # styletts:
 
-  spkemb:
-    kind             : "ResNetSE34V2" # "GST" or "ResNetSE34V2"
-    #kind             : "GST" # "GST" or "ResNetSE34V2"
-
-  gst:
-    n_style_tokens  : 2000 # medium: 2000, base: 2000, small: 2000, tiny: 500
-    n_heads         : 8
-    ref_enc_filters : [32, 32, 64, 64, 128, 128]
-
   resnet:
     layers          : [3, 4, 6, 3]
     num_filters     : [32, 64, 128, 256]
     encoder_type    : "ASP" # "ASP" or "SAP"
-
-  postnet:
-    postnet_embedding_dim  : 0 # 0 -> disabled, 512 -> enabled
-    postnet_kernel_size    : 5
-    postnet_n_convolutions : 5
 
 training:
     max_epochs      : 40
