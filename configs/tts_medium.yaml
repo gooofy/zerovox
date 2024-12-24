@@ -7,15 +7,6 @@ model:
   max_seq_len       : 1500 # 1500*300/24000 = 18.75s
 
   encoder:
-    kind                   : "fastspeech2" # choices: efficientspeech, fastspeech2
-
-    # efficientspeech:
-    depth                  : 2    #         medium: 2, base: 2
-    n_heads                : 2    #         medium: 2, base: 2
-    kernel_size            : 5    #         medium: 5, base: 5
-    expansion              : 2    # MixFFN, medium: 2, base: 2
-
-    # fastspeech2:
     fs2_layer              : 4
     fs2_head               : 2
     fs2_dropout            : 0.2
