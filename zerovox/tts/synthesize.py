@@ -256,7 +256,7 @@ class ZeroVoxTTS:
 
         phone_ids, punct_ids = self.text2phonemeids(text)
 
-        batch_size = 16
+        batch_size = 1
 
         phoneme   = np.array([phone_ids for b in range(batch_size)], dtype=np.int32)
         puncts    = np.array([punct_ids for b in range(batch_size)], dtype=np.int32)
