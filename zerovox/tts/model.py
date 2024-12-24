@@ -385,6 +385,7 @@ class ZeroVox(LightningModule):
         # pitch_target = pitch_target.masked_select(phoneme_mask)
         # pitch_pred = pitch_pred.masked_select(phoneme_mask)
         pitch_loss = nn.MSELoss()(pitch_pred, pitch_target)
+        # pitch_loss = nn.CrossEntropyLoss()(pitch_pred, pitch_target)
 
         energy_pred   = energy_pred.masked_select(phoneme_mask.unsqueeze(2).expand_as(energy_pred))
         energy_target = energy_target.masked_select(phoneme_mask.unsqueeze(2).expand_as(energy_target))
@@ -393,6 +394,7 @@ class ZeroVox(LightningModule):
         # energy      = energy.masked_select(phoneme_mask)
         # energy_pred = energy_pred.masked_select(phoneme_mask)
         energy_loss = nn.MSELoss()(energy_pred, energy_target)
+        # energy_loss = nn.CrossEntropyLoss()(energy_pred, energy_target)
 
         # duration_pred = duration_pred[:,:duration.shape[-1]]
         # duration_pred = torch.squeeze(duration_pred)
@@ -422,6 +424,12 @@ class ZeroVox(LightningModule):
                   "energy_loss": energy_loss.detach(), 
                   "duration_loss": duration_loss.detach()}
         self.training_step_outputs.append(losses)
+
+        self.log("loss", loss, on_step=True, on_epoch=False, prog_bar=True, sync_dist=False)
+        self.log("mel", mel_loss, on_step=True, on_epoch=False, prog_bar=True, sync_dist=False)
+        self.log("pitch", pitch_loss, on_step=True, on_epoch=False, prog_bar=True, sync_dist=False)
+        self.log("energy", energy_loss, on_step=True, on_epoch=False, prog_bar=True, sync_dist=False)
+        self.log("dur", duration_loss, on_step=True, on_epoch=False, prog_bar=True, sync_dist=False)
         
         return loss
 
@@ -442,11 +450,11 @@ class ZeroVox(LightningModule):
             [x["energy_loss"] for x in self.training_step_outputs]).mean()
         avg_duration_loss = torch.stack(
             [x["duration_loss"] for x in self.training_step_outputs]).mean()
-        self.log("mel", avg_mel_loss, on_epoch=True, prog_bar=True, sync_dist=True)
-        self.log("pitch", avg_pitch_loss, on_epoch=True, prog_bar=True, sync_dist=True)
-        self.log("energy", avg_energy_loss, on_epoch=True, prog_bar=True, sync_dist=True)
-        self.log("dur", avg_duration_loss, on_epoch=True, prog_bar=True, sync_dist=True)
-        self.log("loss", avg_loss, on_epoch=True, prog_bar=True, sync_dist=True)
+        self.log("amel", avg_mel_loss, on_epoch=True, prog_bar=False, sync_dist=True)
+        self.log("apitch", avg_pitch_loss, on_epoch=True, prog_bar=False, sync_dist=True)
+        self.log("aenergy", avg_energy_loss, on_epoch=True, prog_bar=False, sync_dist=True)
+        self.log("adur", avg_duration_loss, on_epoch=True, prog_bar=False, sync_dist=True)
+        self.log("aloss", avg_loss, on_epoch=True, prog_bar=False, sync_dist=True)
         self.log("lr", self.scheduler.get_last_lr()[0], on_epoch=True, prog_bar=True, sync_dist=True)
         self.training_step_outputs.clear()
 
