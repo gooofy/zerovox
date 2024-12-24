@@ -7,7 +7,7 @@ path:
   preprocessed_path: "./preprocessed_data/de_thorsten"
 
 preprocessing:
-  val_size: 10
+  val_size: 1
   text:
     language: "de"
     speaker: "de_thorsten"
@@ -28,6 +28,6 @@ preprocessing:
     eps: 1e-10
     log_base: 10.0
   pitch:
-    normalization: True
+    normalization: False
   energy:
-    normalization: True
+    normalization: False
