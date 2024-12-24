@@ -510,7 +510,8 @@ class VariancePredictor(nn.Module):
                  emb_size,
                  vp_filter_size,
                  vp_kernel_size,
-                 vp_dropout):
+                 vp_dropout,
+                 n_bins):
         super(VariancePredictor, self).__init__()
 
         self.input_size = emb_size # model_config["transformer"]["encoder_hidden"]
@@ -550,15 +551,25 @@ class VariancePredictor(nn.Module):
             )
         )
 
-        self.linear_layer = nn.Linear(self.conv_output_size, 1)
+        self._n_bins = n_bins
+        if not n_bins:
+            self.linear_layer = nn.Linear(self.conv_output_size, 1)
+        else:
+            self.linear_layer = nn.Linear(self.conv_output_size, n_bins)
 
     def forward(self, encoder_output, mask):
         out = self.conv_layer(encoder_output)
         out = self.linear_layer(out)
         out = out.squeeze(-1)
 
-        if mask is not None:
-            out = out.masked_fill(mask, 0.0)
+        if self._n_bins:
+            # out = torch.argmax(out, dim=2)
+            if mask is not None:
+                emask = torch.unsqueeze(mask, 2).expand(-1, -1, self._n_bins)
+                out = out.masked_fill(emask, 0.0)
+        else:
+            if mask is not None:
+                out = out.masked_fill(mask, 0.0)
 
         return out
 
@@ -580,43 +591,44 @@ class VarianceAdaptor(nn.Module):
                  vp_filter_size,
                  vp_kernel_size,
                  vp_dropout,
-                 ve_n_bins, # 256
-                 stats, # (pitch_min,pitch_max,energy_min,energy_max),
-                 ):
+                 ve_n_bins):
         
         super(VarianceAdaptor, self).__init__()
         self.duration_predictor = VariancePredictor(emb_size=emb_size,
                                                     vp_filter_size=vp_filter_size,
                                                     vp_kernel_size=vp_kernel_size,
-                                                    vp_dropout=vp_dropout)
+                                                    vp_dropout=vp_dropout,
+                                                    n_bins=0)
         self.length_regulator = LengthRegulator()
         self.pitch_predictor  = VariancePredictor(emb_size=emb_size,
                                                   vp_filter_size=vp_filter_size,
                                                   vp_kernel_size=vp_kernel_size,
-                                                  vp_dropout=vp_dropout)
+                                                  vp_dropout=vp_dropout,
+                                                  n_bins=ve_n_bins)
         self.energy_predictor = VariancePredictor(emb_size=emb_size,
                                                   vp_filter_size=vp_filter_size,
                                                   vp_kernel_size=vp_kernel_size,
-                                                  vp_dropout=vp_dropout)
+                                                  vp_dropout=vp_dropout,
+                                                  n_bins=ve_n_bins)
 
-        pitch_min  = stats[0]
-        pitch_max  = stats[1]
-        energy_min = stats[2]
-        energy_max = stats[3]
+        # pitch_min  = stats[0]
+        # pitch_max  = stats[1]
+        # energy_min = stats[2]
+        # energy_max = stats[3]
 
-        self.pitch_bins = nn.Parameter(
-            torch.exp(
-                torch.linspace(np.log(pitch_min), np.log(pitch_max), ve_n_bins - 1)
-            ),
-            requires_grad=False,
-        )
+        # self.pitch_bins = nn.Parameter(
+        #     torch.exp(
+        #         torch.linspace(np.log(pitch_min), np.log(pitch_max), ve_n_bins - 1)
+        #     ),
+        #     requires_grad=False,
+        # )
 
-        self.energy_bins = nn.Parameter(
-            torch.exp(
-                torch.linspace(np.log(energy_min), np.log(energy_max), ve_n_bins - 1)
-            ),
-            requires_grad=False,
-        )
+        # self.energy_bins = nn.Parameter(
+        #     torch.exp(
+        #         torch.linspace(np.log(energy_min), np.log(energy_max), ve_n_bins - 1)
+        #     ),
+        #     requires_grad=False,
+        # )
 
         self.pitch_embedding = nn.Embedding(
             ve_n_bins, emb_size
@@ -625,26 +637,25 @@ class VarianceAdaptor(nn.Module):
             ve_n_bins, emb_size
         )
 
-    def get_pitch_embedding(self, x, target, mask, control):
+    def get_pitch_embedding(self, x, target, mask):
         prediction = self.pitch_predictor(x, mask)
         if target is not None:
-            embedding = self.pitch_embedding(torch.bucketize(target, self.pitch_bins))
+            # embedding = self.pitch_embedding(torch.bucketize(target, self.pitch_bins))
+            # out = torch.argmax(out, dim=2)
+            embedding = self.pitch_embedding(torch.argmax(target, dim=2))
         else:
-            prediction = prediction * control
-            embedding = self.pitch_embedding(
-                torch.bucketize(prediction, self.pitch_bins)
-            )
+            # embedding = self.pitch_embedding(
+            #     torch.bucketize(prediction, self.pitch_bins)
+            # )
+            embedding = self.pitch_embedding(torch.argmax(prediction, dim=2))
         return prediction, embedding
 
-    def get_energy_embedding(self, x, target, mask, control):
+    def get_energy_embedding(self, x, target, mask):
         prediction = self.energy_predictor(x, mask)
         if target is not None:
-            embedding = self.energy_embedding(torch.bucketize(target, self.energy_bins))
+            embedding = self.energy_embedding(torch.argmax(target, dim=2))
         else:
-            prediction = prediction * control
-            embedding = self.energy_embedding(
-                torch.bucketize(prediction, self.energy_bins)
-            )
+            embedding = self.energy_embedding(torch.argmax(prediction, dim=2))
         return prediction, embedding
 
     def forward(
@@ -655,19 +666,17 @@ class VarianceAdaptor(nn.Module):
         max_len=None,
         pitch_target=None,
         energy_target=None,
-        duration_target=None,
-        p_control=1.0,
-        e_control=1.0,
-        d_control=1.0,
+        duration_target=None
     ):
 
         log_duration_prediction = self.duration_predictor(x, src_mask)
+
         pitch_prediction, pitch_embedding = self.get_pitch_embedding(
-            x, pitch_target, src_mask, p_control
+            x, pitch_target, src_mask
         )
         x = x + pitch_embedding
         energy_prediction, energy_embedding = self.get_energy_embedding(
-            x, energy_target, src_mask, e_control
+            x, energy_target, src_mask
         )
         x = x + energy_embedding
 
@@ -676,7 +685,7 @@ class VarianceAdaptor(nn.Module):
             duration_rounded = duration_target
         else:
             duration_rounded = torch.clamp(
-                (torch.round(torch.exp(log_duration_prediction) - 1) * d_control),
+                (torch.round(torch.exp(log_duration_prediction) - 1)),
                 min=0,
             )
             x, mel_len = self.length_regulator(x, duration_rounded, max_len)
@@ -709,8 +718,7 @@ class FS2Encoder(nn.Module):
                  vp_filter_size,
                  vp_kernel_size,
                  vp_dropout,
-                 ve_n_bins,
-                 stats):
+                 ve_n_bins):
 
         super(FS2Encoder, self).__init__()
 
@@ -728,10 +736,9 @@ class FS2Encoder(nn.Module):
                                                  vp_filter_size=vp_filter_size,
                                                  vp_kernel_size=vp_kernel_size,
                                                  vp_dropout=vp_dropout,
-                                                 ve_n_bins=ve_n_bins, # 256
-                                                 stats=stats)
+                                                 ve_n_bins=ve_n_bins)
 
-    def forward(self, x, style_embed, train=False, force_duration=False, p_control=1.0, e_control=1.0, d_control=1.0):
+    def forward(self, x, style_embed, train=False, force_duration=False):
         phoneme = x["phoneme"]
         puncts = x["puncts"]
         phoneme_mask = x["phoneme_mask"] if 'phoneme_mask' in x else torch.zeros_like(phoneme, dtype=torch.bool) # if phoneme.shape[0] > 1 else None
@@ -764,13 +771,10 @@ class FS2Encoder(nn.Module):
             pitch_target=pitch_target,       # p_targets,
             energy_target=energy_target,     # e_targets,
             duration_target=duration_target, # d_targets,
-            p_control=p_control,
-            e_control=e_control,
-            d_control=d_control,
         )
 
-        y = {"pitch": p_predictions.unsqueeze(-1),
-             "energy": e_predictions.unsqueeze(-1),
+        y = {"pitch": p_predictions,
+             "energy": e_predictions,
              "log_duration": log_d_predictions,
              "mel_len": mel_len_pred,
              "features": features,

@@ -38,10 +38,12 @@ def get_mask_from_lengths(lengths, max_len):
 
 class LJSpeechDataModule(LightningDataModule):
 
-    def __init__(self, preprocess_configs, symbols: G2PSymbols, batch_size=64, num_workers=4):
+    def __init__(self, preprocess_configs, symbols: G2PSymbols, stats, num_bins, batch_size=64, num_workers=4):
         super(LJSpeechDataModule, self).__init__()
         self.preprocess_configs = preprocess_configs
         self._symbols = symbols
+        self._stats = stats
+        self._num_bins = num_bins
         self.batch_size = batch_size
         self.num_workers = num_workers
 
@@ -105,13 +107,17 @@ class LJSpeechDataModule(LightningDataModule):
     def prepare_data(self):
         self.train_dataset = LJSpeechDataset("train.txt",
                                              self.preprocess_configs,
-                                             self._symbols)
+                                             self._symbols,
+                                             self._stats,
+                                             self._num_bins)
 
         #print("Train dataset size: {}".format(len(self.train_dataset)))
 
         self.test_dataset = LJSpeechDataset("val.txt",
                                             self.preprocess_configs,
-                                            self._symbols)
+                                            self._symbols,
+                                            self._stats,
+                                            self._num_bins)
 
         #print("Test dataset size: {}".format(len(self.test_dataset)))
 
@@ -140,7 +146,7 @@ class LJSpeechDataModule(LightningDataModule):
 
 class LJSpeechDataset(Dataset):
 
-    def __init__(self, filename, preprocess_configs, symbols: G2PSymbols):
+    def __init__(self, filename, preprocess_configs, symbols: G2PSymbols, stats, num_bins):
 
         self._symbols        = symbols
         self.max_text_length = 0
@@ -152,6 +158,8 @@ class LJSpeechDataset(Dataset):
         self.puncts             = []
         self.starts             = []
         self.ends               = []
+        self._stats             = stats
+        self._num_bins          = num_bins
 
         for pc in preprocess_configs:
 
@@ -185,18 +193,33 @@ class LJSpeechDataset(Dataset):
             f"mel-{basename}.npy",
         )
         mel = torch.from_numpy(np.load(mel_path)).to(torch.float32)
+
         pitch_path = os.path.join(
             preprocessed_path,
             "pitch",
             f"pitch-{basename}.npy",
         )
         pitch = torch.from_numpy(np.load(pitch_path)).to(torch.float32)
+        # def logarithmic_pitch_to_bin(pitch, pitch_min, pitch_max, num_bins):
+        #   y = np.log(pitch - pitch_min + 1.0) / np.log(pitch_max - pitch_min + 1.0)
+        #   y *= num_bins
+        #   return y
+        pitch = torch.log(pitch - torch.tensor(self._stats['pitch_min']-1.0).expand_as(pitch))
+        pitch /= torch.log(torch.tensor(self._stats['pitch_max']-self._stats['pitch_min']+1.0).expand_as(pitch))
+        pitch = torch.nn.functional.one_hot ((pitch*(self._num_bins-1)).type(torch.LongTensor), num_classes=self._num_bins)
+        pitch = pitch.float()
+        
         energy_path = os.path.join(
             preprocessed_path,
             "energy",
             f"energy-{basename}.npy",
         )
         energy = torch.from_numpy(np.load(energy_path)).to(torch.float32)
+        energy = torch.log(energy - torch.tensor(self._stats['energy_min']-1.0).expand_as(energy))
+        energy /= torch.log(torch.tensor(self._stats['energy_max']-self._stats['energy_min']+1.0).expand_as(energy))
+        energy = torch.nn.functional.one_hot ((energy*(self._num_bins-1)).type(torch.LongTensor), num_classes=self._num_bins)
+        energy = energy.float()
+
         duration_path = os.path.join(
             preprocessed_path,
             "duration",

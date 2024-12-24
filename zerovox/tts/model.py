@@ -160,7 +160,7 @@ class LinearWarmUpCosineDecayLR(LRScheduler):
 class ZeroVox(LightningModule):
     def __init__(self,
                  symbols: G2PSymbols,
-                 stats, 
+                 # stats, 
                  meldec_model,
                  sampling_rate,
                  hop_length,
@@ -218,8 +218,7 @@ class ZeroVox(LightningModule):
                                             vp_filter_size=vp_filter_size,
                                             vp_kernel_size=vp_kernel_size,
                                             vp_dropout=vp_dropout,
-                                            ve_n_bins=ve_n_bins,
-                                            stats=stats)
+                                            ve_n_bins=ve_n_bins)
 
         emb_size = embed_dim+punct_embed_dim
         dec_hidden = emb_size
@@ -365,8 +364,8 @@ class ZeroVox(LightningModule):
         phoneme_mask = x["phoneme_mask"]
         mel_mask = x["mel_mask"]
 
-        pitch = x["pitch"]
-        energy = x["energy"]
+        pitch_target = x["pitch"]
+        energy_target = x["energy"]
         duration_targets = x["duration"]
         log_duration_targets = torch.log(duration_targets.float() + 1)
         mel = y["mel"]
@@ -379,17 +378,21 @@ class ZeroVox(LightningModule):
     
         phoneme_mask = ~phoneme_mask
 
-        pitch_pred = pitch_pred[:,:pitch.shape[-1]]
-        pitch_pred = torch.squeeze(pitch_pred)
-        pitch = pitch.masked_select(phoneme_mask)
-        pitch_pred = pitch_pred.masked_select(phoneme_mask)
-        pitch_loss = nn.MSELoss()(pitch_pred, pitch)
+        pitch_pred   = pitch_pred.masked_select(phoneme_mask.unsqueeze(2).expand_as(pitch_pred))
+        pitch_target = pitch_target.masked_select(phoneme_mask.unsqueeze(2).expand_as(pitch_target))
+        # pitch_pred = pitch_pred[:,:pitch_target.shape[-1]]
+        # pitch_pred = torch.squeeze(pitch_pred)
+        # pitch_target = pitch_target.masked_select(phoneme_mask)
+        # pitch_pred = pitch_pred.masked_select(phoneme_mask)
+        pitch_loss = nn.MSELoss()(pitch_pred, pitch_target)
 
-        energy_pred = energy_pred[:,:energy.shape[-1]]
-        energy_pred = torch.squeeze(energy_pred)
-        energy      = energy.masked_select(phoneme_mask)
-        energy_pred = energy_pred.masked_select(phoneme_mask)
-        energy_loss = nn.MSELoss()(energy_pred, energy)
+        energy_pred   = energy_pred.masked_select(phoneme_mask.unsqueeze(2).expand_as(energy_pred))
+        energy_target = energy_target.masked_select(phoneme_mask.unsqueeze(2).expand_as(energy_target))
+        # energy_pred = energy_pred[:,:energy.shape[-1]]
+        # energy_pred = torch.squeeze(energy_pred)
+        # energy      = energy.masked_select(phoneme_mask)
+        # energy_pred = energy_pred.masked_select(phoneme_mask)
+        energy_loss = nn.MSELoss()(energy_pred, energy_target)
 
         # duration_pred = duration_pred[:,:duration.shape[-1]]
         # duration_pred = torch.squeeze(duration_pred)

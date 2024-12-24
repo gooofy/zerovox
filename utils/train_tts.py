@@ -315,11 +315,13 @@ if __name__ == "__main__":
 
     datamodule = LJSpeechDataModule(preprocess_configs=preprocess_configs,
                                     symbols=symbols,
+                                    stats=modelcfg['stats'],
+                                    num_bins=cfg['model']['encoder']['ve_n_bins'],
                                     batch_size=cfg['training']['batch_size'],
                                     num_workers=args.num_workers)
 
     model = ZeroVox ( symbols=symbols,
-                      stats=(modelcfg['stats']['pitch_min'],modelcfg['stats']['pitch_max'],modelcfg['stats']['energy_min'],modelcfg['stats']['energy_max']),
+                      # stats=(modelcfg['stats']['pitch_min'],modelcfg['stats']['pitch_max'],modelcfg['stats']['energy_min'],modelcfg['stats']['energy_max']),
                       meldec_model=args.meldec_model,
                       sampling_rate=modelcfg['audio']['sampling_rate'],
                       hop_length=modelcfg['audio']['hop_size'],
