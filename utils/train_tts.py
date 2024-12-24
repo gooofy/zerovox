@@ -183,8 +183,6 @@ if __name__ == "__main__":
                 'vp_filter_size'         : cfg['model']['encoder']['vp_filter_size'],
                 'vp_kernel_size'         : cfg['model']['encoder']['vp_kernel_size'],
                 'vp_dropout'             : cfg['model']['encoder']['vp_dropout'],
-                've_pitch_quantization'  : cfg['model']['encoder']['ve_pitch_quantization'],
-                've_energy_quantization' : cfg['model']['encoder']['ve_energy_quantization'],
                 've_n_bins'              : cfg['model']['encoder']['ve_n_bins'],
             },
             'decoder'       : {
@@ -345,8 +343,6 @@ if __name__ == "__main__":
                       vp_filter_size=cfg['model']['encoder']['vp_filter_size'],
                       vp_kernel_size=cfg['model']['encoder']['vp_kernel_size'],
                       vp_dropout=cfg['model']['encoder']['vp_dropout'],
-                      ve_pitch_quantization=cfg['model']['encoder']['ve_pitch_quantization'],
-                      ve_energy_quantization=cfg['model']['encoder']['ve_energy_quantization'],
                       ve_n_bins=cfg['model']['encoder']['ve_n_bins'],
 
                       resnet_layers=cfg['model']['resnet']['layers'],

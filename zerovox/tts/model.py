@@ -184,8 +184,6 @@ class ZeroVox(LightningModule):
                  vp_filter_size, # 256
                  vp_kernel_size, # 3
                  vp_dropout, # 0.5
-                 ve_pitch_quantization, # 'linear'
-                 ve_energy_quantization, # 'linear'
                  ve_n_bins, # 256
 
                  resnet_layers, #=[3, 4, 6, 3]
@@ -220,8 +218,6 @@ class ZeroVox(LightningModule):
                                             vp_filter_size=vp_filter_size,
                                             vp_kernel_size=vp_kernel_size,
                                             vp_dropout=vp_dropout,
-                                            ve_pitch_quantization=ve_pitch_quantization,
-                                            ve_energy_quantization=ve_energy_quantization,
                                             ve_n_bins=ve_n_bins,
                                             stats=stats)
 
