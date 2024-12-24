@@ -186,7 +186,7 @@ if __name__ == "__main__":
                 've_n_bins'              : cfg['model']['encoder']['ve_n_bins'],
             },
             'decoder'       : {
-                'kind'                   : cfg['model']['encoder']['kind'],
+                'kind'                   : cfg['model']['decoder']['kind'],
 
                 'n_layers'               : cfg['model']['decoder']['n_layers'],
                 'n_head'                 : cfg['model']['decoder']['n_head'],
