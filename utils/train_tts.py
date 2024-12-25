@@ -424,7 +424,8 @@ if __name__ == "__main__":
                       callbacks=[checkpoint_callback],
                       gradient_clip_val=cfg['training']['grad_clip'],
                       num_sanity_val_steps=0,
-                      logger=logger)
+                      logger=logger,
+                      log_every_n_steps=1)
 
     if args.compile:
         model = torch.compile(model)
