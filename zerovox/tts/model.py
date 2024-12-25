@@ -374,26 +374,28 @@ class ZeroVox(LightningModule):
         mel_mask = mel_mask.unsqueeze(-1)
         target = mel.masked_select(mel_mask)
         pred = mel_pred.masked_select(mel_mask)
-        mel_loss = nn.L1Loss()(pred, target)
+        mel_loss = torch.nn.functional.l1_loss(pred, target)
     
         phoneme_mask = ~phoneme_mask
 
-        pitch_pred   = pitch_pred.masked_select(phoneme_mask.unsqueeze(2).expand_as(pitch_pred))
-        pitch_target = pitch_target.masked_select(phoneme_mask.unsqueeze(2).expand_as(pitch_target))
+        # pitch_pred   = pitch_pred.masked_select(phoneme_mask.unsqueeze(2).expand_as(pitch_pred))
+        # pitch_target = pitch_target.masked_select(phoneme_mask.unsqueeze(2).expand_as(pitch_target))
         # pitch_pred = pitch_pred[:,:pitch_target.shape[-1]]
         # pitch_pred = torch.squeeze(pitch_pred)
         # pitch_target = pitch_target.masked_select(phoneme_mask)
         # pitch_pred = pitch_pred.masked_select(phoneme_mask)
-        pitch_loss = nn.MSELoss()(pitch_pred, pitch_target)
+        pitch_pred   = pitch_pred.masked_select(phoneme_mask)
+        pitch_target = pitch_target.masked_select(phoneme_mask)
+        pitch_loss = torch.nn.functional.mse_loss(pitch_pred, pitch_target)
         # pitch_loss = nn.CrossEntropyLoss()(pitch_pred, pitch_target)
 
-        energy_pred   = energy_pred.masked_select(phoneme_mask.unsqueeze(2).expand_as(energy_pred))
-        energy_target = energy_target.masked_select(phoneme_mask.unsqueeze(2).expand_as(energy_target))
+        energy_pred   = energy_pred.masked_select(phoneme_mask)
+        energy_target = energy_target.masked_select(phoneme_mask)
         # energy_pred = energy_pred[:,:energy.shape[-1]]
         # energy_pred = torch.squeeze(energy_pred)
         # energy      = energy.masked_select(phoneme_mask)
         # energy_pred = energy_pred.masked_select(phoneme_mask)
-        energy_loss = nn.MSELoss()(energy_pred, energy_target)
+        energy_loss = torch.nn.functional.mse_loss(energy_pred, energy_target)
         # energy_loss = nn.CrossEntropyLoss()(energy_pred, energy_target)
 
         # duration_pred = duration_pred[:,:duration.shape[-1]]
@@ -406,7 +408,7 @@ class ZeroVox(LightningModule):
 
         log_duration_pred    = log_duration_pred.masked_select(phoneme_mask)
         log_duration_targets = log_duration_targets.masked_select(phoneme_mask)
-        duration_loss = nn.MSELoss()(log_duration_pred, log_duration_targets)
+        duration_loss = torch.nn.functional.mse_loss(log_duration_pred, log_duration_targets)
 
         return mel_loss, pitch_loss, energy_loss, duration_loss
  

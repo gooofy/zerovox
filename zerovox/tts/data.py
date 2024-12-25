@@ -206,8 +206,9 @@ class LJSpeechDataset(Dataset):
         #   return y
         pitch = torch.log(pitch - torch.tensor(self._stats['pitch_min']-1.0).expand_as(pitch))
         pitch /= torch.log(torch.tensor(self._stats['pitch_max']-self._stats['pitch_min']+1.0).expand_as(pitch))
-        pitch = torch.nn.functional.one_hot ((pitch*(self._num_bins-1)).type(torch.LongTensor), num_classes=self._num_bins)
-        pitch = pitch.float()
+        # pitch = torch.nn.functional.one_hot ((pitch*(self._num_bins-1)).type(torch.LongTensor), num_classes=self._num_bins)
+        # pitch = pitch.float()
+        # pitch = pitch*(self._num_bins-1)
         
         energy_path = os.path.join(
             preprocessed_path,
@@ -217,8 +218,7 @@ class LJSpeechDataset(Dataset):
         energy = torch.from_numpy(np.load(energy_path)).to(torch.float32)
         energy = torch.log(energy - torch.tensor(self._stats['energy_min']-1.0).expand_as(energy))
         energy /= torch.log(torch.tensor(self._stats['energy_max']-self._stats['energy_min']+1.0).expand_as(energy))
-        energy = torch.nn.functional.one_hot ((energy*(self._num_bins-1)).type(torch.LongTensor), num_classes=self._num_bins)
-        energy = energy.float()
+        # energy = energy*(self._num_bins-1)
 
         duration_path = os.path.join(
             preprocessed_path,

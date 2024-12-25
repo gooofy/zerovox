@@ -510,8 +510,7 @@ class VariancePredictor(nn.Module):
                  emb_size,
                  vp_filter_size,
                  vp_kernel_size,
-                 vp_dropout,
-                 n_bins):
+                 vp_dropout):
         super(VariancePredictor, self).__init__()
 
         self.input_size = emb_size # model_config["transformer"]["encoder_hidden"]
@@ -551,25 +550,15 @@ class VariancePredictor(nn.Module):
             )
         )
 
-        self._n_bins = n_bins
-        if not n_bins:
-            self.linear_layer = nn.Linear(self.conv_output_size, 1)
-        else:
-            self.linear_layer = nn.Linear(self.conv_output_size, n_bins)
+        self.linear_layer = nn.Linear(self.conv_output_size, 1)
 
     def forward(self, encoder_output, mask):
         out = self.conv_layer(encoder_output)
         out = self.linear_layer(out)
         out = out.squeeze(-1)
 
-        if self._n_bins:
-            # out = torch.argmax(out, dim=2)
-            if mask is not None:
-                emask = torch.unsqueeze(mask, 2).expand(-1, -1, self._n_bins)
-                out = out.masked_fill(emask, 0.0)
-        else:
-            if mask is not None:
-                out = out.masked_fill(mask, 0.0)
+        if mask is not None:
+            out = out.masked_fill(mask, 0.0)
 
         return out
 
@@ -597,19 +586,16 @@ class VarianceAdaptor(nn.Module):
         self.duration_predictor = VariancePredictor(emb_size=emb_size,
                                                     vp_filter_size=vp_filter_size,
                                                     vp_kernel_size=vp_kernel_size,
-                                                    vp_dropout=vp_dropout,
-                                                    n_bins=0)
+                                                    vp_dropout=vp_dropout)
         self.length_regulator = LengthRegulator()
         self.pitch_predictor  = VariancePredictor(emb_size=emb_size,
                                                   vp_filter_size=vp_filter_size,
                                                   vp_kernel_size=vp_kernel_size,
-                                                  vp_dropout=vp_dropout,
-                                                  n_bins=ve_n_bins)
+                                                  vp_dropout=vp_dropout)
         self.energy_predictor = VariancePredictor(emb_size=emb_size,
                                                   vp_filter_size=vp_filter_size,
                                                   vp_kernel_size=vp_kernel_size,
-                                                  vp_dropout=vp_dropout,
-                                                  n_bins=ve_n_bins)
+                                                  vp_dropout=vp_dropout)
 
         # pitch_min  = stats[0]
         # pitch_max  = stats[1]
@@ -636,26 +622,31 @@ class VarianceAdaptor(nn.Module):
         self.energy_embedding = nn.Embedding(
             ve_n_bins, emb_size
         )
+        self._ve_n_bins = ve_n_bins
 
     def get_pitch_embedding(self, x, target, mask):
         prediction = self.pitch_predictor(x, mask)
         if target is not None:
             # embedding = self.pitch_embedding(torch.bucketize(target, self.pitch_bins))
             # out = torch.argmax(out, dim=2)
-            embedding = self.pitch_embedding(torch.argmax(target, dim=2))
+            # embedding = self.pitch_embedding(torch.argmax(target, dim=2))
+            embedding = self.pitch_embedding(torch.round(target*(self._ve_n_bins-1)).long())
         else:
             # embedding = self.pitch_embedding(
             #     torch.bucketize(prediction, self.pitch_bins)
             # )
-            embedding = self.pitch_embedding(torch.argmax(prediction, dim=2))
+            #embedding = self.pitch_embedding(torch.argmax(prediction, dim=2))
+            embedding = self.pitch_embedding(torch.clamp(torch.round(prediction*(self._ve_n_bins-1)).long(), min=0, max=self._ve_n_bins-1))
         return prediction, embedding
 
     def get_energy_embedding(self, x, target, mask):
         prediction = self.energy_predictor(x, mask)
         if target is not None:
-            embedding = self.energy_embedding(torch.argmax(target, dim=2))
+            #embedding = self.energy_embedding(torch.argmax(target, dim=2))
+            embedding = self.energy_embedding(torch.round(target*(self._ve_n_bins-1)).long())
         else:
-            embedding = self.energy_embedding(torch.argmax(prediction, dim=2))
+            #embedding = self.energy_embedding(torch.argmax(prediction, dim=2))
+            embedding = self.energy_embedding(torch.clamp(torch.round(prediction*(self._ve_n_bins-1)).long(), min=0, max=self._ve_n_bins-1))
         return prediction, embedding
 
     def forward(
