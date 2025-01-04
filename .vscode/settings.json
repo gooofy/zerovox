@@ -2,9 +2,13 @@
     "files.watcherExclude": {
         "**/attic/**": true,
         "**/configs/corpora/**.yaml": true,
+        "**/priv/configs/corpora/**.yaml": true,
         "**/dist/**": true,
         "**/models/**": true,
         "**/preprocessed_data/**": true,
-        "**/tmp/**": true
+        "**/pretrained_models/**": true,
+        "**/tmp/**": true,
+        "**/.git/objects/**": true,
+        "**/.git/subtree-cache/**": true
     }
 }
