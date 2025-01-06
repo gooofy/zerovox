@@ -31,7 +31,7 @@ from torch.optim import AdamW
 from torch.optim.lr_scheduler import LambdaLR
 from scipy.io import wavfile
 
-from zerovox.g2p.data import G2PSymbols
+from zerovox.tts.symbols import Symbols
 from zerovox.tts.ResNetSE34V2 import ResNetSE34V2
 from zerovox.tts.fs2 import FS2Encoder, FS2Decoder
 from zerovox.tts.styletts import StyleTTSDecoder
@@ -78,10 +78,10 @@ def download_model_file(model:str, relpath:str) -> Path:
 
     return target_path
 
-DEFAULT_MELDEC_MODEL_NAME = "meldec-libritts-multi-band-melgan-v2"
-#DEFAULT_MELDEC_MODEL_NAME = "meldec-libritts-hifigan-v1"
+#DEFAULT_MELDEC_MODEL_NAME = "meldec-libritts-multi-band-melgan-v2"
+DEFAULT_MELDEC_MODEL_NAME = "meldec-libritts-hifigan-v1"
 
-def get_meldec(modelspec: str|os.PathLike, infer_device=None, verbose=False):
+def get_meldec(modelspec: str|os.PathLike, infer_device='cpu', verbose=False):
 
     if os.path.isdir(modelspec):
 
@@ -159,7 +159,7 @@ class LinearWarmUpCosineDecayLR(LRScheduler):
 
 class ZeroVox(LightningModule):
     def __init__(self,
-                 symbols: G2PSymbols,
+                 symbols: Symbols,
                  # stats, 
                  meldec_model,
                  sampling_rate,
@@ -176,7 +176,8 @@ class ZeroVox(LightningModule):
                  punct_embed_dim, #=16,
                  dpe_embed_dim, #=64,
                  emb_reduction, #=1,
-                 max_seq_len, #=1000,
+                 max_mel_len, #=1000,
+                 max_txt_len,
 
                  fs2enc_layer, # 4
                  fs2enc_head, # 2
@@ -198,16 +199,14 @@ class ZeroVox(LightningModule):
                  decoder_dropout, #=0.2,
                  decoder_scln, #=True,
 
-                 wav_path="wavs", 
-                 infer_device=None, 
                  verbose=False,
                  ):
         super(ZeroVox, self).__init__()
 
-        self.save_hyperparameters(ignore=['meldec_model', 'infer_device', 'verbose'])
+        self.save_hyperparameters(ignore=['meldec_model', 'verbose'])
 
         self._phoneme_encoder = FS2Encoder(symbols=symbols,
-                                            max_seq_len=max_seq_len,
+                                            max_txt_len=max_txt_len,
                                             embed_dim=embed_dim,
                                             encoder_layer=fs2enc_layer,
                                             encoder_head=fs2enc_head,
@@ -226,7 +225,7 @@ class ZeroVox(LightningModule):
         self._spkemb = ResNetSE34V2(layers=resnet_layers, num_filters=resnet_num_filters, nOut=emb_size, encoder_type=resnet_encoder_type, n_mels=n_mels, log_input=False)
 
         if decoder_kind == 'fastspeech2':
-            self._mel_decoder = FS2Decoder(dec_max_seq_len=max_seq_len,
+            self._mel_decoder = FS2Decoder(dec_max_seq_len=max_mel_len,
                                            dec_hidden = dec_hidden,
                                            dec_n_layers = decoder_n_layers,
                                            dec_n_head = decoder_n_head,
@@ -247,7 +246,7 @@ class ZeroVox(LightningModule):
             raise Exception (f"unknown decoder kind: '{decoder_kind}'")
 
         if meldec_model:
-            self._meldec = get_meldec(modelspec=meldec_model, infer_device=infer_device, verbose=verbose)
+            self._meldec = get_meldec(modelspec=meldec_model, verbose=verbose)
         else:
             self._meldec = None
 

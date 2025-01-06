@@ -1,10 +1,30 @@
-# Epoch 62: 100%|█| 61827/61827 [10:39:43<00:00,  1.61it/s, v_num=0, mel=0.294, pitch=0.610, energy=0.212, dur=0.107, loson_train_epoch_end: resident size = 1829.0 MB
+
+audio:
+
+  sampling_rate     : 24000
+
+  fft_size          : 2048
+  fmax              : 7600
+  fmin              : 80
+  win_length        : 1200
+  window            : hann
+  num_mels          : 80
+  hop_size          : 300
+  filter_length     : 1200
+  eps               : 1e-10
+  log_base          : 10.0
+
 model:
+  max_txt_len       : 512  # characters
+  max_mel_len       : 1500 # mels, 1500*300/24000 = 18.75s
+
+  phones            : "'-abcdefghijklmnopqrstuvwxyz"
+  puncts            : " ,.;:-!?\""
+
   emb_dim           : 512  # phoneme embedding size     medium: 512, base: 384
   emb_reduction     : 1    #                            medium:   1, base:   1
   punct_emb_dim     : 16   # punctuation embedding size medium:  16, base:  16
   dpe_emb_dim       : 32   # embedding size for _d_uration, _p_itch and _e_nergy
-  max_seq_len       : 1500 # 1500*300/24000 = 18.75s
 
   encoder:
 
@@ -35,14 +55,7 @@ model:
     encoder_type    : "ASP" # "ASP" or "SAP"
 
 training:
-    max_epochs      : 40
-    warmup_epochs   : 2
-    val_epochs      : 1
-
-    lr              : 0.0001      # was: 0.00001
     weight_decay    : 0.0         # was: 0.00001
     betas           : [0.0, 0.99] # was: [0.0, 0.999]
     eps             : 0.000000001 # 1e-9, default: 1e-8
     grad_clip       : 1.0
-
-    batch_size      : 24

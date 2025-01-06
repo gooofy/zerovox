@@ -318,7 +318,7 @@ class Encoder(nn.Module):
     """ Encoder """
 
     def __init__(self,
-                 max_seq_len,
+                 max_txt_len,
                  symbols,
                  embed_dim,
                  encoder_layer,
@@ -330,7 +330,7 @@ class Encoder(nn.Module):
 
         super(Encoder, self).__init__()
 
-        n_position = max_seq_len + 1 # config["max_seq_len"] + 1
+        n_position = max_txt_len + 1 # config["max_txt_len"] + 1
         #n_src_vocab = symbols.num_phonemes + 1 # len(symbols) + 1
         #d_word_vec = encoder_hidden # config["transformer"]["encoder_hidden"]
         #n_layers = encoder_layer # config["transformer"]["encoder_layer"]
@@ -344,10 +344,10 @@ class Encoder(nn.Module):
         kernel_size = conv_kernel_size #config["transformer"]["conv_kernel_size"]
         dropout = encoder_dropout # config["transformer"]["encoder_dropout"]
 
-        self.max_seq_len = max_seq_len # config["max_seq_len"]
+        self.max_txt_len = max_txt_len # config["max_txt_len"]
         self.d_model = encoder_hidden
 
-        self.src_word_emb = nn.Embedding(symbols.num_phonemes + 1, embed_dim, padding_idx=0)
+        self.src_word_emb = nn.Embedding(symbols.num_phones + 1, embed_dim, padding_idx=0)
         # self.src_word_emb = nn.Embedding(
         #     n_src_vocab, d_word_vec, padding_idx=Constants.PAD
         # )
@@ -380,7 +380,7 @@ class Encoder(nn.Module):
         slf_attn_mask = mask.unsqueeze(1).expand(-1, max_len, -1)
 
         # -- Forward
-        if not self.training and src_seq.shape[1] > self.max_seq_len:
+        if not self.training and src_seq.shape[1] > self.max_mel_len:
             enc_output = x + get_sinusoid_encoding_table(
                 src_seq.shape[1], self.d_model
             )[: src_seq.shape[1], :].unsqueeze(0).expand(batch_size, -1, -1).to(
@@ -698,7 +698,7 @@ class FS2Encoder(nn.Module):
 
     def __init__(self,
                  symbols,
-                 max_seq_len,
+                 max_txt_len,
                  embed_dim,
                  encoder_layer,
                  encoder_head,
@@ -713,7 +713,7 @@ class FS2Encoder(nn.Module):
 
         super(FS2Encoder, self).__init__()
 
-        self._encoder = Encoder(max_seq_len=max_seq_len,
+        self._encoder = Encoder(max_txt_len=max_txt_len,
                                 symbols=symbols,
                                 embed_dim=embed_dim,
                                 encoder_layer=encoder_layer,

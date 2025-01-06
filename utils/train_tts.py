@@ -29,8 +29,7 @@ from lightning.pytorch.loggers import TensorBoardLogger
 
 from zerovox.tts.data import LJSpeechDataModule
 from zerovox.tts.model import ZeroVox
-from zerovox.g2p.data import G2PSymbols
-from zerovox.lexicon import Lexicon
+from zerovox.tts.symbols import Symbols
 from zerovox.tts.model import DEFAULT_MELDEC_MODEL_NAME
 
 from pathlib import Path
@@ -58,9 +57,9 @@ def get_args():
                         help="Path to model config.yaml",
                         required=True)
 
-    parser.add_argument("configs",
+    parser.add_argument("corpora",
                         type=str,
-                        help="Path to config.yamls",
+                        help="Path to corpus .yamls",
                         nargs='+')
 
     parser.add_argument('--out-folder',
@@ -77,13 +76,6 @@ def get_args():
                         type=str,
                         help="run name (optional)")
 
-    choices = ['cpu', 'cuda']
-    parser.add_argument("--infer-device",
-                        default=choices[1],
-                        choices=choices,
-                        type=str,
-                        help="Inference device",)
-
     parser.add_argument("--checkpoint",
                         default=None,
                         type=str,
@@ -93,13 +85,27 @@ def get_args():
                         action='store_true',
                         help='Print out debug information')
 
-    parser.add_argument('--compile',
-                        action='store_true',
-                        help='Train using the compiled model')
-
     parser.add_argument('--train-decoder-only',
                         action='store_true',
                         help='Train only the decoder part of the model (useful in incremental mode only, keeps all other module weights fixed)')
+
+    parser.add_argument('--max-epochs',
+                        type=int,
+                        default=40,
+                        help='Train for number of epochs, default: 40')
+    parser.add_argument('--warmup-epochs',
+                        type=int,
+                        default=2,
+                        help='Number of warmup epochs, default: 2')
+    parser.add_argument('--learning-rate',
+                        type=float,
+                        default=0.0001,
+                        help='Learning rate, default: 0.0001')
+    parser.add_argument('--batch-size',
+                        type=int,
+                        default=24,
+                        help='Training batch size, default: 24')
+
 
     args = parser.parse_args()
 
@@ -127,8 +133,8 @@ if __name__ == "__main__":
 
     print ("collecting .yaml files from specified paths...")
 
-    cfgfns = []
-    for cfgfn in args.configs:
+    corpora = []
+    for cfgfn in tqdm(args.corpora):
         if os.path.isdir(cfgfn):
             for cfn in os.listdir(cfgfn):
 
@@ -136,150 +142,30 @@ if __name__ == "__main__":
                 if ext != '.yaml':
                     continue
 
-                cfpath = os.path.join(cfgfn, cfn)
-                #print (f"{cfpath} ...")
-                cfgfns.append(cfpath)
+                cfgpath = os.path.join(cfgfn, cfn)
+                corpora.append(yaml.load(open(cfgpath, "r"), Loader=yaml.FullLoader))
         else:
-            #print (f"{cfgfn} ...")
-            cfgfns.append(cfgfn)
+            corpora.append(yaml.load(open(cfgfn, "r"), Loader=yaml.FullLoader))
 
-    if not cfgfns:
-        print ("*** error: no .yaml files found!")
-        sys.exit(1)
-    else:
-        print (f"{len(cfgfns)} .yaml files found.")
+    if not corpora:
+        raise Exception ("*** error: no .yaml files found!")
+    print (f"{len(corpora)} corpus .yaml files found.")
 
-    preprocess_configs = []
-
-    for fn in tqdm(cfgfns, desc="loading configs"):
-        preprocess_configs.append(yaml.load(open(fn, "r"), Loader=yaml.FullLoader))
-
-    cfg = yaml.load(open(args.model_config, 'r'), Loader=yaml.FullLoader)
-
-    modelcfg = {
-        'lang'          : [],
-        'audio': {
-            'sampling_rate' : None,
-            'hop_size'      : None,
-            'num_mels'      : None,
-            'filter_length' : None,
-            'win_length'    : None,
-            'mel_fmin'      : None,
-            'mel_fmax'      : None,
-            'fft_size'      : None,
-            'eps'           : None,
-            'window'        : None,
-            'log_base'      : None
-        },
-        'model': {
-            'emb_dim'       : cfg['model']['emb_dim'],
-            'emb_reduction' : cfg['model']['emb_reduction'],
-            'punct_emb_dim' : cfg['model']['punct_emb_dim'],
-            'max_seq_len'   : cfg['model']['max_seq_len'],
-            'encoder'       : {
-                'fs2_layer'              : cfg['model']['encoder']['fs2_layer'],
-                'fs2_head'               : cfg['model']['encoder']['fs2_head'],
-                'fs2_dropout'            : cfg['model']['encoder']['fs2_dropout'],
-                'vp_filter_size'         : cfg['model']['encoder']['vp_filter_size'],
-                'vp_kernel_size'         : cfg['model']['encoder']['vp_kernel_size'],
-                'vp_dropout'             : cfg['model']['encoder']['vp_dropout'],
-                've_n_bins'              : cfg['model']['encoder']['ve_n_bins'],
-            },
-            'decoder'       : {
-                'kind'                   : cfg['model']['decoder']['kind'],
-
-                'n_layers'               : cfg['model']['decoder']['n_layers'],
-                'n_head'                 : cfg['model']['decoder']['n_head'],
-                'conv_filter_size'       : cfg['model']['decoder']['conv_filter_size'],
-                'conv_kernel_size'       : cfg['model']['decoder']['conv_kernel_size'],
-                'dropout'                : cfg['model']['decoder']['dropout'],
-                'scln'                   : cfg['model']['decoder']['scln'],
-            },
-            'resnet' : {
-                'layers'         : cfg['model']['resnet']['layers'],
-                'num_filters'    : cfg['model']['resnet']['num_filters'],
-                'encoder_type'   : cfg['model']['resnet']['encoder_type'],
-            },
-        },
-        'stats': {
-            'energy_min'    : sys.float_info.max,
-            'energy_max'    : sys.float_info.min,
-            'pitch_min'     : sys.float_info.max,
-            'pitch_max'     : sys.float_info.min,
-        },
+    modelcfg = yaml.load(open(args.model_config, 'r'), Loader=yaml.FullLoader)
+    
+    modelcfg['stats'] = {
+        'energy_min' : sys.float_info.max,
+        'energy_max' : sys.float_info.min,
+        'pitch_min'  : sys.float_info.max,
+        'pitch_max'  : sys.float_info.min
     }
+    modelcfg['lang']                 = []
 
-    for pc in tqdm(preprocess_configs, desc="check cfg consistency"):
-        if pc['preprocessing']['text']['language'] not in modelcfg['lang']:
-            modelcfg['lang'].append(pc['preprocessing']['text']['language'])
+    for corpus in tqdm(corpora, desc="compute corpus stats"):
+        if corpus['language'] not in modelcfg['lang']:
+            modelcfg['lang'].append(corpus['language'])
 
-        if not modelcfg['audio']['sampling_rate']:
-            modelcfg['audio']['sampling_rate'] = pc['preprocessing']['audio']['sampling_rate']
-        else:
-            if modelcfg['audio']['sampling_rate'] != pc['preprocessing']['audio']['sampling_rate']:
-                raise Exception ('inconsistent rample rates detected')
-
-        if not modelcfg['audio']['hop_size']:
-            modelcfg['audio']['hop_size'] = pc['preprocessing']['mel']['hop_size']
-        else:
-            if modelcfg['audio']['hop_size'] != pc['preprocessing']['mel']['hop_size']:
-                raise Exception ('inconsistent hop lengths detected')
-
-        if not modelcfg['audio']['num_mels']:
-            modelcfg['audio']['num_mels'] = pc['preprocessing']['mel']['num_mels']
-        else:
-            if modelcfg['audio']['num_mels'] != pc['preprocessing']['mel']['num_mels']:
-                raise Exception ('inconsistent number of mel channels detected')
-
-        if not modelcfg['audio']['filter_length']:
-            modelcfg['audio']['filter_length'] = pc['preprocessing']['mel']['filter_length']
-        else:
-            if modelcfg['audio']['filter_length'] != pc['preprocessing']['mel']['filter_length']:
-                raise Exception ('inconsistent filter length detected')
-
-        if not modelcfg['audio']['win_length']:
-            modelcfg['audio']['win_length'] = pc['preprocessing']['mel']['win_length']
-        else:
-            if modelcfg['audio']['win_length'] != pc['preprocessing']['mel']['win_length']:
-                raise Exception ('inconsistent win length detected')
-
-        if not modelcfg['audio']['mel_fmin']:
-            modelcfg['audio']['mel_fmin'] = pc['preprocessing']['mel']['fmin']
-        else:
-            if modelcfg['audio']['mel_fmin'] != pc['preprocessing']['mel']['fmin']:
-                raise Exception ('inconsistent mel fmin detected')
-
-        if not modelcfg['audio']['mel_fmax']:
-            modelcfg['audio']['mel_fmax'] = pc['preprocessing']['mel']['fmax']
-        else:
-            if modelcfg['audio']['mel_fmax'] != pc['preprocessing']['mel']['fmax']:
-                raise Exception ('inconsistent mel fmax detected')
-
-        if not modelcfg['audio']['fft_size']:
-            modelcfg['audio']['fft_size'] = pc['preprocessing']['mel']['fft_size']
-        else:
-            if modelcfg['audio']['fft_size'] != pc['preprocessing']['mel']['fft_size']:
-                raise Exception ('inconsistent fft size detected')
-
-        if not modelcfg['audio']['eps']:
-            modelcfg['audio']['eps'] = pc['preprocessing']['mel']['eps']
-        else:
-            if modelcfg['audio']['eps'] != pc['preprocessing']['mel']['eps']:
-                raise Exception ('inconsistent eps detected')
-
-        if not modelcfg['audio']['window']:
-            modelcfg['audio']['window'] = pc['preprocessing']['mel']['window']
-        else:
-            if modelcfg['audio']['window'] != pc['preprocessing']['mel']['window']:
-                raise Exception ('inconsistent window detected')
-
-        if not modelcfg['audio']['log_base']:
-            modelcfg['audio']['log_base'] = pc['preprocessing']['mel']['log_base']
-        else:
-            if modelcfg['audio']['log_base'] != pc['preprocessing']['mel']['log_base']:
-                raise Exception ('inconsistent log_base detected')
-
-        with open(os.path.join(pc['path']['preprocessed_path'], 'stats.json')) as statsf:
+        with open(os.path.join(corpus['path']['preprocessed_path'], 'stats.json')) as statsf:
             stats = json.load(statsf)
             pitch_min, pitch_max   = stats["pitch"][:2]
             energy_min, energy_max = stats["energy"][:2]
@@ -294,18 +180,15 @@ if __name__ == "__main__":
             if pitch_max > modelcfg['stats']['pitch_max']:
                 modelcfg['stats']['pitch_max'] = pitch_max
 
-    lexicon       = Lexicon.load(modelcfg['lang'][0], load_dicts=False)
-    symbols       = G2PSymbols (lexicon.graphemes, lexicon.phonemes)
+    symbols       = Symbols (modelcfg['model']['phones'], modelcfg['model']['puncts'])
 
     os.makedirs (args.out_folder, exist_ok=True)
 
     if args.name:
         modelcfg_path = Path(args.out_folder) / f"modelcfg_{args.name}.yaml"
-        wav_path = Path(args.out_folder) / 'validation' / args.name
         checkpoint_path = Path(args.out_folder) / 'checkpoints' / args.name
     else:
         modelcfg_path = Path(args.out_folder) / "modelcfg.yaml"
-        wav_path = Path(args.out_folder) / 'validation'
         checkpoint_path = Path(args.out_folder) / 'checkpoints'
 
     with open (modelcfg_path, 'w') as modelcfgf:
@@ -313,54 +196,52 @@ if __name__ == "__main__":
 
     args.num_workers *= args.devices
 
-    datamodule = LJSpeechDataModule(preprocess_configs=preprocess_configs,
+    datamodule = LJSpeechDataModule(corpora=corpora,
                                     symbols=symbols,
                                     stats=modelcfg['stats'],
-                                    num_bins=cfg['model']['encoder']['ve_n_bins'],
-                                    batch_size=cfg['training']['batch_size'],
+                                    num_bins=modelcfg['model']['encoder']['ve_n_bins'],
+                                    batch_size=args.batch_size,
                                     num_workers=args.num_workers)
 
     model = ZeroVox ( symbols=symbols,
-                      # stats=(modelcfg['stats']['pitch_min'],modelcfg['stats']['pitch_max'],modelcfg['stats']['energy_min'],modelcfg['stats']['energy_max']),
                       meldec_model=args.meldec_model,
                       sampling_rate=modelcfg['audio']['sampling_rate'],
                       hop_length=modelcfg['audio']['hop_size'],
                       n_mels=modelcfg['audio']['num_mels'],
-                      lr=cfg['training']['lr'],
-                      weight_decay=cfg['training']['weight_decay'],
-                      betas=cfg['training']['betas'],
-                      eps=cfg['training']['eps'],
-                      max_epochs=cfg['training']['max_epochs'],
-                      warmup_epochs=cfg['training']['warmup_epochs'],
+                      lr=args.learning_rate,
+                      weight_decay=modelcfg['training']['weight_decay'],
+                      betas=modelcfg['training']['betas'],
+                      eps=modelcfg['training']['eps'],
+                      max_epochs=args.max_epochs,
+                      warmup_epochs=args.warmup_epochs,
 
-                      embed_dim=cfg['model']['emb_dim'],
-                      punct_embed_dim=cfg['model']['punct_emb_dim'],
-                      dpe_embed_dim=cfg['model']['dpe_emb_dim'],
-                      emb_reduction=cfg['model']['emb_reduction'],
-                      max_seq_len=cfg['model']['max_seq_len'],
+                      embed_dim=modelcfg['model']['emb_dim'],
+                      punct_embed_dim=modelcfg['model']['punct_emb_dim'],
+                      dpe_embed_dim=modelcfg['model']['dpe_emb_dim'],
+                      emb_reduction=modelcfg['model']['emb_reduction'],
+                      max_txt_len=modelcfg['model']['max_txt_len'],
+                      max_mel_len=modelcfg['model']['max_mel_len'],
 
-                      fs2enc_layer=cfg['model']['encoder']['fs2_layer'],
-                      fs2enc_head=cfg['model']['encoder']['fs2_head'],
-                      fs2enc_dropout=cfg['model']['encoder']['fs2_dropout'],
-                      vp_filter_size=cfg['model']['encoder']['vp_filter_size'],
-                      vp_kernel_size=cfg['model']['encoder']['vp_kernel_size'],
-                      vp_dropout=cfg['model']['encoder']['vp_dropout'],
-                      ve_n_bins=cfg['model']['encoder']['ve_n_bins'],
+                      fs2enc_layer=modelcfg['model']['encoder']['fs2_layer'],
+                      fs2enc_head=modelcfg['model']['encoder']['fs2_head'],
+                      fs2enc_dropout=modelcfg['model']['encoder']['fs2_dropout'],
+                      vp_filter_size=modelcfg['model']['encoder']['vp_filter_size'],
+                      vp_kernel_size=modelcfg['model']['encoder']['vp_kernel_size'],
+                      vp_dropout=modelcfg['model']['encoder']['vp_dropout'],
+                      ve_n_bins=modelcfg['model']['encoder']['ve_n_bins'],
 
-                      resnet_layers=cfg['model']['resnet']['layers'],
-                      resnet_num_filters=cfg['model']['resnet']['num_filters'],
-                      resnet_encoder_type=cfg['model']['resnet']['encoder_type'],
+                      resnet_layers=modelcfg['model']['resnet']['layers'],
+                      resnet_num_filters=modelcfg['model']['resnet']['num_filters'],
+                      resnet_encoder_type=modelcfg['model']['resnet']['encoder_type'],
 
-                      decoder_kind=cfg['model']['decoder']['kind'],
-                      decoder_n_layers=cfg['model']['decoder']['n_layers'],
-                      decoder_n_head=cfg['model']['decoder']['n_head'],
-                      decoder_conv_filter_size=cfg['model']['decoder']['conv_filter_size'],
-                      decoder_conv_kernel_size=cfg['model']['decoder']['conv_kernel_size'],
-                      decoder_dropout=cfg['model']['decoder']['dropout'],
-                      decoder_scln=cfg['model']['decoder']['scln'],
+                      decoder_kind=modelcfg['model']['decoder']['kind'],
+                      decoder_n_layers=modelcfg['model']['decoder']['n_layers'],
+                      decoder_n_head=modelcfg['model']['decoder']['n_head'],
+                      decoder_conv_filter_size=modelcfg['model']['decoder']['conv_filter_size'],
+                      decoder_conv_kernel_size=modelcfg['model']['decoder']['conv_kernel_size'],
+                      decoder_dropout=modelcfg['model']['decoder']['dropout'],
+                      decoder_scln=modelcfg['model']['decoder']['scln'],
 
-                      wav_path=str(wav_path),
-                      infer_device=args.infer_device,
                       verbose=args.verbose)
 
     # we restore the checkpoint manually to support partial training
@@ -418,21 +299,13 @@ if __name__ == "__main__":
     trainer = Trainer(accelerator=args.accelerator,
                       devices=args.devices,
                       precision=args.precision,
-                      check_val_every_n_epoch=cfg['training']['val_epochs'],
-                      max_epochs=cfg['training']['max_epochs'],
+                      #check_val_every_n_epoch=cfg['training']['val_epochs'],
+                      max_epochs=args.max_epochs,
                       default_root_dir=args.out_folder,
                       callbacks=[checkpoint_callback],
-                      gradient_clip_val=cfg['training']['grad_clip'],
-                      num_sanity_val_steps=0,
+                      gradient_clip_val=modelcfg['training']['grad_clip'],
+                      #num_sanity_val_steps=0,
                       logger=logger,
                       log_every_n_steps=1)
 
-    if args.compile:
-        model = torch.compile(model)
-
-    start_time = datetime.datetime.now()
-    #FIXME: remove ckpt_path = Path(args.checkpoint) if args.checkpoint else None
-    #FIXME: remove trainer.fit(model, datamodule=datamodule, ckpt_path = ckpt_path)
     trainer.fit(model, datamodule=datamodule)
-    elapsed_time = datetime.datetime.now() - start_time
-    print(f"Training time: {elapsed_time}")

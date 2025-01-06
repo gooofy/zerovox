@@ -1,32 +1,8 @@
 dataset: "LJSpeech"
+language: "de"
+speaker: "de_hui_SPEAKER"
 
 path:
   corpus_path: "/home/guenter/projects/hal9000/ennis/datasets/speech/de_hui/SPEAKER"
-  raw_path: "./preprocessed_data/de_hui_SPEAKER/wavs"
   preprocessed_path: "./preprocessed_data/de_hui_SPEAKER"
 
-preprocessing:
-  val_size: 1
-  text:
-    language: "de"
-    speaker: "de_hui_SPEAKER"
-    max_length: 512
-  audio:
-    sampling_rate: 24000
-    # max_wav_value: 32768.0
-  mel:
-    fft_size: 2048
-    fmax: 7600
-    fmin: 80
-    win_length: 1200
-    window: hann
-    num_mels: 80
-    hop_size: 300
-    max_len: 1490
-    filter_length: 1200
-    eps: 1e-10
-    log_base: 10.0
-  pitch:
-    normalization: False
-  energy:
-    normalization: False

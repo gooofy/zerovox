@@ -80,19 +80,6 @@
             "justMyCode": false
         },
         {
-            "name": "oovtool",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "utils/oovtool.py",
-            "console": "integratedTerminal",
-            //"args": ["configs/corpora/cv_de_100/de_cv_speaker_80.yaml"],
-            "args": ["-m", "models/g2p_en_autoreg_zamia_1/checkpoints",
-                     //"-a",
-                     "priv/configs/corpora/en_youtube_pi_1/en_youtube_speaker_00023.yaml"],
-            "cwd": "${workspaceFolder}",
-            "justMyCode": false
-        },
-        {
             "name": "import zamia lex",
             "type": "debugpy",
             "request": "launch",
@@ -113,46 +100,19 @@
             "justMyCode": false
         },
         {
-            "name": "prepare align cv 100",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "utils/prepare_align.py",
-            "console": "integratedTerminal",
-            //"args": ["configs/corpora/cv_de_100"],
-            "args": ["configs/corpora/cv_de_100/de_cv_speaker_0.yaml"],
-            "cwd": "${workspaceFolder}",
-            "justMyCode": false
-        },
-        {
-            "name": "train kaldi",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "utils/train_kaldi.py",
-            "console": "integratedTerminal",
-            "args": ["--model-name=tts_de_kaldi_zamia_1",
-                     "--num-jobs=12",
-                     "configs/corpora/cv_de_100",
-                     "configs/corpora/cv_de_100/de_cv_speaker_0.yaml",
-                     "configs/corpora/de_hui",
-                    ]
-        },
-        {
-            "name": "align de_hui_Karlsson",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "utils/align.py",
-            "console": "integratedTerminal",
-            "args": ["--kaldi-model=tts_de_kaldi_zamia_2",
-                     "configs/corpora/de_hui/de_hui_Karlsson.yaml"
-                    ]
-        },       
-        {
             "name": "preprocess de_hui_Karlsson",
             "type": "debugpy",
             "request": "launch",
             "program": "utils/preprocess.py",
             "console": "integratedTerminal",
-            "args": ["configs/corpora/de_hui/de_hui_Karlsson.yaml"]
+            "args": ["-l", "1000",
+                     "configs/tts_medium_styledec.yaml", 
+                     //"configs/corpora/de_hui"
+                     //"configs/corpora/de_hui/de_hui_Karlsson.yaml"
+                     "configs/corpora/de_thorsten.yaml"
+                     //"priv/configs/corpora/de_dlf"
+                    ],
+            "justMyCode": false
         },
         {
             "name": "train karlsson medium incr deconly",
@@ -179,8 +139,6 @@
             "console": "integratedTerminal",
             "args": ["-c", "configs/tts_medium_styledec.yaml",
                      "--accelerator=gpu", "--threads=24",
-                     "--infer-device=cpu",                     
-                     "--name=exp2",
                      "--out-folder=models/tts_de_zerovox_medium_karlsson",
                      //"configs/corpora/cv_de_100/de_cv_speaker_1.yaml"
                      "configs/corpora/de_hui/de_hui_Karlsson.yaml"

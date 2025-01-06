@@ -32,27 +32,15 @@ ZeroVOX Model Training
 Data Preparation
 ----------------
 
-(1/5) prepare corpus yamls:
+(1/2) prepare corpus yamls:
 
     pushd configs/corpora/cv_de_100
     ./gen_cv.sh
     popd
 
-(2/5) prepare alignment:
+(2/2) preprocess:
 
-    utils/prepare_align.py configs/corpora/cv_de_100
-
-(3/5) OOVs:
-
-    utils/oovtool.py -a -m zerovox-g2p-autoreg-zamia-de configs/corpora/cv_de_100
-
-(4/5) align:
-
-    utils/align.py --kaldi-model=tts_de_kaldi_zamia_4 configs/corpora/cv_de_100
-
-(5/5) preprocess:
-
-    utils/preprocess.py configs/corpora/cv_de_100
+    utils/preprocess.py configs/tts_medium_styledec.yaml configs/corpora/de_hui configs/corpora/cv_de_100 ...
 
 TTS Model Training
 ------------------
@@ -67,18 +55,6 @@ TTS Model Training
         configs/corpora/cv_de_100 \
         configs/corpora/de_hui/de_hui_*.yaml \
         configs/corpora/de_thorsten.yaml
-
-Kaldi Accoustic Model Training
-==============================
-
-    utils/train_kaldi.py --model-name=tts_de_kaldi_zamia_4 --num-jobs=12 configs/corpora/cv_de_100
-
-G2P Model Training
-==================
-
-run training:
-
-    scripts/train_g2p_de_autoreg.sh
 
 Credits
 =======
