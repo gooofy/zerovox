@@ -2,9 +2,9 @@
 zerovox
 
     Apache 2.0 License
-    2024 by Guenter Bartsch
+    2024, 2025 by Guenter Bartsch
 
-is based on:
+originally based on:
 
     EfficientSpeech: An On-Device Text to Speech Model
     https://ieeexplore.ieee.org/abstract/document/10094639
@@ -26,8 +26,9 @@ from pathlib import Path
 
 from zerovox.tts import refaudio, refaudio_local
 from zerovox.tts.model import ZeroVox, download_model_file
-from zerovox.g2p.g2p import G2P, DEFAULT_G2P_MODEL_NAME_DE, DEFAULT_G2P_MODEL_NAME_EN
 from zerovox.tts.mels import get_mel_from_wav, TacotronSTFT
+from zerovox.tts.symbols import Symbols
+from zerovox.tts.normalize import Normalizer
 
 DEFAULT_TTS_MODEL_NAME='tts_en_de_zerovox_alpha1'
 DEFAULT_REFAUDIO='en_speaker_00070.wav'
@@ -41,9 +42,9 @@ class ZeroVoxTTS:
 
     def __init__(self,
                  language: str,
+                 syms: Symbols,
                  checkpoint: str | os.PathLike,
                  meldec_model: str,
-                 g2p: G2P,
                  hop_length: int,
                  sampling_rate : int,
                  n_mel_channels : int,
@@ -57,7 +58,6 @@ class ZeroVoxTTS:
                  log_base: float,
                  infer_device: str = 'cpu',
                  num_threads: int = -1,
-                 do_compile: bool = False,
                  verbose: bool = False):
 
         self._hop_length = hop_length
@@ -77,8 +77,6 @@ class ZeroVoxTTS:
         self._log_base = log_base
         self._verbose = verbose
 
-        self._g2p = g2p
-
         self._model = ZeroVox.load_from_checkpoint(lang=language,
                                                    meldec_model=meldec_model,
                                                    sampling_rate=sampling_rate,
@@ -96,10 +94,9 @@ class ZeroVoxTTS:
 
         if num_threads > 0:
             torch.set_num_threads(num_threads)
-        if do_compile:
-            self._model = torch.compile(self._model, mode="reduce-overhead", backend="inductor")
 
-        self._symbols = self._g2p.symbols
+        self._symbols = syms
+        self._normalizer = Normalizer(language)
 
         self._stft = TacotronSTFT(
                         filter_length=filter_length,
@@ -110,6 +107,7 @@ class ZeroVoxTTS:
                         mel_fmin=mel_fmin,
                         mel_fmax=mel_fmax,
                         use_cuda=infer_device != 'cpu')
+
 
     @staticmethod
     def available_speakerrefs():
@@ -160,31 +158,34 @@ class ZeroVoxTTS:
 
         return style_embed
 
-    def ipa2phonemids(self, ipa:list[str]) -> tuple[list[int], list[int]]:
+    def transcript2phonemids(self, transcript:str) -> tuple[list[int], list[int]]:
 
         phones = []
         puncts = []
 
-        punct = self._symbols.encode_punct(' ')
+        punct = 0
         pidx = 0
 
-        while pidx < len(ipa):
+        while pidx < len(transcript):
 
             # collapse whitespace, handle punctuation
 
-            phone = ipa[pidx]
-            if phone == ' ' or self._symbols.is_punct(phone):
+            p = transcript[pidx]
+            if p == ' ' or self._symbols.is_punct(p):
 
-                punct = self._symbols.encode_punct(phone)
+                pu = self._symbols.encode_punct(p)
+                if pu>punct:
+                    punct = pu
 
                 pidx += 1
-                while pidx < len(ipa):
-                    phone = ipa[pidx]
-                    if phone != ' ' and not self._symbols.is_punct(phone):
+                while pidx < len(transcript):
+                    p = transcript[pidx]
+                    if p != ' ' and not self._symbols.is_punct(p):
                         break
 
-                    if phone != ' ':
-                        punct = self._symbols.encode_punct(phone)
+                    pu = self._symbols.encode_punct(p)
+                    if pu>punct:
+                        punct = pu
 
                     pidx += 1
 
@@ -193,26 +194,33 @@ class ZeroVoxTTS:
 
                 continue
 
-            if not self._symbols.is_phone(phone):
+            if not self._symbols.is_phone(p):
                 pidx += 1
                 continue
 
-            phones.append(phone)
+            punct = 0
+            phones.append(self._symbols.encode_phone(p))
             puncts.append(punct)
-            punct = self._symbols.encode_punct('')
             pidx += 1
 
-        return self._symbols.phones_to_ids(phones), self._symbols.puncts_to_ids(puncts)
+        return phones, puncts
 
     def text2phonemeids(self, text:str) -> tuple[list[int],list[int]]:
 
-        ipa = self._g2p(text)
+        phone_ids = []
+        punct_ids = []
 
-        phone_ids, punct_ids = self.ipa2phonemids(ipa)
+        transcript_uroman, _ = self._normalizer.normalize(text)
+
+        phone_ids, punct_ids = self.transcript2phonemids(transcript_uroman)
+
+        #  6,15,21,24,6,5,6,19,27,22,9,6,13,7,6,15,24,6,15,15
+        #  0, 0, 0, 0,0,0,0, 1, 0, 1,0,0, 0,0,0, 2, 0,0, 0, 0
+        #  E  n  t  w e d e  r  z  u h e  l f e  n, w e  n  n
 
         if self._verbose:
             print(f"Raw Text Sequence: {text}")
-            print(f"Phoneme Sequence : {ipa}")
+            print(f"Normalized       : {transcript_uroman}")
             print(f"Phoneme IDs      : {phone_ids}")
             print(f"Punct IDs        : {punct_ids}")
 
@@ -273,44 +281,18 @@ class ZeroVoxTTS:
 
             summary(self._model, input_data = {'x':x, 'force_duration':False, 'normalize_before':True}, depth=depth)
 
-    def ipa (self, ipa:list[str], spkemb):
-
-        phone_ids, punct_ids = self.ipa2phonemids(ipa)
-
-        if not phone_ids:
-            return np.array([[0.0]], dtype=np.float32), 0
-
-        phoneme  = np.array([phone_ids], dtype=np.int32)
-        puncts   = np.array([punct_ids], dtype=np.int32)
-
-        with torch.no_grad():
-            phoneme = torch.from_numpy(phoneme).int().to(self._infer_device)
-            puncts = torch.from_numpy(puncts).int().to(self._infer_device)
-            wav, length, _ = self._model.inference({"phoneme": phoneme, "puncts": puncts}, style_embed=spkemb)
-            wav = wav.cpu().numpy()
-
-        return wav, length
-
     @property
-    def g2p (self):
-        return self._g2p
+    def normalizer (self):
+        return self._normalizer
 
     @property
     def language (self):
-        return self._g2p._lang
+        return self._normalizer.language
 
     @language.setter
     def language(self, value):
-        if value != self._g2p._lang:
-
-            if value == 'de':
-                g2p_model_name = DEFAULT_G2P_MODEL_NAME_DE
-            elif value == 'en':
-                g2p_model_name = DEFAULT_G2P_MODEL_NAME_EN
-            else:
-                raise Exception (f"unsupported language: {value}")
-
-            self._g2p = G2P(value, model=g2p_model_name)
+        if value != self._normalizer.language:
+            self._normalizer = Normalizer(lang=value)
 
     @property
     def meldec_model (self):
@@ -320,11 +302,9 @@ class ZeroVoxTTS:
     def load_model(cls, 
                    modelpath: str | os.PathLike,
                    meldec_model: str | os.PathLike,
-                   g2p: G2P | str,
                    lang: str,
                    infer_device: str = 'cpu',
                    num_threads: int = -1,
-                   do_compile: bool = False,
                    verbose: bool = False) -> tuple[dict[str, any], "ZeroVoxTTS"]:
 
         # download model from huggingface if necessary
@@ -347,18 +327,15 @@ class ZeroVoxTTS:
         with open (config_path) as modelcfgf:
             modelcfg = yaml.load(modelcfgf, Loader=yaml.FullLoader)
 
-        if isinstance(g2p, str) :
-            g2p = G2P(lang, model=g2p)
-
         synth = ZeroVoxTTS ( language=modelcfg['lang'],
+                             syms=Symbols(phones=modelcfg['model']['phones'], puncts=modelcfg['model']['puncts']),
                              checkpoint=checkpoint,
                              meldec_model=str(meldec_model),
-                             g2p=g2p,
                              hop_length=modelcfg['audio']['hop_size'],
                              filter_length=modelcfg['audio']['filter_length'],
                              win_length=modelcfg['audio']['win_length'],
-                             mel_fmin=modelcfg['audio']['mel_fmin'],
-                             mel_fmax=modelcfg['audio']['mel_fmax'],
+                             mel_fmin=modelcfg['audio']['fmin'],
+                             mel_fmax=modelcfg['audio']['fmax'],
                              sampling_rate=modelcfg['audio']['sampling_rate'],
                              n_mel_channels=modelcfg['audio']['num_mels'],
                              fft_size=modelcfg['audio']['fft_size'],
@@ -367,7 +344,6 @@ class ZeroVoxTTS:
                              log_base=modelcfg['audio']['log_base'],
                              infer_device=infer_device,
                              num_threads=num_threads,
-                             do_compile=do_compile,
                              verbose=verbose)
         
         return modelcfg, synth

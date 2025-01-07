@@ -24,7 +24,6 @@ from torchinfo import summary
 
 from scipy.io import wavfile
 from zerovox.tts.synthesize import ZeroVoxTTS, DEFAULT_REFAUDIO
-from zerovox.g2p.g2p import DEFAULT_G2P_MODEL_NAME_DE, DEFAULT_G2P_MODEL_NAME_EN
 from zerovox.tts.model import DEFAULT_MELDEC_MODEL_NAME
 
 def write_wav_to_file(wav, length, filename, sample_rate=24000, hop_length=256):
@@ -51,9 +50,6 @@ def main():
                         choices=['en', 'de'],
                         type=str,
                         help="language: en or de, default: en",)
-    parser.add_argument('--compile',
-                        action='store_true',
-                        help='Infer using the compiled model')    
     parser.add_argument("--model",
                         default=ZeroVoxTTS.get_default_model(),
                         help=f"TTS model to use: Path to model directory or model name, default: {ZeroVoxTTS.get_default_model()}")
@@ -77,21 +73,11 @@ def main():
 
     args = parser.parse_args()
 
-    if args.g2p_model:
-        g2p_model = args.g2p_model
-    else:
-        g2p_model = DEFAULT_G2P_MODEL_NAME_DE if args.lang=='de' else DEFAULT_G2P_MODEL_NAME_EN
-
-    if args.verbose:
-        print (f"using g2p_model: {g2p_model}")
-
     modelcfg, synth = ZeroVoxTTS.load_model(args.model,
-                                            g2p=g2p_model,
                                             lang=args.lang,
                                             meldec_model=args.meldec_model,
                                             infer_device=args.infer_device,
                                             num_threads=args.threads,
-                                            do_compile=args.compile,
                                             verbose=args.verbose)
 
     if args.verbose:
@@ -115,7 +101,7 @@ def main():
         #sd.default.latency = 'low'
 
     if args.verbose:
-        print ("computing speaker embedding...")
+        print (f"computing speaker {args.refaudio} embedding...")
 
     spkemb = synth.speaker_embed(ZeroVoxTTS.get_speakerref(args.refaudio, modelcfg['audio']['sampling_rate']))
 

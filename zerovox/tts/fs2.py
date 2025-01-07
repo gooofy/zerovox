@@ -380,7 +380,7 @@ class Encoder(nn.Module):
         slf_attn_mask = mask.unsqueeze(1).expand(-1, max_len, -1)
 
         # -- Forward
-        if not self.training and src_seq.shape[1] > self.max_mel_len:
+        if not self.training and src_seq.shape[1] > self.max_txt_len:
             enc_output = x + get_sinusoid_encoding_table(
                 src_seq.shape[1], self.d_model
             )[: src_seq.shape[1], :].unsqueeze(0).expand(batch_size, -1, -1).to(

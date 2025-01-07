@@ -105,12 +105,13 @@
             "request": "launch",
             "program": "utils/preprocess.py",
             "console": "integratedTerminal",
-            "args": ["-l", "1000",
+            "args": ["-l", "25",
                      "configs/tts_medium_styledec.yaml", 
                      //"configs/corpora/de_hui"
                      //"configs/corpora/de_hui/de_hui_Karlsson.yaml"
-                     "configs/corpora/de_thorsten.yaml"
+                     //"configs/corpora/de_thorsten.yaml"
                      //"priv/configs/corpora/de_dlf"
+                     "priv/configs/corpora/de_youtube_pi_1"
                     ],
             "justMyCode": false
         },
@@ -197,13 +198,14 @@
             "program": "utils/demo.py",
             "console": "integratedTerminal",
             "args": [
-                     "--model=models/tts_en_de_zerovox_medium_1_styledec",
+                     //"--model=models/tts_en_de_zerovox_medium_1_styledec",
+                     "--model=models/tts_de_zerovox2_medium_1_styledec",
                      "--verbose",
                      "--lang=de",
                      //"--meldec-model=meldec-libritts-hifigan-v1",
                      //"--refaudio=/home/guenter/projects/hal9000/ennis/voices/6s/en_digitalsculler_03.wav",
                      //"--refaudio=/home/guenter/projects/hal9000/ennis/voices/6s/de_tobias_meister_03.wav",
-                     //"--refaudio=/home/guenter/projects/hal9000/ennis/voices/6s/de_christoph_wittelsbürger_03.wav",
+                     "--refaudio=/home/guenter/projects/hal9000/ennis/voices/6s/de_christoph_wittelsbürger_03.wav",
                      //"--refaudio=../voices/12s_norm/de_christoph_wittelsbürger.wav"
                      //"--refaudio=de_christoph.wav",
                      //"--refaudio=preprocessed_data/de_hui_Karlsson/wavs/dschinnistan_dschinnistan_01_f000093.wav",
@@ -211,6 +213,7 @@
                      //"--iter=100",
                      "--wav-filename=base.wav",
                      "Der Regenbogen ist ein atmosphärisch-optisches Phänomen, das als kreisbogenförmiges farbiges Lichtband in einem von der Sonne beschienenen Regenschauer erscheint.",
+                     //"Entweder zu helfen, wenn"
                     ],
             "justMyCode": false
         },       
