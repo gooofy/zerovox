@@ -14,7 +14,7 @@
 #
 
 import os
-import re
+import multiprocessing
 import argparse
 import subprocess
 import shutil
@@ -30,96 +30,64 @@ import torch
 import torchaudio
 import numpy as np
 import scipy
-from sklearn.preprocessing import StandardScaler
+#from scipy.io import wavfile
+#from scipy.signal import resample
 
 import librosa
 import pyworld
 
 from zerovox.tts.mels import get_mel_from_wav, TacotronSTFT
 from zerovox.tts.symbols import Symbols
+from zerovox.tts.normalize import Normalizer
 
 MEL_LEN_HEADROOM = 10 # reduce max_mel_len by this margin to have some headroom in training
 
-#DEBUG_OFFSET = 433
-DEBUG_OFFSET = 0
-
-def spell_out_numbers(text, lang):
-    """
-    Spells out numbers within a string using num2words.
-
-    Args:
-        text: The input string.
-
-    Returns:
-        The string with numbers spelled out, or the original string if no numbers are found.
-        Returns an error message if num2words raises an exception (like for very large numbers).
-    """
-    try:
-        def replace_number(match):
-            num_str = match.group(0)
-            try:
-                num = int(num_str)
-                return num2words(num, lang=lang)
-            except ValueError:  # Handle floats
-                try:
-                    num = float(num_str)
-                    if num.is_integer(): #check if it is an integer represented as float
-                        return num2words(int(num), lang=lang)
-                    else:
-                        parts = str(num).split('.')
-                        integer_part = num2words(int(parts[0]), lang=lang)
-                        decimal_part = parts[1]
-                        decimal_as_int = int(decimal_part)
-                        decimal_spelled = num2words(decimal_as_int, lang=lang)
-                        return f"{integer_part} point {decimal_spelled}"
-                except ValueError:
-                    return num_str  # Return original if not a valid number
-            except OverflowError: #handle numbers too big for int
-                return f"Number too large to spell out"
-            except Exception as e:
-                return f"Error spelling out number: {e}"
-                
-        pattern = r"\b\d+(\.\d+)?\b"  # Matches whole numbers or decimals
-        new_text = re.sub(pattern, replace_number, text)
-
-        pattern = r"\d+"  # Matches remaining digits or numbers
-        new_text = re.sub(pattern, replace_number, new_text)
-
-        return new_text
-    except Exception as e:
-        return f"An unexpected error occurred: {e}"
-
-
-def normalize_uroman(text_uroman):
-    text = re.sub("([^a-z' ])", " ", text_uroman)
-    text = re.sub(' +', ' ', text)
-    return text.strip()
-
-def load_and_preprocess_audio(audio_path, target_sr):
+def batch_list(data, batch_size):
   """
-  Loads a mono WAV file and resamples it to the target sample rate
+  Transforms a list into a list of batches of up to a given max batch size.
 
   Args:
-    audio_path: Path to the WAV file.
-    target_sr: Target sample rate for resampling.
+    data: The input list.
+    batch_size: The maximum size of each batch.
 
   Returns:
-    A PyTorch tensor representing the audio samples.
+    A list of batches, where each batch is a sublist of `data`.
   """
+  batches = []
+  current_batch = []
+  for item in data:
+    current_batch.append(item)
+    if len(current_batch) == batch_size:
+      batches.append(current_batch)
+      current_batch = []
+  if current_batch:
+    batches.append(current_batch)
+  return batches
 
-  # Load audio using librosa
-  audio, sr = librosa.load(audio_path, mono=True) 
+def load_and_preprocess_audio(job):
 
-  # Resample audio to target sample rate
-  if sr != target_sr:
-    audio = librosa.resample(audio, orig_sr=sr, target_sr=target_sr)
+    audio_path = job['audio_path']
+    target_sr  = job['target_sr']
 
-  # Convert to PyTorch tensor
-  audio_tensor = torch.from_numpy(audio).float()
+    # Load the WAV file
+    sr, audio = scipy.io.wavfile.read(audio_path)
 
-  return audio_tensor
+    # Normalize the audio to floating-point values between -1 and 1
+    if audio.dtype != 'float32':
+        audio = audio / 32768.0  # Assuming 16-bit signed integer data
 
-def last_hop_above_threshold(audio, hop_size, threshold):
+    audio = audio.astype(np.float32)
+
+    # Calculate the number of samples in the resampled data
+    num_samples = int(len(audio) * (target_sr / sr))
+
+    # Resample the audio data
+    audio_resampled = scipy.signal.resample(audio, num_samples)
+  
+    return audio_resampled
+
+
+def first_and_last_hop_above_threshold(audio, hop_size, threshold):
   """
   Computes the last hop index in a mono audio waveform (torch tensor) 
   that contains audio above a given noise threshold.
@@ -145,30 +113,18 @@ def last_hop_above_threshold(audio, hop_size, threshold):
     hop_audio = audio[start:end]
     hop_masks[i] = torch.any(torch.abs(hop_audio) > threshold)
 
-  # Find the index of the last True value in the mask
-  last_hop_idx = torch.where(hop_masks)[0].max().item() if torch.any(hop_masks) else -1
+  # Find the index of the first and last True value in the mask
+  first_hop_idx = torch.where(hop_masks)[0].min().item() if torch.any(hop_masks) else 0
+  last_hop_idx = torch.where(hop_masks)[0].max().item() if torch.any(hop_masks) else num_hops-1
 
-  return last_hop_idx
+  return first_hop_idx, last_hop_idx
 
+class AudioPreprocessor:
 
-
-class Preprocessor:
-
-    def __init__(self, modelcfg, use_cuda=True):
-
-        self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-        self._uromanizer = uroman.Uroman()
-        self._syms = Symbols (phones=modelcfg['model']['phones'], puncts=modelcfg['model']['puncts'])
-        self._extra_puncts = set()
+    def __init__(self, modelcfg, use_cuda):
 
         self._modelcfg             = modelcfg
         self._target_sampling_rate = modelcfg['audio']['sampling_rate']
-
-        # mel spectrograms
-
-        self._max_txt_len   = modelcfg['model']["max_txt_len"]
-        self._max_mel_len   = modelcfg['model']["max_mel_len"] - MEL_LEN_HEADROOM
         self._fft_size      = modelcfg['audio']["fft_size"]
         self._hop_size      = modelcfg['audio']["hop_size"]
         self._win_length    = modelcfg['audio']["win_length"]
@@ -189,6 +145,154 @@ class Preprocessor:
                                   mel_fmax=self._fmax,
                                   use_cuda=use_cuda)
 
+    def process(self, job):
+
+        if 'durations' not in job:
+            return None
+
+        out_dir = job['out_dir']
+
+        destwav = f"{out_dir}/wavs/{job['dest_wav']}"
+
+        cmd = [ 'ffmpeg', '-y', '-v', 'quiet',
+                '-i', job['wav_path'],
+                '-filter', f'acompressor,loudnorm=I=-14.0,aresample={self._target_sampling_rate}',
+                '-ac', '1',
+                destwav ]
+
+        subprocess.run(cmd)
+
+        # mel
+
+        # Read and trim wav
+        wav, _ = librosa.load(destwav, sr=self._target_sampling_rate)
+        wav = wav[
+            job['start_hop'] * self._hop_size : job['end_hop'] * self._hop_size
+        ].astype(np.float32)
+
+        #print (f"wav shape: {wav.shape}")
+
+        # Compute fundamental frequency
+        pitch, t = pyworld.dio(
+            wav.astype(np.float64),
+            self._target_sampling_rate,
+            frame_period=self._hop_size / self._target_sampling_rate * 1000,
+        )
+        pitch = pyworld.stonemask(wav.astype(np.float64), pitch, t, self._target_sampling_rate)
+
+        # pitch = pitch[: sum(durations)]
+        # if np.sum(pitch != 0) <= 1:
+        #     continue
+
+        # Compute mel-scale spectrogram and energy
+
+        mel_spectrogram, energy = get_mel_from_wav(audio=wav,
+                    sampling_rate=self._target_sampling_rate,
+                    fft_size=self._fft_size, # =2048,
+                    hop_size=self._hop_size, # =300,
+                    win_length=self._win_length, # =1200,
+                    window=self._window, # ="hann",
+                    num_mels=self._num_mels, #=80,
+                    fmin=self._fmin, #=80,
+                    fmax=self._fmax, #=7600,
+                    eps=self._eps, #=1e-10,
+                    log_base=self._log_base, #=10.0,
+                    stft=self._stft)
+
+        durations = job['durations']
+
+        # mel_spectrogram = mel_spectrogram[:, : sum(durations)]
+        # energy = energy[: sum(durations)]
+
+        # compute pitch per phoneme
+        phoneme_pitches = np.zeros(len(durations), dtype=pitch.dtype)
+
+        # perform linear pitch interpolation
+        nonzero_ids = np.where(pitch != 0)[0]
+        interp_fn = scipy.interpolate.interp1d(
+            nonzero_ids,
+            pitch[nonzero_ids],
+            fill_value=(pitch[nonzero_ids[0]], pitch[nonzero_ids[-1]]),
+            bounds_error=False,
+        )
+        pitch = interp_fn(np.arange(0, len(pitch)))
+
+        # Phoneme-level average
+        pos = 0
+        for i, d in enumerate(durations):
+            #pos = phone_positions[i]
+            if (d>0) and (pos+d < len(pitch)):
+                phoneme_pitches[i] = np.mean(pitch[pos : pos + d])
+            else:
+                if pos < len(pitch):
+                    phoneme_pitches[i] = pitch[pos]
+                else:
+                    phoneme_pitches[i] = pitch[-1]
+            pos += d
+
+        # compute mean energy per phoneme
+        pos = 0
+        phoneme_energy = np.zeros(len(durations), dtype=pitch.dtype)
+        for i, d in enumerate(durations):
+            #pos = phone_positions[i]
+            if (d>0) and (pos+d < len(energy)):
+                phoneme_energy[i] = np.mean(energy[pos : pos + d])
+            else:
+                if pos < len(energy):
+                    phoneme_energy[i] = energy[pos]
+                else:
+                    phoneme_energy[i] = energy[-1]
+            pos += d
+
+        # make sure sum(durations) matches mel_spectrogram precisely
+        diff =  mel_spectrogram.shape[1] - sum(durations)
+        # print(diff)
+        durations[-1] += diff
+        assert sum(durations) == mel_spectrogram.shape[1]
+
+        # Save files
+
+        basename = os.path.basename(destwav)
+        basename = os.path.splitext(basename)[0]
+
+        dur_filename = f"duration-{basename}.npy"
+        np.save(os.path.join(out_dir, "duration", dur_filename), durations)
+
+        pitch_filename = f"pitch-{basename}.npy"
+        np.save(os.path.join(out_dir, "pitch", pitch_filename), phoneme_pitches)
+
+        energy_filename = f"energy-{basename}.npy"
+        np.save(os.path.join(out_dir, "energy", energy_filename), phoneme_energy)
+
+        mel_filename = f"mel-{basename}.npy"
+        np.save(os.path.join(out_dir, "mel", mel_filename), mel_spectrogram.T)
+
+        pmin = np.min(pitch)
+        pmax = np.max(pitch)
+
+        emin = np.min(energy)
+        emax = np.max(energy)
+
+        return pmin, pmax, emin, emax
+
+
+
+class Preprocessor:
+
+    def __init__(self, modelcfg, lang, use_cuda=True):
+
+        self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self._lang   = lang
+
+        self._syms = Symbols (phones=modelcfg['model']['phones'], puncts=modelcfg['model']['puncts'])
+        self._extra_puncts = set()
+
+        self._modelcfg             = modelcfg
+        self._max_txt_len          = modelcfg['model']["max_txt_len"]
+        self._max_mel_len          = modelcfg['model']["max_mel_len"] - MEL_LEN_HEADROOM
+        self._min_mel_len          = modelcfg['model']["min_mel_len"]
+        self._target_sampling_rate = modelcfg['audio']['sampling_rate']
+        self._hop_size             = modelcfg['audio']["hop_size"]
 
         # alignment model
 
@@ -216,327 +320,157 @@ class Preprocessor:
 
         return thop
 
-    def get_alignment(self, wav_path, transcript, lang):
+    def align (self, jobs, out_dir, batch_size, pool):
 
-        waveform = load_and_preprocess_audio(wav_path, target_sr=self._align_sample_rate)
-        waveform = waveform.unsqueeze(dim=0)
+        batches = batch_list(jobs, batch_size=batch_size)
 
-        with torch.inference_mode():
-            emission, _ = self._model(waveform.to(self._device))
+        for batch in tqdm(batches, desc="align"):
 
-        # print(f"emissions: {emission.shape}")
+            waveforms = pool.map(load_and_preprocess_audio, [{'audio_path': job['wav_path'], 'target_sr':self._align_sample_rate} for job in batch])
 
-        # normalize the transcript
+            max_len = max(len(arr) for arr in waveforms)
 
-        transcript_uroman = transcript.replace("’", "'")
-        transcript_uroman = spell_out_numbers(transcript_uroman, lang=lang)
-        transcript_uroman = str(self._uromanizer.romanize_string(transcript_uroman)).lower().strip()
+            padded_wfs = []
+            for wf in waveforms:
+                pad_width = [(0, max_len - len(wf))] 
+                padded_wf = np.pad(wf, pad_width, mode='constant', constant_values=0.0)
+                padded_wfs.append(padded_wf)
 
-        if len(transcript_uroman) > self._max_txt_len:
-            return None
+            # Convert to PyTorch tensor
+            audio_tensor = torch.from_numpy(np.stack(padded_wfs))
 
-        transcript_normalized = normalize_uroman(transcript_uroman).split(' ')
+            with torch.inference_mode():
+                emissions, _ = self._model(audio_tensor.to(self._device))
 
-        tokenized_transcript = [self._dictionary[c] for word in transcript_normalized for c in word]
+            # forced alignment
 
-        # print (f"tokenized transcript: {tokenized_transcript}")
+            for emission, job, audio in zip(emissions, batch, audio_tensor):
 
-        # Computing alignments
+                tt = [self._dictionary[c] for word in job['transcript_normalized'].split(' ') for c in word]
+                targets = torch.tensor([tt], dtype=torch.int32, device=self._device)
 
-        # Frame-level alignments
+                aligned_tokens, alignment_scores = torchaudio.functional.forced_align(emission.unsqueeze(0), targets, blank=0)
 
-        targets = torch.tensor([tokenized_transcript], dtype=torch.int32, device=self._device)
-        alignments, scores = torchaudio.functional.forced_align(emission, targets, blank=0)
+                tokens = aligned_tokens[0]
+                scores = alignment_scores[0]
 
-        aligned_tokens, alignment_scores = alignments[0], scores[0]  # remove batch dimension for simplicity
-        alignment_scores = alignment_scores.exp()  # convert back to probability
+                scores = scores.exp()  # convert back to probability
 
-        # Token-level alignments
+                # Token-level alignments
 
-        # Next step is to resolve the repetation, so that each alignment does not depend 
-        # on previous alignments. torchaudio.functional.merge_tokens() computes the 
-        # TokenSpan object, which represents which token from the transcript is present 
-        # at what time span.
+                token_spans = torchaudio.functional.merge_tokens(tokens, scores)
 
-        token_spans = torchaudio.functional.merge_tokens(aligned_tokens, alignment_scores)
+                ts_pos           = 0
+                end_hop          = 0
+                durations        = []
+                puncts           = []
+                phones           = []
 
-        ts_pos           = 0
-        start_hop        = 0
-        end_hop          = 0
-        durations        = []
-        puncts           = []
-        phones           = []
-        last_token_start = 0
+                # include some extra hops at start and end (model tends to truncate phones)
 
-        for s_idx, s in enumerate(token_spans):
+                start_hop, end_hop_th = first_and_last_hop_above_threshold(audio, self._align_hop_size, threshold=0.004)
+                last_token_start = start_hop = self.ahop2thop(start_hop)
+                end_hop_th = self.ahop2thop(end_hop_th)
 
-            if ts_pos >= len(transcript_uroman):
-                raise Exception ("alignment error: ran out of transcript_uroman!")
+                transcript_uroman = job['transcript_uroman']
 
-            # print(f"{LABELS[s.token]}\t[{s.start:3d}, {s.end:3d})\t{s.score:.2f}")
+                for s_idx, s in enumerate(token_spans):
 
-            token = self._labels[s.token]
+                    if ts_pos >= len(transcript_uroman):
+                        raise Exception ("alignment error: ran out of transcript_uroman!")
 
-            # collect punctuation leading up to this token
-            punct = self._syms.encode_punct(Symbols.NO_PUNCT)
-            
-            while (ts_pos < len(transcript_uroman)) and (transcript_uroman[ts_pos] != token):
+                    # print(f"{LABELS[s.token]}\t[{s.start:3d}, {s.end:3d})\t{s.score:.2f}")
 
-                cp = transcript_uroman[ts_pos]
+                    token = self._labels[s.token]
 
-                # print (f"punctuation: {cp}")
+                    # collect punctuation leading up to this token
+                    punct = self._syms.encode_punct(Symbols.NO_PUNCT)
+                    
+                    while (ts_pos < len(transcript_uroman)) and (transcript_uroman[ts_pos] != token):
 
-                if self._syms.is_punct(cp):
-                    punct_id = self._syms.encode_punct(cp)
-                    if punct_id >punct:
-                        punct = punct_id
-                else:
-                    self._extra_puncts.add(cp)
+                        cp = transcript_uroman[ts_pos]
 
-                ts_pos += 1
+                        # print (f"punctuation: {cp}")
 
-            if (ts_pos >= len(transcript_uroman)) or (transcript_uroman[ts_pos] != token):
-                raise Exception ("alignment error: transcript_uroman mismatch!")
+                        if self._syms.is_punct(cp):
+                            punct_id = self._syms.encode_punct(cp)
+                            if punct_id >punct:
+                                punct = punct_id
+                        else:
+                            self._extra_puncts.add(cp)
 
-            ts_pos += 1
+                        ts_pos += 1
 
-            if s_idx == 0:
-                start_hop = self.ahop2thop(s.start)
-            else:
-                durations[s_idx-1] = self.ahop2thop(s.start) - last_token_start
-                puncts[s_idx-1] = punct
+                    if (ts_pos >= len(transcript_uroman)) or (transcript_uroman[ts_pos] != token):
+                        raise Exception ("alignment error: transcript_uroman mismatch!")
 
-            durations.append(0)
-            puncts.append(0)
-            phones.append(self._syms.encode_phone(token))
-            last_token_start = self.ahop2thop(s.start)
+                    ts_pos += 1
 
-        if not durations:
-            return None
+                    if s_idx > 0:
+                        durations[s_idx-1] = self.ahop2thop(s.start) - last_token_start
+                        puncts[s_idx-1] = punct
+                        last_token_start = self.ahop2thop(s.start)
 
-        s = token_spans[-1]
-        end_hop = self.ahop2thop(s.end)
+                    durations.append(0)
+                    puncts.append(0)
+                    phones.append(self._syms.encode_phone(token))
 
-        # maybe include some extra hops (model tends to truncate phones)
-        end_hop_th = self.ahop2thop(last_hop_above_threshold(waveform[0], self._align_hop_size, threshold=0.02))
-        if end_hop_th>end_hop:
-            end_hop = end_hop_th
+                if not durations:
+                    return None
 
-        # deal with extra puncts at the end and last token / total duration
-        durations[-1] = end_hop-self.ahop2thop(s.start)
+                s = token_spans[-1]
+                end_hop = self.ahop2thop(s.end)
 
-        assert sum(durations) == end_hop-start_hop
+                # maybe include some extra hops (model tends to truncate phones)
+                if end_hop_th>end_hop:
+                    end_hop = end_hop_th
 
-        punct = self._syms.encode_punct(Symbols.NO_PUNCT)
-        while ts_pos < len(transcript_uroman):
+                # deal with extra puncts at the end and last token / total duration
+                durations[-1] = end_hop-self.ahop2thop(s.start)
 
-            cp = transcript_uroman[ts_pos]
+                assert sum(durations) == end_hop-start_hop
 
-            # print (f"punctuation: {cp}")
+                punct = self._syms.encode_punct(Symbols.NO_PUNCT)
+                while ts_pos < len(transcript_uroman):
 
-            if self._syms.is_punct(cp):
-                punct_id = self._syms.encode_punct(cp)
-                if punct_id >punct:
-                    punct = punct_id
-            else:
-                self._extra_puncts.add(cp)
+                    cp = transcript_uroman[ts_pos]
 
-            ts_pos += 1
+                    # print (f"punctuation: {cp}")
 
-        puncts[-1] = punct
-
-        #print (phones)
-        #print (puncts)
-        #print (durations)
-
-        return phones, puncts, durations, start_hop, end_hop
-
-    def process (self, jobs, out_dir, lang):
-
-        pitch_min = np.finfo(np.float64).max
-        pitch_max = np.finfo(np.float64).min
-        energy_min = np.finfo(np.float64).max
-        energy_max = np.finfo(np.float64).min
-
-        cnt = 0
-
-        for job in tqdm(jobs):
-
-            cnt += 1
-            if DEBUG_OFFSET and cnt<DEBUG_OFFSET:
-                continue
-
-            # audio preprocessing
-
-            destwav = f"{out_dir}/wavs/{job['dest_wav']}"
-
-            cmd = [ 'ffmpeg', '-y', '-v', 'quiet',
-                    '-i', job['wav_path'],
-                    '-filter', f'acompressor,loudnorm=I=-14.0,aresample={self._target_sampling_rate}',
-                    '-ac', '1',
-                    destwav ]
-
-            subprocess.run(cmd)
-
-            # transcript processing
-
-            alignment = self.get_alignment(wav_path=destwav, transcript=job['text'], lang=lang)
-
-            if not alignment:
-                continue
-
-            phones, puncts, durations, start_hop, end_hop = alignment
-
-            with open (destwav + ".txt", 'w') as labelf:
-                pos = start_hop
-                for phone, punct, dur in zip (phones, puncts, durations):
-                    labelf.write(f"{float(pos*self._hop_size)/self._target_sampling_rate}\t{float((pos+dur)*self._hop_size)/self._target_sampling_rate}\t{self._syms.decode_phone(phone)}\n")
-                    pos += dur
-
-            # mel
-
-            # Read and trim wav
-            wav, _ = librosa.load(destwav, sr=self._target_sampling_rate)
-            wav = wav[
-                start_hop * self._hop_size : end_hop * self._hop_size
-            ].astype(np.float32)
-
-            #print (f"wav shape: {wav.shape}")
-
-            # Compute fundamental frequency
-            pitch, t = pyworld.dio(
-                wav.astype(np.float64),
-                self._target_sampling_rate,
-                frame_period=self._hop_size / self._target_sampling_rate * 1000,
-            )
-            pitch = pyworld.stonemask(wav.astype(np.float64), pitch, t, self._target_sampling_rate)
-
-            # pitch = pitch[: sum(durations)]
-            if np.sum(pitch != 0) <= 1:
-                continue
-
-            # Compute mel-scale spectrogram and energy
-
-            mel_spectrogram, energy = get_mel_from_wav(audio=wav,
-                        sampling_rate=self._target_sampling_rate,
-                        fft_size=self._fft_size, # =2048,
-                        hop_size=self._hop_size, # =300,
-                        win_length=self._win_length, # =1200,
-                        window=self._window, # ="hann",
-                        num_mels=self._num_mels, #=80,
-                        fmin=self._fmin, #=80,
-                        fmax=self._fmax, #=7600,
-                        eps=self._eps, #=1e-10,
-                        log_base=self._log_base, #=10.0,
-                        stft=self._stft)
-
-            if mel_spectrogram.shape[1] > self._max_mel_len:
-                print (f"*** dropping sample because it exceeds mel max_mel_len: {destwav}")
-                continue
-            
-            # mel_spectrogram = mel_spectrogram[:, : sum(durations)]
-            # energy = energy[: sum(durations)]
-
-            # compute pitch per phoneme
-            phoneme_pitches = np.zeros(len(durations), dtype=pitch.dtype)
-
-            # perform linear pitch interpolation
-            nonzero_ids = np.where(pitch != 0)[0]
-            interp_fn = scipy.interpolate.interp1d(
-                nonzero_ids,
-                pitch[nonzero_ids],
-                fill_value=(pitch[nonzero_ids[0]], pitch[nonzero_ids[-1]]),
-                bounds_error=False,
-            )
-            pitch = interp_fn(np.arange(0, len(pitch)))
-
-            # Phoneme-level average
-            pos = 0
-            for i, d in enumerate(durations):
-                #pos = phone_positions[i]
-                if (d>0) and (pos+d < len(pitch)):
-                    phoneme_pitches[i] = np.mean(pitch[pos : pos + d])
-                else:
-                    if pos < len(pitch):
-                        phoneme_pitches[i] = pitch[pos]
+                    if self._syms.is_punct(cp):
+                        punct_id = self._syms.encode_punct(cp)
+                        if punct_id >punct:
+                            punct = punct_id
                     else:
-                        phoneme_pitches[i] = pitch[-1]
-                pos += d
+                        self._extra_puncts.add(cp)
 
-            # compute mean energy per phoneme
-            pos = 0
-            phoneme_energy = np.zeros(len(durations), dtype=pitch.dtype)
-            for i, d in enumerate(durations):
-                #pos = phone_positions[i]
-                if (d>0) and (pos+d < len(energy)):
-                    phoneme_energy[i] = np.mean(energy[pos : pos + d])
+                    ts_pos += 1
+
+                puncts[-1] = punct
+
+                # check and write final result
+
+                total_hops = end_hop - start_hop
+                if total_hops <= self._max_mel_len and total_hops >= self._min_mel_len:
+
+                    job['start_hop'] = start_hop
+                    job['end_hop'] = end_hop
+                    job['durations'] = durations
+
+                    metafn = f"{out_dir}/train.txt"
+                    with open(metafn, 'a') as metaf:
+                        metaf.write(f"{job['dest_wav']}|{','.join([str(p) for p in phones])}|{','.join([str(p) for p in puncts])}|{job['transcript']}\n")
+
+                    destwav = f"{out_dir}/wavs/{job['dest_wav']}"
+                    with open (destwav + ".txt", 'w') as labelf:
+                        pos = start_hop
+                        for phone, punct, dur in zip (phones, puncts, durations):
+                            labelf.write(f"{float(pos*self._hop_size)/self._target_sampling_rate}\t{float((pos+dur)*self._hop_size)/self._target_sampling_rate}\t{self._syms.decode_phone(phone)}\n")
+                            pos += dur
                 else:
-                    if pos < len(energy):
-                        phoneme_energy[i] = energy[pos]
-                    else:
-                        phoneme_energy[i] = energy[-1]
-                pos += d
+                    print (f"*** {job['wav_path']}: dropping sample because it exceeds mel len limits: {total_hops} vs [{self._min_mel_len}:{self._max_mel_len}]")
 
-            # make sure sum(durations) matches mel_spectrogram precisely
-            diff =  mel_spectrogram.shape[1] - sum(durations)
-            # print(diff)
-            durations[-1] += diff
-            assert sum(durations) == mel_spectrogram.shape[1]
-
-            # Save files
-
-            basename = os.path.basename(destwav)
-            basename = os.path.splitext(basename)[0]
-
-            dur_filename = f"duration-{basename}.npy"
-            np.save(os.path.join(out_dir, "duration", dur_filename), durations)
-
-            pitch_filename = f"pitch-{basename}.npy"
-            np.save(os.path.join(out_dir, "pitch", pitch_filename), phoneme_pitches)
-
-            energy_filename = f"energy-{basename}.npy"
-            np.save(os.path.join(out_dir, "energy", energy_filename), phoneme_energy)
-
-            mel_filename = f"mel-{basename}.npy"
-            np.save(os.path.join(out_dir, "mel", mel_filename), mel_spectrogram.T)
-
-            metafn = f"{out_dir}/train.txt"
-            with open(metafn, 'a') as metaf:
-                metaf.write(f"{job['dest_wav']}|{','.join([str(p) for p in phones])}|{','.join([str(p) for p in puncts])}|{job['text']}\n")
-
-            # update statistics
-
-            pmin = np.min(pitch)
-            if pmin < pitch_min:
-                pitch_min = pmin
-            pmax = np.max(pitch)
-            if pmax > pitch_max:
-                pitch_max = pmax
-
-            emin = np.min(energy)
-            if emin < energy_min:
-                energy_min = emin
-            emax = np.max(energy)
-            if emax > energy_max:
-                energy_max = emax
-
-
-        with open(os.path.join(out_dir, "stats.json"), "w") as f:
-            stats = {
-                "pitch": [
-                    float(pitch_min),
-                    float(pitch_max)
-                ],
-                "energy": [
-                    float(energy_min),
-                    float(energy_max)
-                ],
-            }
-            f.write(json.dumps(stats))
-
-        print (f"extra puncts : {self._extra_puncts}")
-
-def gen_jobs_from_metadata_file(in_dir, metadata_path, book=None):
+def gen_jobs_from_metadata_file(in_dir, out_dir, metadata_path, normalizer, max_txt_len, limit, book=None):
 
     jobs = []
 
@@ -557,16 +491,27 @@ def gen_jobs_from_metadata_file(in_dir, metadata_path, book=None):
 
                 dest_base_name = book + '_' + base_name if book else base_name
 
-                jobs.append({'text': text,
+                transcript_uroman, transcript_normalized = normalizer.normalize(text)
+
+                if len(transcript_normalized) > max_txt_len:
+                    print (f"dropping sample {base_name} because it exceeds max_txt_len ({max_txt_len})")
+                    continue
+
+                jobs.append({'transcript': text,
+                             'transcript_uroman' : transcript_uroman,
+                             'transcript_normalized' : transcript_normalized,
                              'wav_path': wav_path,
                              'dest_wav': f"{dest_base_name}.wav",
+                             'out_dir': out_dir,
                              })
+                if len(jobs) >= limit:
+                    break
 
     print (f"{metadata_path} -> {len(jobs)} jobs")
 
     return jobs
 
-def gather_jobs_from_config(config, limit: int):
+def gather_jobs_from_config(config, limit: int, normalizer, max_txt_len):
 
     if "LJSpeech" not in config["dataset"]:
         raise Exception (f"unknown dataset format '{config['dataset']}")
@@ -588,9 +533,11 @@ def gather_jobs_from_config(config, limit: int):
 
     metadata_path = os.path.join(in_dir, "metadata.csv")
 
+    # max_txt_len=23
+
     if os.path.isfile(metadata_path):
 
-        jobs = gen_jobs_from_metadata_file (in_dir=in_dir, metadata_path=metadata_path)
+        jobs = gen_jobs_from_metadata_file (in_dir=in_dir, out_dir = config["path"]["preprocessed_path"], metadata_path=metadata_path, normalizer=normalizer, max_txt_len=max_txt_len, limit=limit)
 
     else:
 
@@ -603,19 +550,20 @@ def gather_jobs_from_config(config, limit: int):
             metadata_path = os.path.join(bookdir, 'metadata.csv')
 
             if os.path.isfile(metadata_path):
-                jobs.extend(gen_jobs_from_metadata_file (in_dir=bookdir, metadata_path=metadata_path, book=book))
-
-    if limit:
-        jobs = jobs[:limit]
+                jobs.extend(gen_jobs_from_metadata_file (in_dir=bookdir, out_dir = config["path"]["preprocessed_path"], metadata_path=metadata_path, normalizer=normalizer, max_txt_len=max_txt_len, book=book, limit=limit-len(jobs)))
 
     return jobs
 
+
 if __name__ == "__main__":
+    multiprocessing.set_start_method('spawn')
 
     parser = argparse.ArgumentParser()
     parser.add_argument("modelcfg", type=str, help="model config to preprocess for")
     parser.add_argument("corpora", type=str, nargs='+', help="path[s] to corpus .yaml config file[s] or directorie[s]")
     parser.add_argument("-l", "--limit", type=int, default=1000, help="limit number auf audio files to process per config, default: 1000 (0=unlimited)")
+    parser.add_argument("-j", "--num-jobs", type=int, default=multiprocessing.cpu_count(), help=f"number of parallel jobs, default: {multiprocessing.cpu_count()}")
+    parser.add_argument("-b", "--batch-size", type=int, default=4, help=f"number of parallel jobs, default: 4")
     args = parser.parse_args()
 
     modelcfg = yaml.load(open(args.modelcfg, "r"), Loader=yaml.FullLoader)
@@ -646,14 +594,67 @@ if __name__ == "__main__":
     
     print (f"{len(corpus_configs)} corpora found.")
 
-    pproc = Preprocessor (modelcfg)
+    lang = None
+    for corpus in corpus_configs:
+        if not lang:
+            lang = corpus['language']
+        else:
+            if lang != corpus['language']:
+                raise Exception ('inconsistent languages detected')
+
+    normalizer = Normalizer(lang=lang)
+    pproc = Preprocessor (modelcfg, lang=lang, use_cuda=True)
+    aproc = AudioPreprocessor(modelcfg=modelcfg, use_cuda=False)
 
     for cfg in corpus_configs:
 
-        jobs = gather_jobs_from_config (cfg, limit=args.limit)
+        jobs = gather_jobs_from_config (cfg, limit=args.limit, normalizer=normalizer, max_txt_len=modelcfg['model']["max_txt_len"])
 
         print(f"gathered {len(jobs)} jobs.")
 
-        pproc.process (jobs, out_dir = cfg["path"]["preprocessed_path"], lang=cfg['language'])
+        #     print(p.map(pproc.process_audio, jobs))
+
+        # pproc.process (jobs, out_dir = cfg["path"]["preprocessed_path"])
+
+        with multiprocessing.Pool(args.num_jobs) as p:
+            pproc.align (jobs, out_dir = cfg["path"]["preprocessed_path"], batch_size=args.batch_size, pool=p)
+            p.map(aproc.process, jobs)
+
+            stats = list(tqdm(p.imap(aproc.process, jobs), total=len(jobs), desc="audio"))
+
+            pitch_min = np.finfo(np.float64).max
+            pitch_max = np.finfo(np.float64).min
+            energy_min = np.finfo(np.float64).max
+            energy_max = np.finfo(np.float64).min
+
+            if stats:
+                # update statistics
+
+                for pmin, pmax, emin, emax in stats:
+
+                    if pmin < pitch_min:
+                        pitch_min = pmin
+                    if pmax > pitch_max:
+                        pitch_max = pmax
+
+                    if emin < energy_min:
+                        energy_min = emin
+                    if emax > energy_max:
+                        energy_max = emax
 
 
+            with open(os.path.join(cfg["path"]["preprocessed_path"], "stats.json"), "w") as f:
+                stats = {
+                    "pitch": [
+                        float(pitch_min),
+                        float(pitch_max)
+                    ],
+                    "energy": [
+                        float(energy_min),
+                        float(energy_max)
+                    ],
+                }
+                f.write(json.dumps(stats))
+
+
+        print (f"extra puncts : {pproc._extra_puncts}")

@@ -16,6 +16,7 @@ audio:
 
 model:
   max_txt_len       : 512  # characters
+  min_mel_len       : 100  # mels,  100*300/24000 =  1.25s
   max_mel_len       : 1500 # mels, 1500*300/24000 = 18.75s
 
   phones            : "'-abcdefghijklmnopqrstuvwxyz"
