@@ -620,17 +620,22 @@ if __name__ == "__main__":
             pproc.align (jobs, out_dir = cfg["path"]["preprocessed_path"], batch_size=args.batch_size, pool=p)
             p.map(aproc.process, jobs)
 
-            stats = list(tqdm(p.imap(aproc.process, jobs), total=len(jobs), desc="audio"))
+            statlist = list(tqdm(p.imap(aproc.process, jobs), total=len(jobs), desc="audio"))
 
             pitch_min = np.finfo(np.float64).max
             pitch_max = np.finfo(np.float64).min
             energy_min = np.finfo(np.float64).max
             energy_max = np.finfo(np.float64).min
 
-            if stats:
+            if statlist:
                 # update statistics
 
-                for pmin, pmax, emin, emax in stats:
+                for stats in statlist:
+
+                    if not stats:
+                        continue
+                    
+                    pmin, pmax, emin, emax = stats
 
                     if pmin < pitch_min:
                         pitch_min = pmin
