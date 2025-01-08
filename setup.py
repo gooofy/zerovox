@@ -15,7 +15,7 @@ setup(
         #include=['zerovox', 'zerovox/g2p'],  # ['*'] by default
         #exclude=['mypackage.tests'],  # empty by default
   ),
-  version = '0.1.1',
+  version = '0.2.0',
   description = 'zero-shot realtime TTS system, fully offline, free and open source',
   long_description=long_description,
   author = 'Günter Bartsch',
