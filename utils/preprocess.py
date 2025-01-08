@@ -41,6 +41,7 @@ from zerovox.tts.symbols import Symbols
 from zerovox.tts.normalize import Normalizer
 
 MEL_LEN_HEADROOM = 10 # reduce max_mel_len by this margin to have some headroom in training
+MIN_TXT_LEN      = 5  # characters
 
 def batch_list(data, batch_size):
   """
@@ -493,6 +494,9 @@ def gen_jobs_from_metadata_file(in_dir, out_dir, metadata_path, normalizer, max_
 
                 transcript_uroman, transcript_normalized = normalizer.normalize(text)
 
+                if len(transcript_normalized) < MIN_TXT_LEN:
+                    print (f"dropping sample {base_name} because it is too short")
+                    continue
                 if len(transcript_normalized) > max_txt_len:
                     print (f"dropping sample {base_name} because it exceeds max_txt_len ({max_txt_len})")
                     continue
@@ -634,7 +638,7 @@ if __name__ == "__main__":
 
                     if not stats:
                         continue
-                    
+
                     pmin, pmax, emin, emax = stats
 
                     if pmin < pitch_min:
