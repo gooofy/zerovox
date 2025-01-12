@@ -51,7 +51,7 @@ class Normalizer:
                     return f"Number too large to spell out"
                 except Exception as e:
                     return f"Error spelling out number: {e}"
-                    
+
             pattern = r"\b\d+(\.\d+)?\b"  # Matches whole numbers or decimals
             new_text = re.sub(pattern, replace_number, text)
 
@@ -70,11 +70,11 @@ class Normalizer:
 
     def normalize (self, transcript):
 
-        transcript_uroman = transcript.replace("’", "'")
+        transcript_uroman = transcript.replace("’", "'").replace('»', '"').replace('«', '"').replace('…', '...').replace('–', '-').replace('„','"').replace('”','"').replace('´','\'').replace('`','\'').replace('‘','\'').replace('‚',',').replace('−','-').replace('‹','"').replace('›','"').replace('‑','-').replace('“','"').replace('1','1').replace('—','-')
         transcript_uroman = self.spell_out_numbers(transcript_uroman)
         transcript_uroman = str(self._uromanizer.romanize_string(transcript_uroman)).lower().strip()
 
         transcript_normalized = self.normalize_uroman(transcript_uroman)
 
         return transcript_uroman, transcript_normalized
-    
+
