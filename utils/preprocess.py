@@ -210,6 +210,8 @@ class AudioPreprocessor:
 
         # perform linear pitch interpolation
         nonzero_ids = np.where(pitch != 0)[0]
+        if not nonzero_ids.any():
+            return None
         interp_fn = scipy.interpolate.interp1d(
             nonzero_ids,
             pitch[nonzero_ids],
@@ -624,18 +626,19 @@ if __name__ == "__main__":
             pproc.align (jobs, out_dir = cfg["path"]["preprocessed_path"], batch_size=args.batch_size, pool=p)
             p.map(aproc.process, jobs)
 
-            statlist = list(tqdm(p.imap(aproc.process, jobs), total=len(jobs), desc="audio"))
-
             pitch_min = np.finfo(np.float64).max
             pitch_max = np.finfo(np.float64).min
             energy_min = np.finfo(np.float64).max
             energy_max = np.finfo(np.float64).min
 
-            if statlist:
-                # update statistics
+            with tqdm(total=len(jobs), desc="audio") as pbar:
 
-                for stats in statlist:
+                for stats in p.imap_unordered(aproc.process, jobs):
 
+                    pbar.update()
+                    pbar.refresh()
+
+                    # update statistics
                     if not stats:
                         continue
 
