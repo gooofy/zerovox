@@ -137,12 +137,13 @@ class LJSpeechDataset(Dataset):
         self._num_bins           = num_bins
 
         for corpus in corpora:
-            preprocessed_paths, filenames, phonemes, puncts, transcripts = self.process_meta(filename, corpus["path"]["preprocessed_path"])
-            self._preprocessed_paths.extend(preprocessed_paths)
-            self._filenames.extend(filenames)
-            self._phonemes.extend(phonemes)
-            self._puncts.extend(puncts)
-            self._transcripts.extend(transcripts)
+            if os.path.exists(os.path.join(corpus["path"]["preprocessed_path"], filename)):
+                preprocessed_paths, filenames, phonemes, puncts, transcripts = self.process_meta(filename, corpus["path"]["preprocessed_path"])
+                self._preprocessed_paths.extend(preprocessed_paths)
+                self._filenames.extend(filenames)
+                self._phonemes.extend(phonemes)
+                self._puncts.extend(puncts)
+                self._transcripts.extend(transcripts)
 
     def __len__(self):
         return len(self._transcripts)
