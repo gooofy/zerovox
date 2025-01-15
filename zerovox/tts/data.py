@@ -200,11 +200,17 @@ class LJSpeechDataset(Dataset):
             puncts = []
             for line in f.readlines():
                 filename,phoneme,punct,transcript = line.strip("\n").split("|")
-                preprocessed_paths.append(preprocessed_path)
-                filenames.append(filename)
-                phonemes.append([int(p) for p in phoneme.split(',')])
-                puncts.append([int(p) for p in punct.split(',')])
-                transcripts.append(transcript)
+
+                basename = os.path.splitext(filename)[0]
+                duration_path = os.path.join(preprocessed_path,"duration",f"duration-{basename}.npy")
+                if os.path.exists(duration_path):
+                    preprocessed_paths.append(preprocessed_path)
+                    filenames.append(filename)
+                    phonemes.append([int(p) for p in phoneme.split(',')])
+                    puncts.append([int(p) for p in punct.split(',')])
+                    transcripts.append(transcript)
+                else:
+                    print(f"{duration_path} missing -> skipping sample")
             return preprocessed_paths, filenames, phonemes, puncts, transcripts
 
 # if __name__ == "__main__":

@@ -432,6 +432,9 @@ class ZeroVox(LightningModule):
         self.log("energy", energy_loss, on_step=True, on_epoch=False, prog_bar=True, sync_dist=False)
         self.log("dur", duration_loss, on_step=True, on_epoch=False, prog_bar=True, sync_dist=False)
         
+        if torch.isinf(duration_loss) or torch.isnan(duration_loss):
+            print (f"*** error: invalid duration loss detected: {duration_loss}")
+
         return loss
 
 

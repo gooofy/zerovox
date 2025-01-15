@@ -13,7 +13,12 @@
 # 2025/01/05
 #
 
+import warnings
+# FIXME: keep enabled?
+#warnings.filterwarnings("error")
+
 import os
+import sys
 import multiprocessing
 import argparse
 import subprocess
@@ -122,9 +127,11 @@ def first_and_last_hop_above_threshold(audio, hop_size, threshold):
 
 class AudioPreprocessor:
 
-    def __init__(self, modelcfg, use_cuda):
+    def __init__(self, modelcfg, use_cuda, verbose):
 
         self._modelcfg             = modelcfg
+        self._verbose              = verbose
+
         self._target_sampling_rate = modelcfg['audio']['sampling_rate']
         self._fft_size      = modelcfg['audio']["fft_size"]
         self._hop_size      = modelcfg['audio']["hop_size"]
@@ -165,21 +172,32 @@ class AudioPreprocessor:
 
         # mel
 
+        if self._verbose:
+            print (f"{destwav}: librosa.load")
+            sys.stdout.flush()
+
         # Read and trim wav
         wav, _ = librosa.load(destwav, sr=self._target_sampling_rate)
         wav = wav[
             job['start_hop'] * self._hop_size : job['end_hop'] * self._hop_size
         ].astype(np.float32)
 
-        #print (f"wav shape: {wav.shape}")
-
         # Compute fundamental frequency
+        if self._verbose:
+            print (f"{destwav}: pyworld.dio")
+            sys.stdout.flush()
         pitch, t = pyworld.dio(
             wav.astype(np.float64),
             self._target_sampling_rate,
             frame_period=self._hop_size / self._target_sampling_rate * 1000,
         )
+        if self._verbose:
+            print (f"{destwav}: pyworld.stonemask")
+            sys.stdout.flush()
         pitch = pyworld.stonemask(wav.astype(np.float64), pitch, t, self._target_sampling_rate)
+
+        # librosa alternative
+        # f0 = librosa.yin(y, fmin=librosa.note_to_hz('C2'), fmax=librosa.note_to_hz('C7'))
 
         # pitch = pitch[: sum(durations)]
         # if np.sum(pitch != 0) <= 1:
@@ -187,6 +205,9 @@ class AudioPreprocessor:
 
         # Compute mel-scale spectrogram and energy
 
+        if self._verbose:
+            print (f"{destwav}: get_mel_from_wav")
+            sys.stdout.flush()
         mel_spectrogram, energy = get_mel_from_wav(audio=wav,
                     sampling_rate=self._target_sampling_rate,
                     fft_size=self._fft_size, # =2048,
@@ -206,6 +227,9 @@ class AudioPreprocessor:
         # energy = energy[: sum(durations)]
 
         # compute pitch per phoneme
+        if self._verbose:
+            print (f"{destwav}: compute pitch per phoneme")
+            sys.stdout.flush()
         phoneme_pitches = np.zeros(len(durations), dtype=pitch.dtype)
 
         # perform linear pitch interpolation
@@ -221,6 +245,9 @@ class AudioPreprocessor:
         pitch = interp_fn(np.arange(0, len(pitch)))
 
         # Phoneme-level average
+        if self._verbose:
+            print (f"{destwav}: Phoneme-level average")
+            sys.stdout.flush()
         pos = 0
         for i, d in enumerate(durations):
             #pos = phone_positions[i]
@@ -234,6 +261,9 @@ class AudioPreprocessor:
             pos += d
 
         # compute mean energy per phoneme
+        if self._verbose:
+            print (f"{destwav}: compute mean energy per phoneme")
+            sys.stdout.flush()
         pos = 0
         phoneme_energy = np.zeros(len(durations), dtype=pitch.dtype)
         for i, d in enumerate(durations):
@@ -252,8 +282,15 @@ class AudioPreprocessor:
         # print(diff)
         durations[-1] += diff
         assert sum(durations) == mel_spectrogram.shape[1]
+        if min(durations)<0:
+            print (f"{destwav}: negative duration detected: {durations} -> skipping")
+            return None
 
         # Save files
+
+        if self._verbose:
+            print (f"{destwav}: save")
+            sys.stdout.flush()
 
         basename = os.path.basename(destwav)
         basename = os.path.splitext(basename)[0]
@@ -282,10 +319,11 @@ class AudioPreprocessor:
 
 class Preprocessor:
 
-    def __init__(self, modelcfg, lang, use_cuda=True):
+    def __init__(self, modelcfg, lang, min_avg_score, use_cuda=True):
 
-        self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self._lang   = lang
+        self._device         = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self._lang           = lang
+        self._min_avg_score  = min_avg_score
 
         self._syms = Symbols (phones=modelcfg['model']['phones'], puncts=modelcfg['model']['puncts'])
         self._extra_puncts = set()
@@ -359,6 +397,18 @@ class Preprocessor:
 
                 scores = scores.exp()  # convert back to probability
 
+                if len(scores)==0:
+                    print (f"{job['wav_path']}: *** dropping sample because alignment failed")
+                    continue
+
+                # min_score = min(scores)
+                avg_score = sum(scores) / len(scores)
+                # print (f"{job['wav_path']}: min_score: {min_score}, avg_score: {avg_score}")
+
+                if avg_score < self._min_avg_score:
+                    print (f"{job['wav_path']}: *** dropping sample because avg alignment score is too low: {avg_score} < {self._min_avg_score}")
+                    continue
+
                 # Token-level alignments
 
                 token_spans = torchaudio.functional.merge_tokens(tokens, scores)
@@ -372,7 +422,12 @@ class Preprocessor:
                 # include some extra hops at start and end (model tends to truncate phones)
 
                 start_hop, end_hop_th = first_and_last_hop_above_threshold(audio, self._align_hop_size, threshold=0.004)
+                if token_spans:
+                    s = token_spans[0]
+                    if s.start<start_hop:
+                        start_hop = s.start
                 last_token_start = start_hop = self.ahop2thop(start_hop)
+
                 end_hop_th = self.ahop2thop(end_hop_th)
 
                 transcript_uroman = job['transcript_uroman']
@@ -430,6 +485,8 @@ class Preprocessor:
 
                 # deal with extra puncts at the end and last token / total duration
                 durations[-1] = end_hop-self.ahop2thop(s.start)
+
+                assert min(durations)>=0
 
                 assert sum(durations) == end_hop-start_hop
 
@@ -569,7 +626,9 @@ if __name__ == "__main__":
     parser.add_argument("corpora", type=str, nargs='+', help="path[s] to corpus .yaml config file[s] or directorie[s]")
     parser.add_argument("-l", "--limit", type=int, default=1000, help="limit number auf audio files to process per config, default: 1000 (0=unlimited)")
     parser.add_argument("-j", "--num-jobs", type=int, default=multiprocessing.cpu_count(), help=f"number of parallel jobs, default: {multiprocessing.cpu_count()}")
+    parser.add_argument("-m", "--min-alignment-score", type=float, default=0.9, help="minimum required alignment score to keep sample, default: 0.9 (90%)")
     parser.add_argument("-b", "--batch-size", type=int, default=4, help=f"number of parallel jobs, default: 4")
+    parser.add_argument('-v', '--verbose', action='store_true')
     args = parser.parse_args()
 
     modelcfg = yaml.load(open(args.modelcfg, "r"), Loader=yaml.FullLoader)
@@ -609,8 +668,8 @@ if __name__ == "__main__":
                 raise Exception ('inconsistent languages detected')
 
     normalizer = Normalizer(lang=lang)
-    pproc = Preprocessor (modelcfg, lang=lang, use_cuda=True)
-    aproc = AudioPreprocessor(modelcfg=modelcfg, use_cuda=False)
+    pproc = Preprocessor (modelcfg, lang=lang, min_avg_score=args.min_alignment_score, use_cuda=True)
+    aproc = AudioPreprocessor(modelcfg=modelcfg, use_cuda=False, verbose=args.verbose)
 
     for cfg in corpus_configs:
 
@@ -624,7 +683,6 @@ if __name__ == "__main__":
 
         with multiprocessing.Pool(args.num_jobs) as p:
             pproc.align (jobs, out_dir = cfg["path"]["preprocessed_path"], batch_size=args.batch_size, pool=p)
-            p.map(aproc.process, jobs)
 
             pitch_min = np.finfo(np.float64).max
             pitch_max = np.finfo(np.float64).min
