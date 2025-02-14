@@ -4,11 +4,13 @@ from num2words import num2words
 import uroman
 from zerovox.tts.symbols import Symbols
 
-
+# extend as needed, only these have been tested so far:
+SUPPORTED_LANGS = set(['en', 'de'])
 
 class Normalizer:
 
     def __init__(self, lang):
+        assert lang in SUPPORTED_LANGS
         self._lang = lang
         self._uromanizer = uroman.Uroman()
 

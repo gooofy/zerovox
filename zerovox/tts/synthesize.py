@@ -302,7 +302,6 @@ class ZeroVoxTTS:
     def load_model(cls, 
                    modelpath: str | os.PathLike,
                    meldec_model: str | os.PathLike,
-                   lang: str,
                    infer_device: str = 'cpu',
                    num_threads: int = -1,
                    verbose: bool = False) -> tuple[dict[str, any], "ZeroVoxTTS"]:
@@ -327,7 +326,7 @@ class ZeroVoxTTS:
         with open (config_path) as modelcfgf:
             modelcfg = yaml.load(modelcfgf, Loader=yaml.FullLoader)
 
-        synth = ZeroVoxTTS ( language=modelcfg['lang'],
+        synth = ZeroVoxTTS ( language=modelcfg['lang'][0],
                              syms=Symbols(phones=modelcfg['model']['phones'], puncts=modelcfg['model']['puncts']),
                              checkpoint=checkpoint,
                              meldec_model=str(meldec_model),

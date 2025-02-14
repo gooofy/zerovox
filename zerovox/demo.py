@@ -45,11 +45,6 @@ def main():
                         choices=choices,
                         type=str,
                         help="Inference device",)
-    parser.add_argument("-l", "--lang",
-                        default='en',
-                        choices=['en', 'de'],
-                        type=str,
-                        help="language: en or de, default: en",)
     parser.add_argument("--model",
                         default=ZeroVoxTTS.get_default_model(),
                         help=f"TTS model to use: Path to model directory or model name, default: {ZeroVoxTTS.get_default_model()}")
@@ -74,7 +69,6 @@ def main():
     args = parser.parse_args()
 
     modelcfg, synth = ZeroVoxTTS.load_model(args.model,
-                                            lang=args.lang,
                                             meldec_model=args.meldec_model,
                                             infer_device=args.infer_device,
                                             num_threads=args.threads,
