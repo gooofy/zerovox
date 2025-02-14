@@ -164,6 +164,7 @@ cython_debug/
 
 /models
 preprocessed_data
+preprocessed_data.phonetic
 pretrained_models
 oovs.dict
 priv

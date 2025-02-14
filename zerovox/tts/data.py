@@ -137,12 +137,13 @@ class LJSpeechDataset(Dataset):
         self._num_bins           = num_bins
 
         for corpus in corpora:
-            preprocessed_paths, filenames, phonemes, puncts, transcripts = self.process_meta(filename, corpus["path"]["preprocessed_path"])
-            self._preprocessed_paths.extend(preprocessed_paths)
-            self._filenames.extend(filenames)
-            self._phonemes.extend(phonemes)
-            self._puncts.extend(puncts)
-            self._transcripts.extend(transcripts)
+            if os.path.exists(os.path.join(corpus["path"]["preprocessed_path"], filename)):
+                preprocessed_paths, filenames, phonemes, puncts, transcripts = self.process_meta(filename, corpus["path"]["preprocessed_path"])
+                self._preprocessed_paths.extend(preprocessed_paths)
+                self._filenames.extend(filenames)
+                self._phonemes.extend(phonemes)
+                self._puncts.extend(puncts)
+                self._transcripts.extend(transcripts)
 
     def __len__(self):
         return len(self._transcripts)
@@ -199,11 +200,17 @@ class LJSpeechDataset(Dataset):
             puncts = []
             for line in f.readlines():
                 filename,phoneme,punct,transcript = line.strip("\n").split("|")
-                preprocessed_paths.append(preprocessed_path)
-                filenames.append(filename)
-                phonemes.append([int(p) for p in phoneme.split(',')])
-                puncts.append([int(p) for p in punct.split(',')])
-                transcripts.append(transcript)
+
+                basename = os.path.splitext(filename)[0]
+                duration_path = os.path.join(preprocessed_path,"duration",f"duration-{basename}.npy")
+                if os.path.exists(duration_path):
+                    preprocessed_paths.append(preprocessed_path)
+                    filenames.append(filename)
+                    phonemes.append([int(p) for p in phoneme.split(',')])
+                    puncts.append([int(p) for p in punct.split(',')])
+                    transcripts.append(transcript)
+                else:
+                    print(f"{duration_path} missing -> skipping sample")
             return preprocessed_paths, filenames, phonemes, puncts, transcripts
 
 # if __name__ == "__main__":

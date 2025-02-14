@@ -105,13 +105,31 @@
             "request": "launch",
             "program": "utils/preprocess.py",
             "console": "integratedTerminal",
-            "args": ["-l", "25",
+            "args": ["-l", "100",
                      "configs/tts_medium_styledec.yaml", 
                      //"configs/corpora/de_hui"
                      //"configs/corpora/de_hui/de_hui_Karlsson.yaml"
                      //"configs/corpora/de_thorsten.yaml"
                      //"priv/configs/corpora/de_dlf"
-                     "priv/configs/corpora/de_youtube_pi_1"
+                     //"priv/configs/corpora/de_youtube_pi_1"
+                     //"priv/configs/corpora/de_dlf2/de_dlf2_speaker_00353.yaml"
+                     //"priv/configs/corpora/de_dlf2/de_dlf2_speaker_00001.yaml"
+                     "priv/configs/corpora/de_abook"
+                    ],
+            "justMyCode": false
+        },
+        {
+            "name": "preprocess dbg",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "utils/preprocess.py",
+            "console": "integratedTerminal",
+            "args": [
+                        "--verbose",
+                        "-m", "0.5",
+                        "-j", "1",
+                        "configs/tts_medium_styledec.yaml",
+                        "priv/configs/corpora/de_dlf_dbg/de_dlf2_speaker_00011.yaml"
                     ],
             "justMyCode": false
         },
@@ -142,7 +160,8 @@
                      "--accelerator=gpu", "--threads=24",
                      "--out-folder=models/tts_de_zerovox_medium_karlsson",
                      //"configs/corpora/cv_de_100/de_cv_speaker_1.yaml"
-                     "configs/corpora/de_hui/de_hui_Karlsson.yaml"
+                     //"configs/corpora/de_hui/de_hui_Karlsson.yaml"
+                     "priv/configs/corpora/de_abook"
                     ],
             "justMyCode": false
         },
