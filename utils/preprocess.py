@@ -387,27 +387,33 @@ class Preprocessor:
 
             for emission, job, audio in zip(emissions, batch, audio_tensor):
 
-                tt = [self._dictionary[c] for word in job['transcript_normalized'].split(' ') for c in word]
-                targets = torch.tensor([tt], dtype=torch.int32, device=self._device)
+                try:
+                    tt = [self._dictionary[c] for word in job['transcript_normalized'].split(' ') for c in word]
+                    targets = torch.tensor([tt], dtype=torch.int32, device=self._device)
 
-                aligned_tokens, alignment_scores = torchaudio.functional.forced_align(emission.unsqueeze(0), targets, blank=0)
+                    aligned_tokens, alignment_scores = torchaudio.functional.forced_align(emission.unsqueeze(0), targets, blank=0)
 
-                tokens = aligned_tokens[0]
-                scores = alignment_scores[0]
+                    tokens = aligned_tokens[0]
+                    scores = alignment_scores[0]
 
-                scores = scores.exp()  # convert back to probability
+                    scores = scores.exp()  # convert back to probability
 
-                if len(scores)==0:
-                    print (f"{job['wav_path']}: *** dropping sample because alignment failed")
+                    if len(scores)==0:
+                        print (f"{job['wav_path']}: *** dropping sample because alignment failed")
+                        continue
+
+                    # min_score = min(scores)
+                    avg_score = sum(scores) / len(scores)
+                    # print (f"{job['wav_path']}: min_score: {min_score}, avg_score: {avg_score}")
+
+                    if avg_score < self._min_avg_score:
+                        print (f"{job['wav_path']}: *** dropping sample because avg alignment score is too low: {avg_score} < {self._min_avg_score}")
+                        continue
+
+                except RuntimeError as e:
+                    print (f"{job['wav_path']}: *** dropping sample due to RuntimeError: {e}")
                     continue
 
-                # min_score = min(scores)
-                avg_score = sum(scores) / len(scores)
-                # print (f"{job['wav_path']}: min_score: {min_score}, avg_score: {avg_score}")
-
-                if avg_score < self._min_avg_score:
-                    print (f"{job['wav_path']}: *** dropping sample because avg alignment score is too low: {avg_score} < {self._min_avg_score}")
-                    continue
 
                 # Token-level alignments
 
@@ -529,6 +535,8 @@ class Preprocessor:
                             pos += dur
                 else:
                     print (f"*** {job['wav_path']}: dropping sample because it exceeds mel len limits: {total_hops} vs [{self._min_mel_len}:{self._max_mel_len}]")
+
+
 
 def gen_jobs_from_metadata_file(in_dir, out_dir, metadata_path, normalizer, max_txt_len, limit, book=None):
 
