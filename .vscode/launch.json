@@ -205,8 +205,8 @@
             "request": "launch",
             "program": "utils/stats.py",
             "console": "integratedTerminal",
-            "args": ["configs/corpora/cv_de_100/de_cv_speaker_1.yaml",
-                     "configs/corpora/de_hui/de_hui_Karlsson.yaml"
+            "args": ["configs/tts_medium_styledec.yaml",
+                     "priv/configs/corpora/en_ljspeech.yaml"
                     ],
             "justMyCode": false
         },       
@@ -463,6 +463,15 @@
             "program": "priv/utils/meldebug.py",
             "console": "integratedTerminal",
             "args": [],
+            "justMyCode": false
+        },
+        {
+            "name": "import e",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "priv/utils/e_import.py",
+            "console": "integratedTerminal",
+            "args": ["en_emilia_B000000"],
             "justMyCode": false
         }
     ]

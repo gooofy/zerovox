@@ -12,16 +12,8 @@ from tqdm import tqdm
 def get_args():
     parser = argparse.ArgumentParser()
 
-    # parser.add_argument("-c", "--model-config",
-    #                     type=str,
-    #                     help="Path to model config.yaml",
-    #                     required=True)
-
-    parser.add_argument("configs",
-                        type=str,
-                        help="Path to config.yamls",
-                        nargs='+')
-
+    parser.add_argument("modelcfg", type=str, help="model config preprocessing was done for")
+    parser.add_argument("corpora", type=str, nargs='+', help="path[s] to corpus .yaml config file[s] or directorie[s]")
 
     parser.add_argument('--verbose',
                         action='store_true',
@@ -32,73 +24,62 @@ def get_args():
     return args
 
 
-
 if __name__ == "__main__":
     args = get_args()
 
-    print ("collecting .yaml files from specified paths...")
+    modelcfg = yaml.load(open(args.modelcfg, "r"), Loader=yaml.FullLoader)
 
-    cfgfns = []
-    for cfgfn in args.configs:
-        if os.path.isdir(cfgfn):
-            for cfn in os.listdir(cfgfn):
+    print (f"audio cfg:\n{modelcfg['audio']}")
+
+    for corpusfn in args.corpora:
+
+        corpus_configs = []
+
+        if os.path.isdir(corpusfn):
+            for cfn in os.listdir(corpusfn):
 
                 _, ext = os.path.splitext(cfn)
                 if ext != '.yaml':
                     continue
 
-                cfpath = os.path.join(cfgfn, cfn)
-                #print (f"{cfpath} ...")
-                cfgfns.append(cfpath)
+                cfpath = os.path.join(corpusfn, cfn)
+                cfg = yaml.load(open(cfpath, "r"), Loader=yaml.FullLoader)
+                corpus_configs.append(cfg)
         else:
-            #print (f"{cfgfn} ...")
-            cfgfns.append(cfgfn)
+            cfg = yaml.load(open(corpusfn, "r"), Loader=yaml.FullLoader)
+            corpus_configs.append(cfg)
 
-    if not cfgfns:
-        print ("*** error: no .yaml files found!")
-        sys.exit(1)
-    else:
-        print (f"{len(cfgfns)} .yaml files found.")
+        lang = None
+        for corpus in corpus_configs:
+            if not lang:
+                lang = corpus['language']
+            else:
+                if lang != corpus['language']:
+                    raise Exception ('inconsistent languages detected')
 
-    preprocess_configs = [yaml.load(open(fn, "r"), Loader=yaml.FullLoader) for fn in cfgfns]
+        sampling_rate = modelcfg['audio']['sampling_rate']
+        hop_length = modelcfg['audio']['hop_size']
+        num_speakers = 0
+        total_length = 0
 
-    # cfg = yaml.load(open(args.model_config, 'r'), Loader=yaml.FullLoader)
+        for pc in tqdm(corpus_configs):
 
-    sampling_rate = None
-    hop_length = None
-    num_speakers = 0
-    total_length = 0
+            num_speakers += 1
 
-    for pc in tqdm(preprocess_configs):
+            mel_dir = os.path.join(pc['path']['preprocessed_path'], 'mel')
+            for melfn in os.listdir(mel_dir):
 
-        num_speakers += 1
+                #print (melfn)
 
-        if not sampling_rate:
-            sampling_rate = pc['preprocessing']['audio']['sampling_rate']
-        else:
-            if sampling_rate != pc['preprocessing']['audio']['sampling_rate']:
-                raise Exception ('inconsistent rample rates detected')
+                if melfn.endswith('.npy'):
+                    mel_spectrogram = np.load(os.path.join(mel_dir, melfn))
+                    #print (mel_spectrogram.shape)
+                    num_frames = float(mel_spectrogram.shape[0])
+                    audio_length = (num_frames * hop_length) / sampling_rate
+                    total_length += audio_length
 
-        if not hop_length:
-            hop_length = pc['preprocessing']['mel']['hop_size']
-        else:
-            if hop_length != pc['preprocessing']['mel']['hop_size']:
-                raise Exception ('inconsistent hop lengths detected')
+                    #print (f"mel: {mel_spectrogram.shape} -> audio_length={audio_length}")
 
-        mel_dir = os.path.join(pc['path']['preprocessed_path'], 'mel')
-        for melfn in os.listdir(mel_dir):
+                #break
 
-            #print (melfn)
-
-            if melfn.endswith('.npy'):
-                mel_spectrogram = np.load(os.path.join(mel_dir, melfn))
-                #print (mel_spectrogram.shape)
-                num_frames = float(mel_spectrogram.shape[0])
-                audio_length = (num_frames * hop_length) / sampling_rate
-                total_length += audio_length
-
-                #print (f"mel: {mel_spectrogram.shape} -> audio_length={audio_length}")
-
-            #break
-
-    print (f"sampling rate: {sampling_rate}, hop_length: {hop_length}, # speakers: {num_speakers}, audio length: {total_length}s={total_length/3600.0}h")
+        print (f"{corpusfn}: sampling rate: {sampling_rate}, hop_length: {hop_length}, # speakers: {num_speakers}, audio length: {total_length:.1f}s = {total_length/3600.0:.1f}h")
