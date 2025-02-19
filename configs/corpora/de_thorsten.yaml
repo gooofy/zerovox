@@ -4,5 +4,5 @@ speaker  : "de_thorsten"
 
 path:
   corpus_path: "/home/guenter/projects/hal9000/ennis/datasets/speech/de_thorsten"
-  preprocessed_path: "./preprocessed_data/de_thorsten"
+  preprocessed_path: "/mnt/data1/preprocessed_data/v2/de_thorsten"
 
