@@ -108,7 +108,7 @@ if __name__ == "__main__":
 
     symbols       = Symbols (modelcfg['model']['phones'], modelcfg['model']['puncts'])
 
-    shutil.rmtree(args.out_dir, ignore_errors=True)
+    # shutil.rmtree(args.out_dir, ignore_errors=True)
 
     os.makedirs(os.path.join(args.out_dir, "train"), mode=0o755)
     os.makedirs(os.path.join(args.out_dir, "dev"), mode=0o755)
