@@ -52,10 +52,6 @@ def main():
                         default=DEFAULT_MELDEC_MODEL_NAME,
                         type=str,
                         help=f"MELGAN model to use (meldec-libritts-multi-band-melgan-v2 or meldec-libritts-hifigan-v1, default: {DEFAULT_MELDEC_MODEL_NAME})",)
-    parser.add_argument("--g2p-model",
-                        #default=DEFAULT_G2P_MODEL_NAME,
-                        type=str,
-                        help="G2P model, default=auto select according to language setting",)                     
     parser.add_argument('--play', action='store_true')
     parser.add_argument('--verbose', action='store_true')
     parser.add_argument('-i', '--interactive', action='store_true')
