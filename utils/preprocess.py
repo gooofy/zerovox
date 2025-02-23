@@ -307,6 +307,10 @@ class AudioPreprocessor:
         mel_filename = f"mel-{basename}.npy"
         np.save(os.path.join(out_dir, "mel", mel_filename), mel_spectrogram.T)
 
+        startstop_filename = f"startstop-{basename}.json"
+        with open(os.path.join(out_dir, "mel", startstop_filename), "w") as f:
+            f.write(json.dumps({'start_hop':job['start_hop'], 'end_hop': job['end_hop']}))
+
         pmin = np.min(pitch)
         pmax = np.max(pitch)
 

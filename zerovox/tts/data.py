@@ -48,23 +48,21 @@ class LJSpeechDataModule(LightningDataModule):
 
     def collate_fn(self, batch):
 
-        phoneme_lens = torch.tensor([sample[0]["phoneme"].shape[0] for sample in batch], dtype=torch.int32)
-        mel_lens     = torch.tensor([sample[1]["mel"].shape[0]     for sample in batch], dtype=torch.int32)
+        phoneme_lens = torch.tensor([sample[0]['phoneme'].shape[0] for sample in batch], dtype=torch.int32)
+        mel_lens     = torch.tensor([sample[1]['mel'].shape[0]     for sample in batch], dtype=torch.int32)
 
-        # phonemes   = pad_sequence([torch.tensor(sample[0]["phoneme" ], dtype=torch.int32  ) for sample in batch], batch_first=True)
-        # puncts     = pad_sequence([torch.tensor(sample[0]["puncts"  ], dtype=torch.int32  ) for sample in batch], batch_first=True)
-        phonemes   = pad_sequence([sample[0]["phoneme" ] for sample in batch], batch_first=True)
-        puncts     = pad_sequence([sample[0]["puncts"  ] for sample in batch], batch_first=True)
-        texts      = [sample[0]["text"] for sample in batch]
-        mels       = pad_sequence([sample[1]["mel"     ] for sample in batch], batch_first=True)
-        pitches    = pad_sequence([sample[0]["pitch"   ] for sample in batch], batch_first=True)
-        energies   = pad_sequence([sample[0]["energy"  ] for sample in batch], batch_first=True)
-        durations  = pad_sequence([sample[0]["duration"] for sample in batch], batch_first=True)
-        # phonemposs = pad_sequence([torch.tensor(sample[0][""], dtype=torch.) for sample in batch], batch_first=True)
-        # basenames = [x[idx]["basename"] for idx in idxs]
-        # preprocessed_paths = [x[idx]["preprocessed_path"] for idx in idxs]
-        # starts = [x[idx]["start"] for idx in idxs]
-        # ends = [x[idx]["end"] for idx in idxs]
+        phonemes   = pad_sequence([sample[0]['phoneme' ] for sample in batch], batch_first=True)
+        puncts     = pad_sequence([sample[0]['puncts'  ] for sample in batch], batch_first=True)
+        texts      = [sample[0]['text'] for sample in batch]
+        mels       = pad_sequence([sample[1]['mel'     ] for sample in batch], batch_first=True)
+        pitches    = pad_sequence([sample[0]['pitch'   ] for sample in batch], batch_first=True)
+        energies   = pad_sequence([sample[0]['energy'  ] for sample in batch], batch_first=True)
+        durations  = pad_sequence([sample[0]['duration'] for sample in batch], batch_first=True)
+        # phonemposs = pad_sequence([torch.tensor(sample[0][''], dtype=torch.) for sample in batch], batch_first=True)
+        basenames = [sample[0]['basename'] for sample in batch]
+        preprocessed_paths = [sample[0]['preprocessed_path'] for sample in batch]
+        starts = [sample[0]['start_hop'] for sample in batch]
+        ends = [sample[0]['end_hop'] for sample in batch]
 
         ref_mel_len = min(mel_lens)
         if ref_mel_len > MAX_REF_LEN:
@@ -81,25 +79,25 @@ class LJSpeechDataModule(LightningDataModule):
         max_mel_len = torch.max(mel_lens).item()
         mel_mask = get_mask_from_lengths(mel_lens, max_mel_len)
 
-        x = {"phoneme": phonemes,
-             "puncts": puncts,
-             "phoneme_len": phoneme_lens,
-             "phoneme_mask": phoneme_mask,
-             "text": texts,
-             "mel_len": mel_lens,
-             "mel_mask": mel_mask,
-             "pitch": pitches,
-             "energy": energies,
-             "duration": durations,
-             #"phonemepos": phonemposs,
-             "ref_mel": ref_mels,
-             #"basenames": basenames,
-             #"preprocessed_paths": preprocessed_paths,
-             #"starts": starts,
-             #"ends": ends
+        x = {'phoneme': phonemes,
+             'puncts': puncts,
+             'phoneme_len': phoneme_lens,
+             'phoneme_mask': phoneme_mask,
+             'text': texts,
+             'mel_len': mel_lens,
+             'mel_mask': mel_mask,
+             'pitch': pitches,
+             'energy': energies,
+             'duration': durations,
+             #'phonemepos': phonemposs,
+             'ref_mel': ref_mels,
+             'basenames': basenames,
+             'preprocessed_paths': preprocessed_paths,
+             'starts': starts,
+             'ends': ends
              }
 
-        y = {"mel": mels,}
+        y = {'mel': mels,}
 
         return x, y
 
@@ -162,6 +160,12 @@ class LJSpeechDataset(Dataset):
         mel_path = os.path.join(preprocessed_path,"mel",f"mel-{basename}.npy")
         mel = torch.from_numpy(np.load(mel_path)).to(torch.float32)
 
+        startstop_path = os.path.join(preprocessed_path,"mel",f"startstop-{basename}.json")
+        with open(startstop_path, "r") as f:
+            d = json.load(f)
+            start_hop = d['start_hop']
+            end_hop = d['end_hop']
+
         pitch_path = os.path.join(preprocessed_path,"pitch",f"pitch-{basename}.npy")
         pitch = torch.from_numpy(np.load(pitch_path)).to(torch.float32)
 
@@ -176,22 +180,24 @@ class LJSpeechDataset(Dataset):
         duration_path = os.path.join(preprocessed_path,"duration",f"duration-{basename}.npy")
         duration = torch.from_numpy(np.load(duration_path)).to(torch.int32)
 
-        x = {"phoneme": phonemes,
-             "puncts": puncts,
-             "text": transcript,
-             "pitch": pitch,
-             "energy": energy,
-             "duration": duration,
-             "basename": basename,
-             "preprocessed_path": preprocessed_path}
+        x = {'phoneme': phonemes,
+             'puncts': puncts,
+             'text': transcript,
+             'pitch': pitch,
+             'energy': energy,
+             'duration': duration,
+             'basename': basename,
+             'preprocessed_path': preprocessed_path,
+             'start_hop' : start_hop,
+             'end_hop' : end_hop}
 
-        y = {"mel": mel,}
+        y = {'mel': mel,}
 
         return x, y
 
     def process_meta(self, filename, preprocessed_path):
         with open(
-            os.path.join(preprocessed_path, filename), "r", encoding="utf-8"
+            os.path.join(preprocessed_path, filename), 'r', encoding='utf-8'
         ) as f:
             preprocessed_paths = []
             filenames = []

@@ -105,16 +105,15 @@
             "request": "launch",
             "program": "utils/preprocess.py",
             "console": "integratedTerminal",
-            "args": ["-l", "100",
-                     "configs/tts_medium_styledec.yaml", 
+            "args": ["configs/tts_medium_styledec.yaml", 
                      //"configs/corpora/de_hui"
-                     //"configs/corpora/de_hui/de_hui_Karlsson.yaml"
+                     "configs/corpora/de_hui/de_hui_Karlsson.yaml"
                      //"configs/corpora/de_thorsten.yaml"
                      //"priv/configs/corpora/de_dlf"
                      //"priv/configs/corpora/de_youtube_pi_1"
                      //"priv/configs/corpora/de_dlf2/de_dlf2_speaker_00353.yaml"
                      //"priv/configs/corpora/de_dlf2/de_dlf2_speaker_00001.yaml"
-                     "priv/configs/corpora/de_abook"
+                     //"priv/configs/corpora/de_abook"
                     ],
             "justMyCode": false
         },
@@ -344,12 +343,7 @@
             "request": "launch",
             "program": "utils/export_hifigan.py",
             "console": "integratedTerminal",
-            "args": ["--model=models/tts_de_zerovox_fs2dec_base_1",
-                     //"--accelerator=cpu",
-                     //"--threads=24",
-                     //"--infer-device=cpu",                     
-                     //"--hifigan-model=VCTK_V2",
-                     "--out-dir=../chat/src/hifi-gan/ft_dataset",
+            "args": ["--out-dir=/mnt/data1/preprocessed_data/v2-hifigan",
                      "configs/corpora/cv_de_s100/de_cvs_speaker_2371.yaml"
                     ],
             "justMyCode": false
@@ -360,12 +354,9 @@
             "request": "launch",
             "program": "utils/export_hifigan.py",
             "console": "integratedTerminal",
-            "args": ["--model=models/tts_de_zerovox_fs2dec_base_1",
-                     //"--accelerator=cpu",
-                     //"--threads=24",
-                     //"--infer-device=cpu",                     
-                     //"--hifigan-model=VCTK_V2",
-                     "--out-dir=../chat/src/hifi-gan/ft_dataset",
+            "args": ["--out-dir=/mnt/data1/preprocessed_data/v2-hifigan",
+                     "--infer-device", "cuda",
+                     "--batch-size", "16",
                      "configs/corpora/de_hui/de_hui_Karlsson.yaml"
                     ],
             "justMyCode": false
@@ -466,12 +457,12 @@
             "justMyCode": false
         },
         {
-            "name": "import e",
+            "name": "nemo test",
             "type": "debugpy",
             "request": "launch",
-            "program": "priv/utils/e_import.py",
+            "program": "utils/nemo_test.py",
             "console": "integratedTerminal",
-            "args": ["en_emilia_B000000"],
+            "args": [],
             "justMyCode": false
         }
     ]
