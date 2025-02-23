@@ -153,9 +153,9 @@ if __name__ == "__main__":
 
                 cnt += 1
                 if cnt % 100 == 0:
-                    out_dir = os.path.join(args.out_dir, "dev", os.path.basename(x['preprocessed_paths'][0]))
+                    out_dir = os.path.join(args.out_dir, "dev", os.path.basename(x['preprocessed_paths'][i]))
                 else:
-                    out_dir = os.path.join(args.out_dir, "train", os.path.basename(x['preprocessed_paths'][0]))
+                    out_dir = os.path.join(args.out_dir, "train", os.path.basename(x['preprocessed_paths'][i]))
 
                 os.makedirs(os.path.join(out_dir), mode=0o755, exist_ok=True)
 
