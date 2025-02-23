@@ -110,8 +110,8 @@ if __name__ == "__main__":
 
     # shutil.rmtree(args.out_dir, ignore_errors=True)
 
-    os.makedirs(os.path.join(args.out_dir, "train"), mode=0o755)
-    os.makedirs(os.path.join(args.out_dir, "dev"), mode=0o755)
+    os.makedirs(os.path.join(args.out_dir, "train"), mode=0o755, exist_ok=True)
+    os.makedirs(os.path.join(args.out_dir, "dev"), mode=0o755, exist_ok=True)
 
     datamodule = LJSpeechDataModule(corpora=corpora,
                                     symbols=symbols,
