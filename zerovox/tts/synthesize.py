@@ -30,14 +30,18 @@ from zerovox.tts.mels import get_mel_from_wav, TacotronSTFT
 from zerovox.tts.symbols import Symbols
 from zerovox.tts.normalize import Normalizer
 
-DEFAULT_TTS_MODEL_NAME='tts_en_de_zerovox_alpha1'
+DEFAULT_TTS_MODEL_NAME_EN='tts_en_zerovox2_alpha1'
+DEFAULT_TTS_MODEL_NAME_DE='tts_de_zerovox2_alpha1'
 DEFAULT_REFAUDIO='en_speaker_00070.wav'
 
 class ZeroVoxTTS:
 
     @staticmethod
-    def get_default_model():
-        model = os.getenv("ZEROVOX_TTS_MODEL", DEFAULT_TTS_MODEL_NAME)
+    def get_default_model(lang:str):
+        if lang=='en':
+            model = os.getenv("ZEROVOX_TTS_MODEL_EN", DEFAULT_TTS_MODEL_NAME_EN)
+        elif lang=='de':
+            model = os.getenv("ZEROVOX_TTS_MODEL_DE", DEFAULT_TTS_MODEL_NAME_DE)
         return model
 
     def __init__(self,
