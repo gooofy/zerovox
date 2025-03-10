@@ -42,9 +42,9 @@ if __name__ == "__main__":
                         help="Path to corpus .yamls",
                         nargs='+')
     parser.add_argument("--out-dir", type=str, help="exported corpus output path")
-    parser.add_argument("--model",
-                        default=ZeroVoxTTS.get_default_model(),
-                        help=f"TTS model to use: Path to model directory or model name, default: {ZeroVoxTTS.get_default_model()}")
+    # parser.add_argument("--model",
+    #                     default=ZeroVoxTTS.get_default_model(),
+    #                     help=f"TTS model to use: Path to model directory or model name, default: {ZeroVoxTTS.get_default_model()}")
     parser.add_argument("--meldec-model",
                         default=DEFAULT_MELDEC_MODEL_NAME,
                         type=str,
@@ -75,7 +75,8 @@ if __name__ == "__main__":
                     continue
 
                 cfgpath = os.path.join(cfgfn, cfn)
-                corpora.append(yaml.load(open(cfgpath, "r"), Loader=yaml.FullLoader))
+                corpuscfg = yaml.load(open(cfgpath, "r"), Loader=yaml.FullLoader)
+                corpora.append(corpuscfg)
         else:
             corpora.append(yaml.load(open(cfgfn, "r"), Loader=yaml.FullLoader))
 
@@ -83,10 +84,21 @@ if __name__ == "__main__":
         raise Exception ("*** error: no .yaml files found!")
     print (f"{len(corpora)} corpus .yaml files found.")
 
-    with open (os.path.join(args.model, "modelcfg.yaml")) as modelcfgf:
+    # determine language
+    lang = None
+    for corpus in corpora:
+        if not lang:
+            lang = corpus['language']
+        else:
+            if lang != corpus['language']:
+                raise Exception (f"multiple languages detected: {lang} != {corpus['language']}")
+
+    model = ZeroVoxTTS.get_default_model(lang=lang)
+
+    with open (os.path.join(model, "modelcfg.yaml")) as modelcfgf:
         modelcfg = yaml.load(modelcfgf, Loader=yaml.FullLoader)
 
-    list_of_files = glob.glob(os.path.join(args.model, 'checkpoints/*.ckpt'))
+    list_of_files = glob.glob(os.path.join(model, 'checkpoints/*.ckpt'))
     checkpoint = max(list_of_files, key=os.path.getctime)
 
     model = ZeroVox.load_from_checkpoint(lang=modelcfg['lang'],
@@ -188,7 +200,8 @@ if __name__ == "__main__":
                 mel = mel[:, :wav_len]
                 with h5py.File(path, 'w') as hdf:
                     hdf.create_dataset('feats', data=mel.T)
-                    hdf.create_dataset('wave', data=orig_wav)
+                    float_wav = orig_wav.astype(numpy.float32) / 32768.0
+                    hdf.create_dataset('wave', data=float_wav)
                 #numpy.save(path, mel)
 
                 path = os.path.join(out_dir, f"{x['basenames'][i]}.txt")
