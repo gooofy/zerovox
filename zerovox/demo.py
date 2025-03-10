@@ -46,8 +46,9 @@ def main():
                         type=str,
                         help="Inference device",)
     parser.add_argument("--model",
-                        default=ZeroVoxTTS.get_default_model(),
-                        help=f"TTS model to use: Path to model directory or model name, default: {ZeroVoxTTS.get_default_model()}")
+                        #default=ZeroVoxTTS.get_default_model(),
+                        required=True,
+                        help=f"TTS model to use: Path to model directory or model name")
     parser.add_argument("--meldec-model",
                         default=DEFAULT_MELDEC_MODEL_NAME,
                         type=str,

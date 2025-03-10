@@ -327,6 +327,7 @@ class ZeroVox(LightningModule):
         mel_len  = int(pred["mel_len"].cpu().detach().numpy())
         log_duration = pred["log_duration"]
 
+        #if normalize_before and hasattr(self._meldec, 'mean'):
         if normalize_before:
             mel = (mel - self._meldec.mean) / self._meldec.scale
         mel = mel.transpose(1, 2)

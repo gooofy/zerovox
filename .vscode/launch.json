@@ -217,9 +217,9 @@
             "console": "integratedTerminal",
             "args": [
                      //"--model=models/tts_en_de_zerovox_medium_1_styledec",
-                     "--model=models/tts_de_zerovox2_medium_2_styledec",
+                     "--model=models/tts_de_zerovox2_medium_3_styledec",
                      "--verbose",
-                     //"--meldec-model=meldec-libritts-hifigan-v1",
+                     "--meldec-model=models/meldec-zerovox-de-hifigan-v1-0",
                      //"--refaudio=/home/guenter/projects/hal9000/ennis/voices/6s/en_digitalsculler_03.wav",
                      //"--refaudio=/home/guenter/projects/hal9000/ennis/voices/6s/de_tobias_meister_03.wav",
                      "--refaudio=/home/guenter/projects/hal9000/ennis/voices/6s/de_christoph_wittelsbürger_03.wav",
@@ -463,6 +463,18 @@
             "program": "utils/nemo_test.py",
             "console": "integratedTerminal",
             "args": [],
+            "justMyCode": false
+        },
+        {
+            "name": "dump pkl",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "utils/dump_pkl.py",
+            "console": "integratedTerminal",
+            "args": [
+                //"models/meldec-libritts-hifigan-v1/checkpoint.pkl",
+                "models/meldec-zerovox-de-hifigan-v1-0/checkpoint.pkl"
+            ],
             "justMyCode": false
         }
     ]
