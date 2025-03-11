@@ -349,13 +349,28 @@
             "justMyCode": false
         },   
         {
-            "name": "export hifigan hui karlsson",
+            "name": "export hifigan hui karlsson synth",
             "type": "debugpy",
             "request": "launch",
             "program": "utils/export_hifigan.py",
             "console": "integratedTerminal",
             "args": ["--out-dir=/mnt/data1/preprocessed_data/v2-hifigan",
+                     "--synth",
                      "--infer-device", "cuda",
+                     "--batch-size", "16",
+                     "configs/corpora/de_hui/de_hui_Karlsson.yaml"
+                    ],
+            "justMyCode": false
+        },   
+        {
+            "name": "export hifigan hui karlsson orig",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "utils/export_hifigan.py",
+            "console": "integratedTerminal",
+            "args": [
+                     //"--out-dir=/mnt/data1/preprocessed_data/v2-hifigan-orig",
+                     "--out-dir=/home/guenter/projects/hal9000/ennis/gan/ParallelWaveGAN/egs/zerovox_de_orig/data",
                      "--batch-size", "16",
                      "configs/corpora/de_hui/de_hui_Karlsson.yaml"
                     ],
