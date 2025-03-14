@@ -683,17 +683,18 @@ if __name__ == "__main__":
     pproc = Preprocessor (modelcfg, lang=lang, min_avg_score=args.min_alignment_score, use_cuda=True)
     aproc = AudioPreprocessor(modelcfg=modelcfg, use_cuda=False, verbose=args.verbose)
 
-    for cfg in corpus_configs:
+    with multiprocessing.Pool(args.num_jobs) as p:
+        
+        for cfg in corpus_configs:
 
-        jobs = gather_jobs_from_config (cfg, limit=args.limit, normalizer=normalizer, max_txt_len=modelcfg['model']["max_txt_len"])
+            jobs = gather_jobs_from_config (cfg, limit=args.limit, normalizer=normalizer, max_txt_len=modelcfg['model']["max_txt_len"])
 
-        print(f"gathered {len(jobs)} jobs.")
+            print(f"gathered {len(jobs)} jobs.")
 
-        #     print(p.map(pproc.process_audio, jobs))
+            #     print(p.map(pproc.process_audio, jobs))
 
-        # pproc.process (jobs, out_dir = cfg["path"]["preprocessed_path"])
+            # pproc.process (jobs, out_dir = cfg["path"]["preprocessed_path"])
 
-        with multiprocessing.Pool(args.num_jobs) as p:
             pproc.align (jobs, out_dir = cfg["path"]["preprocessed_path"], batch_size=args.batch_size, pool=p)
 
             pitch_min = np.finfo(np.float64).max
