@@ -327,22 +327,19 @@ class ZeroVox(LightningModule):
         mel_len  = int(pred["mel_len"].cpu().detach().numpy())
         log_duration = pred["log_duration"]
 
-        #if normalize_before and hasattr(self._meldec, 'mean'):
-        if normalize_before:
-            mel = (mel - self._meldec.mean) / self._meldec.scale
-        mel = mel.transpose(1, 2)
+        mel = mel.squeeze((0,1)) # [826, 80]
 
-        # try to keep mel size constant to reduce meldec latency (no torch/coda recompile on every utterance)
+        # try to keep mel size constant to reduce meldec latency (no torch/cuda recompile on every utterance)
         if mel_len < self._min_mel_len:
-            mel = torch.nn.functional.pad(mel, (0, self._min_mel_len - mel_len))
+            # mel = torch.nn.functional.pad(mel, (self._min_mel_len - mel_len, 0))
+            mel = torch.nn.functional.pad(mel, (0, 0, 0, self._min_mel_len - mel_len))
         elif mel_len > self._min_mel_len:
             self._min_mel_len = mel_len
 
-        wav = self._meldec(c=mel)
-        if self._meldec.pqmf is not None:
-            wav = self._meldec.pqmf.synthesis(wav)
-        wav = wav.squeeze((0,1))
-        mel = mel.squeeze((0,1))
+        wav = self._meldec.inference(c=mel, normalize_before=normalize_before)
+
+        wav = wav.squeeze(1)
+        mel = mel.transpose(0, 1)
 
         meldec_time = time.time()
 

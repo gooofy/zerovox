@@ -210,7 +210,7 @@
             "justMyCode": false
         },       
         {
-            "name": "demo german",
+            "name": "demo german hifigan v1",
             "type": "debugpy",
             "request": "launch",
             "program": "utils/demo.py",
@@ -219,7 +219,60 @@
                      //"--model=models/tts_en_de_zerovox_medium_1_styledec",
                      "--model=models/tts_de_zerovox2_medium_3_styledec",
                      "--verbose",
-                     "--meldec-model=models/meldec-zerovox-de-hifigan-v1-0",
+                     //"--meldec-model=models/meldec-zerovox-de-hifigan-v1-0",
+                     "--meldec-model=models/meldec-libritts-hifigan-v1",
+                     //"--refaudio=/home/guenter/projects/hal9000/ennis/voices/6s/en_digitalsculler_03.wav",
+                     //"--refaudio=/home/guenter/projects/hal9000/ennis/voices/6s/de_tobias_meister_03.wav",
+                     "--refaudio=/home/guenter/projects/hal9000/ennis/voices/6s/de_christoph_wittelsbürger_03.wav",
+                     //"--refaudio=../voices/12s_norm/de_christoph_wittelsbürger.wav"
+                     //"--refaudio=de_christoph.wav",
+                     //"--refaudio=preprocessed_data/de_hui_Karlsson/wavs/dschinnistan_dschinnistan_01_f000093.wav",
+                     "--play",
+                     //"--iter=100",
+                     "--wav-filename=base.wav",
+                     "Der Regenbogen ist ein atmosphärisch-optisches Phänomen, das als kreisbogenförmiges farbiges Lichtband in einem von der Sonne beschienenen Regenschauer erscheint.",
+                     //"Entweder zu helfen, wenn"
+                    ],
+            "justMyCode": false
+        },       
+        {
+            "name": "demo german parallel-wavegan-v1-long",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "utils/demo.py",
+            "console": "integratedTerminal",
+            "args": [
+                     //"--model=models/tts_en_de_zerovox_medium_1_styledec",
+                     "--model=models/tts_de_zerovox2_medium_3_styledec",
+                     "--verbose",
+                     //"--meldec-model=models/meldec-zerovox-de-hifigan-v1-0",
+                     "--meldec-model=models/meldec-libritts-parallel-wavegan-v1-long",
+                     //"--refaudio=/home/guenter/projects/hal9000/ennis/voices/6s/en_digitalsculler_03.wav",
+                     //"--refaudio=/home/guenter/projects/hal9000/ennis/voices/6s/de_tobias_meister_03.wav",
+                     "--refaudio=/home/guenter/projects/hal9000/ennis/voices/6s/de_christoph_wittelsbürger_03.wav",
+                     //"--refaudio=../voices/12s_norm/de_christoph_wittelsbürger.wav"
+                     //"--refaudio=de_christoph.wav",
+                     //"--refaudio=preprocessed_data/de_hui_Karlsson/wavs/dschinnistan_dschinnistan_01_f000093.wav",
+                     "--play",
+                     //"--iter=100",
+                     "--wav-filename=base.wav",
+                     "Der Regenbogen ist ein atmosphärisch-optisches Phänomen, das als kreisbogenförmiges farbiges Lichtband in einem von der Sonne beschienenen Regenschauer erscheint.",
+                     //"Entweder zu helfen, wenn"
+                    ],
+            "justMyCode": false
+        },       
+        {
+            "name": "demo german style melgan v1",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "utils/demo.py",
+            "console": "integratedTerminal",
+            "args": [
+                     //"--model=models/tts_en_de_zerovox_medium_1_styledec",
+                     "--model=models/tts_de_zerovox2_medium_3_styledec",
+                     "--verbose",
+                     //"--meldec-model=models/meldec-zerovox-de-hifigan-v1-0",
+                     "--meldec-model=models/meldec-libritts-style-melgan-v1",
                      //"--refaudio=/home/guenter/projects/hal9000/ennis/voices/6s/en_digitalsculler_03.wav",
                      //"--refaudio=/home/guenter/projects/hal9000/ennis/voices/6s/de_tobias_meister_03.wav",
                      "--refaudio=/home/guenter/projects/hal9000/ennis/voices/6s/de_christoph_wittelsbürger_03.wav",
