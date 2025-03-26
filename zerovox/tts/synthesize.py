@@ -28,7 +28,7 @@ from zerovox.tts import refaudio, refaudio_local
 from zerovox.tts.model import ZeroVox, download_model_file
 from zerovox.tts.mels import get_mel_from_wav, TacotronSTFT
 from zerovox.tts.symbols import Symbols
-from zerovox.tts.normalize import Normalizer
+from zerovox.tts.normalize import ZeroVoxNormalizer
 
 DEFAULT_TTS_MODEL_NAME_EN='tts_en_zerovox2_alpha1'
 DEFAULT_TTS_MODEL_NAME_DE='tts_de_zerovox2_alpha1'
@@ -100,7 +100,7 @@ class ZeroVoxTTS:
             torch.set_num_threads(num_threads)
 
         self._symbols = syms
-        self._normalizer = Normalizer(language)
+        self._normalizer = ZeroVoxNormalizer(language)
 
         self._stft = TacotronSTFT(
                         filter_length=filter_length,
@@ -296,7 +296,7 @@ class ZeroVoxTTS:
     @language.setter
     def language(self, value):
         if value != self._normalizer.language:
-            self._normalizer = Normalizer(lang=value)
+            self._normalizer = ZeroVoxNormalizer(lang=value)
 
     @property
     def meldec_model (self):

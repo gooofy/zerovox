@@ -13,7 +13,7 @@
 # 2025/01/05
 #
 
-import warnings
+#import warnings
 # FIXME: keep enabled?
 #warnings.filterwarnings("error")
 
@@ -24,26 +24,22 @@ import argparse
 import subprocess
 import shutil
 
-import uroman
 import yaml
 import json
 
 from tqdm import tqdm
-from num2words import num2words
 
 import torch
 import torchaudio
 import numpy as np
 import scipy
-#from scipy.io import wavfile
-#from scipy.signal import resample
 
 import librosa
 import pyworld
 
 from zerovox.tts.mels import get_mel_from_wav, TacotronSTFT
 from zerovox.tts.symbols import Symbols
-from zerovox.tts.normalize import Normalizer
+from zerovox.tts.normalize import ZeroVoxNormalizer
 
 MEL_LEN_HEADROOM = 10 # reduce max_mel_len by this margin to have some headroom in training
 MIN_TXT_LEN      = 5  # characters
@@ -692,7 +688,7 @@ if __name__ == "__main__":
             if lang != corpus['language']:
                 raise Exception ('inconsistent languages detected')
 
-    normalizer = Normalizer(lang=lang)
+    normalizer = ZeroVoxNormalizer(lang=lang)
     pproc = Preprocessor (modelcfg, lang=lang, min_avg_score=args.min_alignment_score, use_cuda=True)
     aproc = AudioPreprocessor(modelcfg=modelcfg, use_cuda=False, verbose=args.verbose)
 
