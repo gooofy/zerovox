@@ -1,15 +1,15 @@
 #!/bin/env python3
 
-# https://docs.nvidia.com/nemo-framework/user-guide/24.09/nemotoolkit/nlp/text_normalization/wfst/wfst_text_normalization.html
+# https://github.com/NVIDIA/NeMo-text-processing/blob/main/tutorials/Text_(Inverse)_Normalization.ipynb
 
-#python normalize.py --language de --text "CDU und CSU fallen im Vergleich zum Befragungszeitraum 11. bis 17. Februar um einen Prozentpunkt auf 29 Prozent Zustimmung. Auch die SPD steht mit einem Punkt weniger bei nun 15 Prozent. Zulegen kann die AfD um einen Punkt auf 21 Prozent. Sie würde damit mit Abstand zweitstärkste Kraft im nächsten Bundestag. Die Linke, die lange Zeit weit weg von der Fünfprozenthürde war, steht mit einem Punkt mehr bei 8 Prozent. Die FDP liegt wie im vorherigen Befragungszeitraum bei 5 Prozent. Sie wird demnach den ganzen Wahlabend bangen müssen, ob es wirklich für den Wiedereinzug reicht."
+import os
+from pathlib import Path
+import nemo_text_processing
+from nemo_text_processing.text_normalization.normalize import Normalizer
 
+cache_path = Path(os.getenv("CACHED_PATH_ZEROVOX", Path.home() / ".cache" / "zerovox" / "nemo"))
 
-
-import nemo.text_processing.text_normalization as tn
-
-# Initialize the normalizer
-normalizer = tn.TextNormalizer(lang='en')  # You can specify other languages like 'es', 'fr', etc. if needed.
+normalizer = Normalizer(input_case='lower_cased', lang='en', cache_dir=str(cache_path / 'en'))
 
 # Examples
 text_examples = [
@@ -39,6 +39,39 @@ for text in text_examples:
     print(f"Normalized: {normalized_text}")
     print("-" * 20)
 
+normalizer = Normalizer(input_case='lower_cased', lang='de', cache_dir=str(cache_path / 'de'))
+
+text_examples = [
+    "123",  # Zahlen
+    "1.234,56",  # Zahlen mit Tausendertrennzeichen und Dezimalpunkt
+    "€100",  # Währungssymbole
+    "Euro 100",  # Währungen mit Namen
+    "1. Januar 2024",  # Datumsangaben
+    "1.1.2024",  # Andere Datumsformate
+    "10:30 Uhr",  # Uhrzeit
+    "10:30:00",  # Uhrzeit mit Sekunden
+    "Herr Dr. Müller",  # Titel und Abkürzungen
+    "10%",  # Prozentangaben
+    "10 kg",  # Einheiten
+    "10 km/h",  # Einheiten mit Slash
+    "1. Übersicht",  # Ordinalzahlen
+    "2. Platz",  # Ordinalzahlen mit Nomen
+    "10 Downing Street",  # Adressen
+    "Der schnelle braune Fuchs springt über den faulen Hund.",  # Normaler Text
+    "d.h.",  # Abkürzung
+    "z.B.",  # Abkürzung
+    "ca.",  # Abkürzung
+    "500 €",  # Währung am Ende
+    "500 Euro",  # Währung mit Namen am Ende
+    "2024-12-25",  # ISO-Datumsformat
+    "10.05.2024",  # DD.MM.YYYY
+]
+
+for text in text_examples:
+    normalized_text = normalizer.normalize(text)
+    print(f"Original: {text}")
+    print(f"Normalized: {normalized_text}")
+    print("-" * 20)
 
 # Customizing for specific cases (more advanced)
 # You can customize the behavior by creating your own rules or lexicon files.
@@ -47,17 +80,17 @@ for text in text_examples:
 # before or after the normalization process.
 
 # Example of Preprocessing to help normalization
-def preprocess_text(text):
-    # Example: Replace some characters before normalization
-    text = text.replace("½", "one half")
-    return text
+# def preprocess_text(text):
+#     # Example: Replace some characters before normalization
+#     text = text.replace("½", "one half")
+#     return text
 
-custom_text = "I have ½ a pizza."
-preprocessed_custom_text = preprocess_text(custom_text)
-normalized_custom_text = normalizer.normalize(preprocessed_custom_text)
-print(f"Original: {custom_text}")
-print(f"Preprocessed: {preprocessed_custom_text}")
-print(f"Normalized: {normalized_custom_text}")
+# custom_text = "I have ½ a pizza."
+# preprocessed_custom_text = preprocess_text(custom_text)
+# normalized_custom_text = normalizer.normalize(preprocessed_custom_text)
+# print(f"Original: {custom_text}")
+# print(f"Preprocessed: {preprocessed_custom_text}")
+# print(f"Normalized: {normalized_custom_text}")
 
 
 # For more complex customizations, consult the NeMo documentation regarding
