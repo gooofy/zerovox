@@ -128,7 +128,7 @@
                         "-m", "0.5",
                         "-j", "1",
                         "configs/tts_medium_styledec.yaml",
-                        "priv/configs/corpora/de_dlf_dbg/de_dlf2_speaker_00011.yaml"
+                        "priv/configs/corpora/de_dlf_dbg"
                     ],
             "justMyCode": false
         },

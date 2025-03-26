@@ -436,9 +436,14 @@ class Preprocessor:
                     s = token_spans[0]
                     if s.start<start_hop:
                         start_hop = s.start
-                last_token_start = start_hop = self.ahop2thop(start_hop)
 
+                # convert all time markers to target hops so we don't have to worry about that anymore
+
+                last_token_start = start_hop = self.ahop2thop(start_hop)
                 end_hop_th = self.ahop2thop(end_hop_th)
+                for s in token_spans:
+                    s.start = self.ahop2thop(s.start)
+                    s.end   = self.ahop2thop(s.end)
 
                 transcript_uroman = job['transcript_uroman']
 
@@ -475,11 +480,19 @@ class Preprocessor:
                     ts_pos += 1
 
                     if s_idx > 0:
-                        durations[s_idx-1] = self.ahop2thop(s.start) - last_token_start
-                        puncts[s_idx-1] = punct
-                        last_token_start = self.ahop2thop(s.start)
+                        # extend phonemes to include pauses between them
 
-                    durations.append(0)
+                        extra_hops = s.start - last_token_start - durations[s_idx-1]
+                        assert extra_hops >= 0
+                        extra_hops_next_token = extra_hops // 2
+                        extra_hops_prev_token = extra_hops - extra_hops_next_token
+                        durations[s_idx-1] += extra_hops_prev_token
+                        s.start -= extra_hops_next_token
+
+                        puncts[s_idx-1] = punct
+                        last_token_start = s.start
+
+                    durations.append(s.end-s.start)
                     puncts.append(0)
                     phones.append(self._syms.encode_phone(token))
 
@@ -487,14 +500,14 @@ class Preprocessor:
                     return None
 
                 s = token_spans[-1]
-                end_hop = self.ahop2thop(s.end)
+                end_hop = s.end
 
                 # maybe include some extra hops (model tends to truncate phones)
                 if end_hop_th>end_hop:
                     end_hop = end_hop_th
 
                 # deal with extra puncts at the end and last token / total duration
-                durations[-1] = end_hop-self.ahop2thop(s.start)
+                durations[-1] = end_hop-s.start
 
                 assert min(durations)>=0
 
