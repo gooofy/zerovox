@@ -285,7 +285,7 @@ if __name__ == "__main__":
         # filename='best',
         filename='{epoch:04d}',
         auto_insert_metric_name=False,
-        save_top_k=5,
+        save_top_k=args.max_epochs, # keep all checkpoints
         # save_top_k=1,
         verbose=True,
         save_on_train_epoch_end=True,
