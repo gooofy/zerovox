@@ -545,6 +545,16 @@
                 "models/meldec-zerovox-de-hifigan-v1-0/checkpoint.pkl"
             ],
             "justMyCode": false
+        },
+        {
+            "name": "cv refaudio",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "priv/utils/cv_refaudio.py",
+            "console": "integratedTerminal",
+            "args": [
+            ],
+            "justMyCode": false
         }
     ]
 }
