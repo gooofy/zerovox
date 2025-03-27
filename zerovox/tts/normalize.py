@@ -7,45 +7,55 @@ from nemo_text_processing.text_normalization.normalize import Normalizer
 
 from zerovox.tts.symbols import Symbols
 
-# extend as needed, only these have been tested so far:
-SUPPORTED_LANGS = set(['en', 'de'])
+_normalizer_cache = {}
+
+def _get_normalizer(lang:str):
+
+    if lang in _normalizer_cache:
+        return _normalizer_cache[lang]
+
+    cache_dir = Path(os.getenv("CACHED_PATH_ZEROVOX", Path.home() / ".cache" / "zerovox" / "nemo"))
+    nemo_normalizer = Normalizer(
+        input_case='cased',
+        lang=lang,
+        cache_dir=str(cache_dir / lang)
+    )
+
+    _normalizer_cache[lang] = uroman.Uroman(), nemo_normalizer
+
+    return _normalizer_cache[lang]
+
+def zerovox_normalize(transcript:str, lang:str):
+
+    uromanizer, nemo_normalizer = _get_normalizer(lang) 
+
+    transcript_normalized = nemo_normalizer.normalize(transcript)
+
+    transcript_uroman = str(uromanizer.romanize_string(transcript_normalized)).lower().strip()
+
+    # apply additional normalization steps
+
+    transcript_uroman_normalized = re.sub("([^a-z' ])", " ", transcript_uroman)
+    transcript_uroman_normalized = re.sub(' +', ' ', transcript_uroman_normalized)
+    transcript_uroman_normalized = transcript_uroman_normalized.strip()
+
+    #print (f"transcript                  : {transcript}")
+    #print (f"transcript_normalized       : {transcript_normalized}")
+    #print (f"transcript_uroman           : {transcript_uroman}")
+    #print (f"transcript_uroman_normalized: {transcript_uroman_normalized}")
+
+    return transcript_uroman, transcript_uroman_normalized
 
 class ZeroVoxNormalizer:
 
     def __init__(self, lang):
-        assert lang in SUPPORTED_LANGS
         self._lang = lang
-        self._uromanizer = uroman.Uroman()
-
-        cache_dir = Path(os.getenv("CACHED_PATH_ZEROVOX", Path.home() / ".cache" / "zerovox" / "nemo"))
-        self._nemo_normalizer = Normalizer(
-            input_case='cased',
-            lang=lang,
-            cache_dir=str(cache_dir / lang)
-        )
 
     @property
     def language (self):
         return self._lang
 
     def normalize(self, transcript):
-        transcript_normalized = self._nemo_normalizer.normalize(transcript)
 
-        transcript_uroman = str(self._uromanizer.romanize_string(transcript_normalized)).lower().strip()
-
-        # Apply existing normalization steps
-        transcript_uroman_normalized = self.normalize_uroman(transcript_uroman)
-
-        #print (f"transcript                  : {transcript}")
-        #print (f"transcript_normalized       : {transcript_normalized}")
-        #print (f"transcript_uroman           : {transcript_uroman}")
-        #print (f"transcript_uroman_normalized: {transcript_uroman_normalized}")
-
-        return transcript_uroman, transcript_uroman_normalized
-
-    def normalize_uroman(self, text_uroman):
-        text = re.sub("([^a-z' ])", " ", text_uroman)
-        text = re.sub(' +', ' ', text)
-        return text.strip()
-
+        return zerovox_normalize(transcript=transcript, lang=self._lang)
 

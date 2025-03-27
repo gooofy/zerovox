@@ -39,7 +39,7 @@ import pyworld
 
 from zerovox.tts.mels import get_mel_from_wav, TacotronSTFT
 from zerovox.tts.symbols import Symbols
-from zerovox.tts.normalize import ZeroVoxNormalizer
+from zerovox.tts.normalize import zerovox_normalize
 
 MEL_LEN_HEADROOM = 10 # reduce max_mel_len by this margin to have some headroom in training
 MIN_TXT_LEN      = 5  # characters
@@ -120,6 +120,12 @@ def first_and_last_hop_above_threshold(audio, hop_size, threshold):
   last_hop_idx = torch.where(hop_masks)[0].max().item() if torch.any(hop_masks) else num_hops-1
 
   return first_hop_idx, last_hop_idx
+
+def zerovox_normalize_helper(job):
+
+    transcript, lang = job
+
+    return zerovox_normalize(transcript=transcript, lang=lang)
 
 class AudioPreprocessor:
 
@@ -319,7 +325,7 @@ class AudioPreprocessor:
 
 class Preprocessor:
 
-    def __init__(self, modelcfg, lang, min_avg_score, use_cuda=True):
+    def __init__(self, modelcfg, lang, min_avg_score):
 
         self._device         = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self._lang           = lang
@@ -361,9 +367,43 @@ class Preprocessor:
 
         return thop
 
-    def align (self, jobs, out_dir, batch_size, pool):
+    def align (self, jobs, out_dir, batch_size, max_txt_len, pool, lang):
 
-        batches = batch_list(jobs, batch_size=batch_size)
+        # normalize text
+
+        with tqdm(total=len(jobs), desc="normalize") as pbar:
+
+            transcripts_uroman = []
+            transcripts_normalized = []
+
+            for transcript_uroman, transcript_normalized in p.map(zerovox_normalize_helper, [(job['transcript'], lang) for job in jobs]):
+
+                pbar.update()
+                pbar.refresh()
+
+                transcripts_uroman.append(transcript_uroman)
+                transcripts_normalized.append(transcript_normalized)
+
+            for transcript_uroman, transcript_normalized, job in zip(transcripts_uroman, transcripts_normalized, jobs):
+                job['transcript_uroman'] = transcript_uroman
+                job['transcript_normalized'] = transcript_normalized
+
+        # filter out transcripts that are either too short or too long
+
+        jobs_filtered = []
+
+        for job in jobs:
+
+            if len(job['transcript_normalized']) < MIN_TXT_LEN:
+                print (f"dropping sample {job['base_name']} because it is too short")
+                continue
+            if len(job['transcript_normalized']) > max_txt_len:
+                print (f"dropping sample {job['base_name']} because it exceeds max_txt_len ({max_txt_len})")
+                continue
+
+            jobs_filtered.append(job)
+
+        batches = batch_list(jobs_filtered, batch_size=batch_size)
 
         for batch in tqdm(batches, desc="align"):
 
@@ -551,7 +591,7 @@ class Preprocessor:
 
 
 
-def gen_jobs_from_metadata_file(in_dir, out_dir, metadata_path, normalizer, max_txt_len, limit, book=None):
+def gen_jobs_from_metadata_file(in_dir, out_dir, metadata_path, limit, book=None):
 
     jobs = []
 
@@ -572,21 +612,11 @@ def gen_jobs_from_metadata_file(in_dir, out_dir, metadata_path, normalizer, max_
 
                 dest_base_name = book + '_' + base_name if book else base_name
 
-                transcript_uroman, transcript_normalized = normalizer.normalize(text)
-
-                if len(transcript_normalized) < MIN_TXT_LEN:
-                    print (f"dropping sample {base_name} because it is too short")
-                    continue
-                if len(transcript_normalized) > max_txt_len:
-                    print (f"dropping sample {base_name} because it exceeds max_txt_len ({max_txt_len})")
-                    continue
-
                 jobs.append({'transcript': text,
-                             'transcript_uroman' : transcript_uroman,
-                             'transcript_normalized' : transcript_normalized,
                              'wav_path': wav_path,
                              'dest_wav': f"{dest_base_name}.wav",
                              'out_dir': out_dir,
+                             'base_name': base_name
                              })
                 if len(jobs) >= limit:
                     break
@@ -595,7 +625,7 @@ def gen_jobs_from_metadata_file(in_dir, out_dir, metadata_path, normalizer, max_
 
     return jobs
 
-def gather_jobs_from_config(config, limit: int, normalizer, max_txt_len):
+def gather_jobs_from_config(config, limit: int):
 
     if "LJSpeech" not in config["dataset"]:
         raise Exception (f"unknown dataset format '{config['dataset']}")
@@ -621,7 +651,7 @@ def gather_jobs_from_config(config, limit: int, normalizer, max_txt_len):
 
     if os.path.isfile(metadata_path):
 
-        jobs = gen_jobs_from_metadata_file (in_dir=in_dir, out_dir = config["path"]["preprocessed_path"], metadata_path=metadata_path, normalizer=normalizer, max_txt_len=max_txt_len, limit=limit)
+        jobs = gen_jobs_from_metadata_file (in_dir=in_dir, out_dir = config["path"]["preprocessed_path"], metadata_path=metadata_path, limit=limit)
 
     else:
 
@@ -634,7 +664,7 @@ def gather_jobs_from_config(config, limit: int, normalizer, max_txt_len):
             metadata_path = os.path.join(bookdir, 'metadata.csv')
 
             if os.path.isfile(metadata_path):
-                jobs.extend(gen_jobs_from_metadata_file (in_dir=bookdir, out_dir = config["path"]["preprocessed_path"], metadata_path=metadata_path, normalizer=normalizer, max_txt_len=max_txt_len, book=book, limit=limit-len(jobs)))
+                jobs.extend(gen_jobs_from_metadata_file (in_dir=bookdir, out_dir = config["path"]["preprocessed_path"], metadata_path=metadata_path, book=book, limit=limit-len(jobs)))
 
     return jobs
 
@@ -688,23 +718,20 @@ if __name__ == "__main__":
             if lang != corpus['language']:
                 raise Exception ('inconsistent languages detected')
 
-    normalizer = ZeroVoxNormalizer(lang=lang)
-    pproc = Preprocessor (modelcfg, lang=lang, min_avg_score=args.min_alignment_score, use_cuda=True)
+    print (f"language is {lang}")
+
+    pproc = Preprocessor (modelcfg, lang=lang, min_avg_score=args.min_alignment_score)
     aproc = AudioPreprocessor(modelcfg=modelcfg, use_cuda=False, verbose=args.verbose)
 
     with multiprocessing.Pool(args.num_jobs) as p:
         
         for cfg in corpus_configs:
 
-            jobs = gather_jobs_from_config (cfg, limit=args.limit, normalizer=normalizer, max_txt_len=modelcfg['model']["max_txt_len"])
+            jobs = gather_jobs_from_config (cfg, limit=args.limit)
 
             print(f"gathered {len(jobs)} jobs.")
 
-            #     print(p.map(pproc.process_audio, jobs))
-
-            # pproc.process (jobs, out_dir = cfg["path"]["preprocessed_path"])
-
-            pproc.align (jobs, out_dir = cfg["path"]["preprocessed_path"], batch_size=args.batch_size, pool=p)
+            pproc.align (jobs, out_dir = cfg["path"]["preprocessed_path"], batch_size=args.batch_size, max_txt_len=modelcfg['model']["max_txt_len"], pool=p, lang=lang)
 
             pitch_min = np.finfo(np.float64).max
             pitch_max = np.finfo(np.float64).min

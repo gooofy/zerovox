@@ -107,8 +107,8 @@
             "console": "integratedTerminal",
             "args": ["configs/tts_medium_styledec.yaml", 
                      //"configs/corpora/de_hui"
-                     "configs/corpora/de_hui/de_hui_Karlsson.yaml"
-                     //"configs/corpora/de_thorsten.yaml"
+                     //"configs/corpora/de_hui/de_hui_Karlsson.yaml"
+                     "configs/corpora/de_thorsten.yaml"
                      //"priv/configs/corpora/de_dlf"
                      //"priv/configs/corpora/de_youtube_pi_1"
                      //"priv/configs/corpora/de_dlf2/de_dlf2_speaker_00353.yaml"
@@ -128,7 +128,8 @@
                         "-m", "0.5",
                         "-j", "1",
                         "configs/tts_medium_styledec.yaml",
-                        "priv/configs/corpora/de_dlf_dbg"
+                        //"priv/configs/corpora/de_dlf_dbg",
+                        "configs/corpora/de_thorsten.yaml"
                     ],
             "justMyCode": false
         },
