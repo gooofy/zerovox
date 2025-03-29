@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "zerovox"
-version = "0.3.0"
+version = "0.3.3"
 authors = [
   {name = "Günter Bartsch", email = "guenter@zamia.org"}
 ]
 description = "zero-shot realtime TTS system, fully offline, free and open source"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.10"
 classifiers = [
   "Development Status :: 4 - Beta",
   "Environment :: Console",
@@ -37,7 +37,9 @@ dependencies = [
     "sounddevice>=0.4.7",
     "setproctitle>=1.3.3",
     "psutil>=6.0.0",
-    "h5py>=3.11.0"
+    "h5py>=3.11.0",
+    "uroman>=1.3.1",
+    "nemo_text_processing>=1.1.0"
 ]
 maintainers = [
   {name = "Günter Bartsch", email = "guenter@zamia.org"}

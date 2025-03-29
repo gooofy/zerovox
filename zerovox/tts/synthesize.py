@@ -30,9 +30,9 @@ from zerovox.tts.mels import get_mel_from_wav, TacotronSTFT
 from zerovox.tts.symbols import Symbols
 from zerovox.tts.normalize import ZeroVoxNormalizer
 
-DEFAULT_TTS_MODEL_NAME_EN='tts_en_zerovox2_alpha1'
-DEFAULT_TTS_MODEL_NAME_DE='tts_de_zerovox2_alpha1'
-DEFAULT_REFAUDIO='en_speaker_00070.wav'
+DEFAULT_TTS_MODEL_NAME_EN='tts_en_zerovox2_medium_2_styledec'
+DEFAULT_TTS_MODEL_NAME_DE='tts_de_zerovox2_medium_3_styledec'
+DEFAULT_REFAUDIO='en_kevin.wav'
 
 class ZeroVoxTTS:
 
