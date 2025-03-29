@@ -1,23 +1,19 @@
 
 audio:
 
-  sampling_rate     : 24000
+  sampling_rate     : 22050
 
-  fft_size          : 2048
-  fmax              : 7600
-  fmin              : 80
-  win_length        : 1200
-  window            : hann
+  fft_size          : 1024
+  fmax              : 8000
+  fmin              : 0
+  win_length        : 1024
   num_mels          : 80
-  hop_size          : 300
-  filter_length     : 1200
-  eps               : 1e-10
-  log_base          : 10.0
+  hop_size          : 256
 
 model:
   max_txt_len       : 512  # characters
-  min_mel_len       : 100  # mels,  100*300/24000 =  1.25s
-  max_mel_len       : 1500 # mels, 1500*300/24000 = 18.75s
+  min_mel_len       : 100  # mels,  100*256/22050 =  1.16s
+  max_mel_len       : 1750 # mels, 1750*256/22050 = 20.32s
 
   phones            : "'-abcdefghijklmnopqrstuvwxyz"
   puncts            : " ,.;:-!?\""

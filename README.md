@@ -46,14 +46,14 @@ TTS Model Training
 ------------------
 
     utils/train_tts.py \
-        --head=2 --reduction=1 --expansion=2 --kernel-size=5 --n-blocks=3 --block-depth=3 \
-        --accelerator=gpu --threads=24 --batch-size=32 --val_epochs=8 \
-        --infer-device=cpu \
-        --lr=0.0001 --warmup_epochs=25 \
-        --hifigan-checkpoint=VCTK_V2 \
-        --out-folder=models/tts_de_zerovox_base_1 \
+        -c configs/tts_medium_styledec.yaml \
+        --accelerator=gpu \
+        --threads=24 \
+        --batch-size=20 \
+        --max-epochs=100 \
+        --out-folder=models/tts_de_zerovox_medium_1 \
         configs/corpora/cv_de_100 \
-        configs/corpora/de_hui/de_hui_*.yaml \
+        configs/corpora/de_hui \
         configs/corpora/de_thorsten.yaml
 
 Credits
@@ -101,24 +101,19 @@ https://github.com/yl4579/StyleTTS
         url={https://arxiv.org/abs/2205.15439}, 
     }
 
-The MEL decoder implementation is borrowed (under MIT license) from Tomoki Hayashi's ParallelWaveGAN project:
+The HiFi-GAN MEL decoder implementation is borrowed (under MIT license) from Jungil Kong's hifi-gan project:
 
-https://github.com/kan-bayashi/ParallelWaveGAN
+https://github.com/jik876/hifi-gan
 
-The G2P transformer models are based on DeepPhonemizer by Axel Springer News Media & Tech GmbH & Co. KG - Ideas Engineering (MIT license)
-
-https://github.com/as-ideas/DeepPhonemizer
-
-    @inproceedings{Yolchuyeva_2019, series={interspeech_2019},
-    title={Transformer Based Grapheme-to-Phoneme Conversion},
-    url={http://dx.doi.org/10.21437/Interspeech.2019-1954},
-    DOI={10.21437/interspeech.2019-1954},
-    booktitle={Interspeech 2019},
-    publisher={ISCA},
-    author={Yolchuyeva, Sevinj and Németh, Géza and Gyires-Tóth, Bálint},
-    year={2019},
-    month=sep, pages={2095–2099},
-    collection={interspeech_2019} }
+    @misc{kong2020hifigangenerativeadversarialnetworks,
+        title={HiFi-GAN: Generative Adversarial Networks for Efficient and High Fidelity Speech Synthesis}, 
+        author={Jungil Kong and Jaehyeon Kim and Jaekyoung Bae},
+        year={2020},
+        eprint={2010.05646},
+        archivePrefix={arXiv},
+        primaryClass={cs.SD},
+        url={https://arxiv.org/abs/2010.05646}, 
+    }
 
 The ZeroShot ResNet based speaker encoding is borrowed (under MIT license) from voxceleb_trainer by Clova AI Research
 

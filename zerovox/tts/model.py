@@ -21,7 +21,6 @@ import numpy as np
 from torch.optim.lr_scheduler import LRScheduler
 import math
 import time
-import traceback
 import psutil
 import gc
 from pathlib import Path
@@ -35,8 +34,12 @@ from zerovox.tts.symbols import Symbols
 from zerovox.tts.ResNetSE34V2 import ResNetSE34V2
 from zerovox.tts.fs2 import FS2Encoder, FS2Decoder
 from zerovox.tts.styletts import StyleTTSDecoder
+from zerovox.tts.hifigan import Generator
 
-from zerovox.parallel_wavegan.utils import load_model as load_meldec_model
+class AttrDict(dict):
+    def __init__(self, *args, **kwargs):
+        super(AttrDict, self).__init__(*args, **kwargs)
+        self.__dict__ = self
 
 def write_to_file(wavs, sampling_rate, hop_length, lengths=None, wav_path="outputs", filename="tts"):
     wavs = (wavs * 32760).astype("int16")
@@ -78,46 +81,41 @@ def download_model_file(model:str, relpath:str) -> Path:
 
     return target_path
 
-#DEFAULT_MELDEC_MODEL_NAME = "meldec-libritts-multi-band-melgan-v2"
-DEFAULT_MELDEC_MODEL_NAME = "meldec-libritts-hifigan-v1"
+DEFAULT_MELDEC_MODEL_NAME = "zerovox-hifigan-vctk-v2-en-1"
 
 def get_meldec(modelspec: str|os.PathLike, infer_device='cpu', verbose=False):
 
     if os.path.isdir(modelspec):
 
-        config_path = Path(Path(modelspec) / 'config.yml')
-        gen_path  = Path(Path(modelspec) / 'checkpoint.pkl')
-        stats_path  = Path(Path(modelspec) / 'stats.h5')
+        config_path = Path(Path(modelspec) / 'config.json')
+        gen_path  = Path(Path(modelspec) / 'generator.ckpt')
 
     else:
 
-        config_path = download_model_file(model=str(modelspec), relpath="config.yml")
-        gen_path  = download_model_file(model=str(modelspec), relpath="checkpoint.pkl")
-        stats_path  = download_model_file(model=str(modelspec), relpath="stats.h5")
+        config_path = download_model_file(model=str(modelspec), relpath='config.json')
+        gen_path  = download_model_file(model=str(modelspec), relpath='generator.ckpt')
 
     # get the main path
     if verbose:
         print("meldec: using config    : ", config_path)
         print("meldec: using checkpoint: ", gen_path)
-        print("meldec: using stats     : ", stats_path)
 
     with open(config_path) as f:
-        config = yaml.load(f, Loader=yaml.Loader)
-
-    model = load_meldec_model(gen_path, config)
-    if verbose:
-        print(f"meldec: loaded model parameters from {gen_path}.")
-
-    model.remove_weight_norm()
+        json_config = json.loads(f.read())
+        config = AttrDict(json_config)
 
     device = torch.device(infer_device)
-    model = model.eval().to(device)
-    model.to(device)
 
-    if config["generator_params"]["out_channels"] == 1:
-        model.pqmf = None
+    generator = Generator(config).to(device)
 
-    return model
+    state_dict_g = torch.load(gen_path, map_location=device)
+    generator.load_state_dict(state_dict_g['generator'])
+
+    generator.eval()
+    generator.remove_weight_norm()
+    generator = generator.to(device)
+
+    return generator
 
 class LinearWarmUpCosineDecayLR(LRScheduler):
     

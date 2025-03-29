@@ -128,8 +128,8 @@
                         "-m", "0.5",
                         "-j", "1",
                         "configs/tts_medium_styledec.yaml",
-                        //"priv/configs/corpora/de_dlf_dbg",
-                        "configs/corpora/de_thorsten.yaml"
+                        "priv/configs/corpora/de_dlf_dbg",
+                        //"configs/corpora/de_thorsten.yaml"
                     ],
             "justMyCode": false
         },
@@ -553,6 +553,19 @@
             "program": "priv/utils/cv_refaudio.py",
             "console": "integratedTerminal",
             "args": [
+            ],
+            "justMyCode": false
+        },
+        {
+            "name": "debug GAN",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "priv/utils/dbg_gan.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--mel_npy_path", "/mnt/data1/preprocessed_data/v2/de_dlf_dbg/mel/mel-00001.npy",
+                "--output_wav_path", "hifigan.wav",
+                "--meldec", "zerovox-hifigan-vctk-v2-en-1"
             ],
             "justMyCode": false
         }

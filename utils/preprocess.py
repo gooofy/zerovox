@@ -37,7 +37,7 @@ import scipy
 import librosa
 import pyworld
 
-from zerovox.tts.mels import get_mel_from_wav, TacotronSTFT
+from zerovox.tts.mels import get_mel_from_wav
 from zerovox.tts.symbols import Symbols
 from zerovox.tts.normalize import zerovox_normalize
 
@@ -135,25 +135,12 @@ class AudioPreprocessor:
         self._verbose              = verbose
 
         self._target_sampling_rate = modelcfg['audio']['sampling_rate']
-        self._fft_size      = modelcfg['audio']["fft_size"]
-        self._hop_size      = modelcfg['audio']["hop_size"]
-        self._win_length    = modelcfg['audio']["win_length"]
-        self._window        = modelcfg['audio']["window"]
-        self._num_mels      = modelcfg['audio']["num_mels"]
-        self._fmin          = modelcfg['audio']["fmin"]
-        self._fmax          = modelcfg['audio']["fmax"]
-        self._eps           = float(modelcfg['audio']["eps"])
-        self._log_base      = float(modelcfg['audio']["log_base"])
-        self._filter_length = modelcfg['audio']["filter_length"]        
-
-        self._stft = TacotronSTFT(filter_length=self._filter_length, 
-                                  hop_length=self._hop_size,
-                                  win_length=self._win_length,
-                                  n_mel_channels=self._num_mels,
-                                  sampling_rate=self._target_sampling_rate,
-                                  mel_fmin=self._fmin,
-                                  mel_fmax=self._fmax,
-                                  use_cuda=use_cuda)
+        self._fft_size             = modelcfg['audio']["fft_size"]
+        self._hop_size             = modelcfg['audio']["hop_size"]
+        self._win_length           = modelcfg['audio']["win_length"]
+        self._num_mels             = modelcfg['audio']["num_mels"]
+        self._fmin                 = modelcfg['audio']["fmin"]
+        self._fmax                 = modelcfg['audio']["fmax"]
 
     def process(self, job):
 
@@ -212,16 +199,13 @@ class AudioPreprocessor:
             sys.stdout.flush()
         mel_spectrogram, energy = get_mel_from_wav(audio=wav,
                     sampling_rate=self._target_sampling_rate,
-                    fft_size=self._fft_size, # =2048,
-                    hop_size=self._hop_size, # =300,
-                    win_length=self._win_length, # =1200,
-                    window=self._window, # ="hann",
+                    fft_size=self._fft_size, # =1024,
+                    hop_size=self._hop_size, # =256,
+                    win_length=self._win_length, # =1024,
                     num_mels=self._num_mels, #=80,
-                    fmin=self._fmin, #=80,
-                    fmax=self._fmax, #=7600,
-                    eps=self._eps, #=1e-10,
-                    log_base=self._log_base, #=10.0,
-                    stft=self._stft)
+                    fmin=self._fmin, #=0,
+                    fmax=self._fmax, #=8000,
+                    )
 
         durations = job['durations']
 
@@ -357,7 +341,7 @@ class Preprocessor:
         print ("loading the alignment model... done.")
 
     def ahop2thop (self, hop):
-        # convert alignment model hop(hop_size=320, sr=16000) to target hop (hop_size=300, sr=24000)
+        # convert alignment model hop(hop_size=320, sr=16000) to target hop (hop_size=256, sr=22050)
 
         aframe = hop * self._align_hop_size
 
@@ -368,6 +352,8 @@ class Preprocessor:
         return thop
 
     def align (self, jobs, out_dir, batch_size, max_txt_len, pool, lang):
+
+        print ("normalizing...")
 
         # normalize text
 
