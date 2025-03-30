@@ -26,10 +26,10 @@ from pathlib import Path
 
 from zerovox.tts import refaudio, refaudio_local
 from zerovox.tts.model import ZeroVox, download_model_file
-from zerovox.tts.mels import get_mel_from_wav, TacotronSTFT
+from zerovox.tts.mels import get_mel_from_wav
 from zerovox.tts.symbols import Symbols
 from zerovox.tts.normalize import ZeroVoxNormalizer
-from zerovox.parallel_wavegan.bin.preprocess import logmelfilterbank
+#from zerovox.parallel_wavegan.bin.preprocess import logmelfilterbank
 
 DEFAULT_TTS_MODEL_NAME_EN='tts_en_zerovox2_medium_2_styledec'
 DEFAULT_TTS_MODEL_NAME_DE='tts_de_zerovox2_medium_3_styledec'
@@ -57,9 +57,6 @@ class ZeroVoxTTS:
                  win_length : int,
                  mel_fmin: int,
                  mel_fmax: int,
-                 mel_eps: float,
-                 mel_window: str,
-                 log_base: float,
                  infer_device: str = 'cpu',
                  num_threads: int = -1,
                  verbose: bool = False):
@@ -76,9 +73,6 @@ class ZeroVoxTTS:
         self._num_mels = n_mel_channels
         self._mel_fmin = mel_fmin
         self._mel_fmax = mel_fmax
-        self._mel_window = mel_window
-        self._mel_eps = mel_eps
-        self._log_base = log_base
         self._verbose = verbose
 
         self._model = ZeroVox.load_from_checkpoint(lang=language,
@@ -131,21 +125,17 @@ class ZeroVoxTTS:
         # Trim the beginning and ending silence
         wav, _ = librosa.effects.trim(wav, top_db=40)
 
-        mel_spectrogram = logmelfilterbank(
-            audio=wav,
-            sampling_rate=self._sampling_rate,
-            fft_size=self._fft_size,
-            hop_size=self._hop_length,
-            win_length=self._win_length,
-            window=self._mel_window,
-            num_mels=self._num_mels,
-            fmin=self._mel_fmin,
-            fmax=self._mel_fmax,
-            eps=self._mel_eps,
-            log_base=self._log_base
-        )
+        mel_spectrogram, _ = get_mel_from_wav(audio=wav,
+                    sampling_rate=self._sampling_rate,
+                    fft_size=self._fft_size, # =1024,
+                    hop_size=self._hop_length, # =256,
+                    win_length=self._win_length, # =1024,
+                    num_mels=self._num_mels, #=80,
+                    fmin=self._mel_fmin, #=0,
+                    fmax=self._mel_fmax, #=8000,
+                    )
 
-        x = np.array([mel_spectrogram], dtype=np.float32)
+        x = np.array([mel_spectrogram.T], dtype=np.float32)
         with torch.no_grad():
             x = torch.from_numpy(x).to(self._infer_device)
             style_embed = self._model._spkemb(x)
@@ -331,9 +321,6 @@ class ZeroVoxTTS:
                              sampling_rate=modelcfg['audio']['sampling_rate'],
                              n_mel_channels=modelcfg['audio']['num_mels'],
                              fft_size=modelcfg['audio']['fft_size'],
-                             mel_eps=float(modelcfg['audio']['eps']),
-                             mel_window=modelcfg['audio']['window'],
-                             log_base=modelcfg['audio']['log_base'],
                              infer_device=infer_device,
                              num_threads=num_threads,
                              verbose=verbose)

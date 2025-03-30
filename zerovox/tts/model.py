@@ -334,9 +334,9 @@ class ZeroVox(LightningModule):
         elif mel_len > self._min_mel_len:
             self._min_mel_len = mel_len
 
-        wav = self._meldec.inference(c=mel, normalize_before=normalize_before)
+        wav = self._meldec(mel.T)
 
-        wav = wav.squeeze(1)
+        wav = wav.squeeze(0)
         mel = mel.transpose(0, 1)
 
         meldec_time = time.time()

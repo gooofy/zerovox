@@ -218,10 +218,11 @@
             "console": "integratedTerminal",
             "args": [
                      //"--model=models/tts_en_de_zerovox_medium_1_styledec",
-                     "--model=models/tts_de_zerovox2_medium_3_styledec",
+                     "--model=models/tts_de_zerovox2_medium_4_styledec",
                      "--verbose",
+                     "--meldec-model=models/zerovox-hifigan-zamia-v2-de-1",
                      //"--meldec-model=models/meldec-zerovox-de-hifigan-v1-0",
-                     "--meldec-model=models/meldec-libritts-hifigan-v1",
+                    //  "--meldec-model=models/meldec-libritts-hifigan-v1",
                      //"--refaudio=/home/guenter/projects/hal9000/ennis/voices/6s/en_digitalsculler_03.wav",
                      //"--refaudio=/home/guenter/projects/hal9000/ennis/voices/6s/de_tobias_meister_03.wav",
                      "--refaudio=/home/guenter/projects/hal9000/ennis/voices/6s/de_christoph_wittelsbürger_03.wav",
