@@ -250,6 +250,9 @@ if __name__ == "__main__":
     if args.checkpoint:
         ckpt_path = Path(args.checkpoint)
         #torch.serialization.add_safe_globals([G2PSymbols])
+
+        print(f"incremental training mode: restoring model weights from {args.checkpoint}")
+
         checkpoint = torch.load(ckpt_path, weights_only=False)
 
         state_dict = checkpoint['state_dict']
