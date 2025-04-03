@@ -1,13 +1,12 @@
 #!/bin/env python3
 
-
-
-import sys
 import os
 import argparse
 import yaml
 import numpy as np
 from tqdm import tqdm
+
+from zerovox.tts.data import PREPROCESSED_DATA_PATH
 
 def get_args():
     parser = argparse.ArgumentParser()
@@ -66,7 +65,7 @@ if __name__ == "__main__":
 
             num_speakers += 1
 
-            mel_dir = os.path.join(pc['path']['preprocessed_path'], 'mel')
+            mel_dir = os.path.join(PREPROCESSED_DATA_PATH, pc['path']['preprocessed_path'], 'mel')
             for melfn in os.listdir(mel_dir):
 
                 #print (melfn)

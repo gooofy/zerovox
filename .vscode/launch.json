@@ -156,12 +156,15 @@
             "request": "launch",
             "program": "utils/train_tts.py",
             "console": "integratedTerminal",
-            "args": ["-c", "configs/tts_medium_styledec.yaml",
-                     "--accelerator=gpu", "--threads=24",
+            "args": ["-c", "configs/tts_medium.yaml",
+                     "--accelerator=gpu", 
+                     "--threads=24",
+                     "--batch-size=28",
+                     "--max-epochs=100",
                      "--out-folder=models/tts_de_zerovox_medium_karlsson",
                      //"configs/corpora/cv_de_100/de_cv_speaker_1.yaml"
-                     //"configs/corpora/de_hui/de_hui_Karlsson.yaml"
-                     "priv/configs/corpora/de_abook"
+                     "configs/corpora/de_hui/de_hui_Karlsson.yaml"
+                     //"priv/configs/corpora/de_abook"
                     ],
             "justMyCode": false
         },

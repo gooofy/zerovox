@@ -29,6 +29,10 @@ Current ZeroVOX training corpus stats:
 ZeroVOX Model Training
 ======================
 
+set ZEROVOX_PREPROCESSED_DATA_PATH env var to point to where you want to store preprocessed data, e.g.
+
+    export ZEROVOX_PREPROCESSED_DATA_PATH="/mnt/data1/preprocessed_data"
+
 Data Preparation
 ----------------
 

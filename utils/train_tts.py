@@ -27,7 +27,7 @@ from lightning import Trainer
 from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.loggers import TensorBoardLogger
 
-from zerovox.tts.data import LJSpeechDataModule
+from zerovox.tts.data import LJSpeechDataModule, PREPROCESSED_DATA_PATH
 from zerovox.tts.model import ZeroVox
 from zerovox.tts.symbols import Symbols
 from zerovox.tts.model import DEFAULT_MELDEC_MODEL_NAME
@@ -165,7 +165,7 @@ if __name__ == "__main__":
         if corpus['language'] not in modelcfg['lang']:
             modelcfg['lang'].append(corpus['language'])
 
-        with open(os.path.join(corpus['path']['preprocessed_path'], 'stats.json')) as statsf:
+        with open(os.path.join(PREPROCESSED_DATA_PATH, corpus['path']['preprocessed_path'], 'stats.json')) as statsf:
             stats = json.load(statsf)
             pitch_min, pitch_max   = stats["pitch"][:2]
             energy_min, energy_max = stats["energy"][:2]

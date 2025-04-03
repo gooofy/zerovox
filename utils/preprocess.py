@@ -40,6 +40,7 @@ import pyworld
 from zerovox.tts.mels import get_mel_from_wav
 from zerovox.tts.symbols import Symbols
 from zerovox.tts.normalize import zerovox_normalize
+from zerovox.tts.data import PREPROCESSED_DATA_PATH
 
 MEL_LEN_HEADROOM = 10 # reduce max_mel_len by this margin to have some headroom in training
 MIN_TXT_LEN      = 5  # characters
@@ -618,7 +619,7 @@ def gather_jobs_from_config(config, limit: int):
 
     in_dir = config["path"]["corpus_path"]
 
-    out_dir = config["path"]["preprocessed_path"]
+    out_dir = os.path.join(PREPROCESSED_DATA_PATH, config["path"]["preprocessed_path"])
 
     shutil.rmtree(out_dir, ignore_errors=True)
 
@@ -637,7 +638,7 @@ def gather_jobs_from_config(config, limit: int):
 
     if os.path.isfile(metadata_path):
 
-        jobs = gen_jobs_from_metadata_file (in_dir=in_dir, out_dir = config["path"]["preprocessed_path"], metadata_path=metadata_path, limit=limit)
+        jobs = gen_jobs_from_metadata_file (in_dir=in_dir, out_dir = out_dir, metadata_path=metadata_path, limit=limit)
 
     else:
 
@@ -650,7 +651,7 @@ def gather_jobs_from_config(config, limit: int):
             metadata_path = os.path.join(bookdir, 'metadata.csv')
 
             if os.path.isfile(metadata_path):
-                jobs.extend(gen_jobs_from_metadata_file (in_dir=bookdir, out_dir = config["path"]["preprocessed_path"], metadata_path=metadata_path, book=book, limit=limit-len(jobs)))
+                jobs.extend(gen_jobs_from_metadata_file (in_dir=bookdir, out_dir = out_dir, metadata_path=metadata_path, book=book, limit=limit-len(jobs)))
 
     return jobs
 
@@ -717,7 +718,7 @@ if __name__ == "__main__":
 
             print(f"gathered {len(jobs)} jobs.")
 
-            pproc.align (jobs, out_dir = cfg["path"]["preprocessed_path"], batch_size=args.batch_size, max_txt_len=modelcfg['model']["max_txt_len"], pool=p, lang=lang)
+            pproc.align (jobs, out_dir = os.path.join(PREPROCESSED_DATA_PATH, cfg["path"]["preprocessed_path"]), batch_size=args.batch_size, max_txt_len=modelcfg['model']["max_txt_len"], pool=p, lang=lang)
 
             pitch_min = np.finfo(np.float64).max
             pitch_max = np.finfo(np.float64).min
@@ -748,7 +749,7 @@ if __name__ == "__main__":
                         energy_max = emax
 
 
-            with open(os.path.join(cfg["path"]["preprocessed_path"], "stats.json"), "w") as f:
+            with open(os.path.join(PREPROCESSED_DATA_PATH, cfg["path"]["preprocessed_path"], "stats.json"), "w") as f:
                 stats = {
                     "pitch": [
                         float(pitch_min),

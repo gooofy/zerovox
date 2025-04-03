@@ -27,6 +27,11 @@ from zerovox.tts.symbols  import Symbols
 
 MAX_REF_LEN = 500 # approx 5.5 seconds (24000/256*6)
 
+if 'ZEROVOX_PREPROCESSED_DATA_PATH' not in os.environ:
+    raise Exception ("PREPROCESSED_DATA_PATH env var is not set")
+
+PREPROCESSED_DATA_PATH = os.environ.get('ZEROVOX_PREPROCESSED_DATA_PATH', '')
+
 def get_mask_from_lengths(lengths, max_len):
     batch_size = lengths.shape[0]
 
@@ -135,8 +140,8 @@ class LJSpeechDataset(Dataset):
         self._num_bins           = num_bins
 
         for corpus in corpora:
-            if os.path.exists(os.path.join(corpus["path"]["preprocessed_path"], filename)):
-                preprocessed_paths, filenames, phonemes, puncts, transcripts = self.process_meta(filename, corpus["path"]["preprocessed_path"])
+            if os.path.exists(os.path.join(PREPROCESSED_DATA_PATH, corpus["path"]["preprocessed_path"], filename)):
+                preprocessed_paths, filenames, phonemes, puncts, transcripts = self.process_meta(filename, os.path.join(PREPROCESSED_DATA_PATH, corpus["path"]["preprocessed_path"]))
                 self._preprocessed_paths.extend(preprocessed_paths)
                 self._filenames.extend(filenames)
                 self._phonemes.extend(phonemes)
