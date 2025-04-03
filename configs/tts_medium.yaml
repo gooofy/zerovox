@@ -1,12 +1,29 @@
-# Epoch 62: 100%|█| 61827/61827 [10:39:43<00:00,  1.61it/s, v_num=0, mel=0.294, pitch=0.610, energy=0.212, dur=0.107, loson_train_epoch_end: resident size = 1829.0 MB
+audio:
+
+  sampling_rate     : 22050
+
+  fft_size          : 1024
+  fmax              : 8000
+  fmin              : 0
+  win_length        : 1024
+  num_mels          : 80
+  hop_size          : 256
+
 model:
+  max_txt_len       : 512  # characters
+  min_mel_len       : 100  # mels,  100*256/22050 =  1.16s
+  max_mel_len       : 1750 # mels, 1750*256/22050 = 20.32s
+
+  phones            : "'-abcdefghijklmnopqrstuvwxyz"
+  puncts            : " ,.;:-!?\""
+
   emb_dim           : 512  # phoneme embedding size     medium: 512, base: 384
   emb_reduction     : 1    #                            medium:   1, base:   1
   punct_emb_dim     : 16   # punctuation embedding size medium:  16, base:  16
   dpe_emb_dim       : 32   # embedding size for _d_uration, _p_itch and _e_nergy
-  max_seq_len       : 1500 # 1500*300/24000 = 18.75s
 
   encoder:
+
     fs2_layer              : 4
     fs2_head               : 2
     fs2_dropout            : 0.2
@@ -19,12 +36,12 @@ model:
     kind                   : "fastspeech2" # choices: fastspeech2, styletts
 
     # fastspeech2:
-    n_layers         : 6
-    n_head           : 2
-    conv_filter_size : 1024
-    conv_kernel_size : [9, 1]
-    dropout          : 0.2
-    scln             : true
+    n_layers               : 6
+    n_head                 : 2
+    conv_filter_size       : 1024
+    conv_kernel_size       : [9, 1]
+    dropout                : 0.2
+    scln                   : true
 
     # styletts:
 
@@ -34,14 +51,7 @@ model:
     encoder_type    : "ASP" # "ASP" or "SAP"
 
 training:
-    max_epochs      : 100
-    warmup_epochs   : 10
-    val_epochs      : 1
-
-    lr              : 0.0001      # was: 0.00001
     weight_decay    : 0.0         # was: 0.00001
     betas           : [0.0, 0.99] # was: [0.0, 0.999]
     eps             : 0.000000001 # 1e-9, default: 1e-8
     grad_clip       : 1.0
-
-    batch_size      : 12
