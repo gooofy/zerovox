@@ -97,10 +97,6 @@ def get_args():
                         type=int,
                         default=2,
                         help='Number of warmup epochs, default: 2')
-    parser.add_argument('--learning-rate',
-                        type=float,
-                        default=0.0001,
-                        help='Learning rate, default: 0.0001')
     parser.add_argument('--batch-size',
                         type=int,
                         default=24,
@@ -208,7 +204,7 @@ if __name__ == "__main__":
                       sampling_rate=modelcfg['audio']['sampling_rate'],
                       hop_length=modelcfg['audio']['hop_size'],
                       n_mels=modelcfg['audio']['num_mels'],
-                      lr=args.learning_rate,
+                      lr=modelcfg['training']['learning_rate'],
                       weight_decay=modelcfg['training']['weight_decay'],
                       betas=modelcfg['training']['betas'],
                       eps=modelcfg['training']['eps'],

@@ -55,3 +55,4 @@ training:
     betas           : [0.0, 0.99] # was: [0.0, 0.999]
     eps             : 0.000000001 # 1e-9, default: 1e-8
     grad_clip       : 1.0
+    learning_rate   : 0.00001     # was: 0.0001
